@@ -53,6 +53,9 @@ class NPC:
     acc: str = ""      # винительный: «убил Лиду»
     ins: str = ""      # творительный: «обменял с Лидой»
     skills: List[str] = field(default_factory=list)
+    # GDD 12.1: «Ценности: что любит и ненавидит». Метки поступков, на которые
+    # этот человек реагирует сильнее прочих — см. social.judge
+    values: Dict[str, Any] = field(default_factory=dict)
 
     # --- черты 0..10 (GDD 12.1) ---
     traits: Dict[str, float] = field(default_factory=dict)

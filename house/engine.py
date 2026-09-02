@@ -20,17 +20,80 @@ def load_json(name):
         return json.load(f)
 
 
+# Эффекты, которые умеет применять world.apply_effects. Всё остальное в events.json —
+# опечатка, и лучше узнать о ней при запуске, чем не заметить никогда.
+ЭФФЕКТЫ = {"паника", "настроение", "богатство", "связь", "температура", "опасность_вылазки",
+           "укрепление_порыв", "болезнь_шанс", "кража_в_доме", "смерть_от_холода"}
+
+ЧЕРТЫ = {"жадность", "храбрость", "лояльность", "общительность", "вспыльчивость"}
+
+
+def validate_data(balance, npcs, events):
+    """Проверить данные при загрузке.
+
+    Без этого опечатка в id тихо стирает стартовые отношения, дубль id стирает
+    жильца, а несуществующий эффект события не делает ничего и никто не замечает.
+    """
+    from .model import WEAPONS
+    bad = []
+
+    ids = [d["id"] for d in npcs["жильцы"]]
+    dupes = {i for i in ids if ids.count(i) > 1}
+    if dupes:
+        bad.append("повторяющиеся id жильцов: " + ", ".join(sorted(dupes)))
+    known = set(ids)
+    for d in npcs["жильцы"]:
+        for field in ("доверие_старт", "ненависть_старт", "осведомлённость_старт"):
+            for k in d.get(field, {}):
+                if k not in known:
+                    bad.append(f"{d['id']}.{field} ссылается на несуществующего «{k}»")
+        missing = ЧЕРТЫ - set(d.get("черты", {}))
+        if missing:
+            bad.append(f"{d['id']}: нет черт {', '.join(sorted(missing))}")
+        for t, v in d.get("черты", {}).items():
+            if not (0 <= v <= 10):
+                bad.append(f"{d['id']}: черта {t} = {v}, а должна быть 0..10")
+        if d.get("оружие", "нет") not in WEAPONS:
+            bad.append(f"{d['id']}: неизвестное оружие «{d.get('оружие')}»")
+
+    apts = [d["кв"] for d in npcs["жильцы"]] + [f["кв"] for f in npcs.get("пустые_квартиры", [])]
+    if len(apts) != len(set(apts)):
+        bad.append("две квартиры с одним номером в npcs.json")
+
+    for group in ("скриптовые", "случайные"):
+        for ev in events.get(group, []):
+            for k in ev.get("эффекты", {}):
+                if k not in ЭФФЕКТЫ:
+                    bad.append(f"событие «{ev.get('id') or ev.get('день')}»: "
+                               f"эффект «{k}» никто не применяет")
+
+    if bad:
+        raise ValueError("Данные не в порядке:\n  · " + "\n  · ".join(bad))
+
+
 class Simulation:
-    def __init__(self, seed=1, days=30, verbosity=1, secrets=False, stream=None):
+    def __init__(self, seed=1, days=30, verbosity=1, secrets=False, stream=None,
+                 overrides=None):
+        """overrides — {ключ: значение} поверх balance.json.
+
+        Нужно, чтобы сравнивать две настройки одной ручки, не правя файл:
+        без этого A/B по параметру технически невозможен.
+        """
         self.seed = seed
         self.days = days
         self.balance = load_json("balance.json")
+        if overrides:
+            unknown = [k for k in overrides if k not in self.balance]
+            if unknown:
+                raise KeyError("нет такой ручки в balance.json: " + ", ".join(sorted(unknown)))
+            self.balance.update(overrides)
         self.npcs_data = load_json("npcs.json")
         self.events = load_json("events.json")
         try:
             self.lines = load_json("lines.json")
         except FileNotFoundError:
             self.lines = {}
+        validate_data(self.balance, self.npcs_data, self.events)
         self.h = House(rng=Rng(seed), B=self.balance)
         self.h.mods["реплики_быт"] = self.lines.get("быт", [])
         self.h.journal = report.Journal(verbosity=verbosity, secrets=secrets, stream=stream)
@@ -45,6 +108,7 @@ class Simulation:
             p = NPC(
                 id=d["id"], name=d["имя"], short=d["коротко"], apt=d["кв"], floor=d["этаж"],
                 age=d["возраст"], role=d["роль"], sex=d.get("пол", "м"), skills=list(d.get("умения", [])),
+                values=dict(d.get("ценности") or {}),
                 gen=d.get("коротко_род", ""), dat=d.get("коротко_дат", ""),
                 acc=d.get("коротко_вин", ""), ins=d.get("коротко_твор", ""),
                 traits=dict(d["черты"]), stock=dict(d["запасы"]),
@@ -145,6 +209,9 @@ class Simulation:
                     acted = True
             if not acted:
                 break
+        # ночью все дома: «хозяин ушёл» не должно перетекать в ночную кражу
+        for p in h.alive():
+            p.away = False
 
     # ------------------------------------------------------------ ночь
     def _night(self, h):
@@ -262,7 +329,9 @@ class Simulation:
             room_mates = len(p.guests) + (1 if p.living_with else 0)
             if room_mates:
                 p.mood = clamp(p.mood - b["теснота_настроение"] * room_mates)
-                for other_id in list(p.guests) + ([p.living_with] if p.living_with else []):
+                # sorted, а не list: порядок множества строк зависит от PYTHONHASHSEED,
+                # а внутри цикла бросается кубик — иначе зерно перестаёт быть зерном
+                for other_id in sorted(p.guests) + ([p.living_with] if p.living_with else []):
                     o = h.get(other_id)
                     if o and o.alive:
                         social.adjust(p, o.id, trust=-b["теснота_доверие"])

@@ -107,7 +107,55 @@ def apply_effects(h, eff):
             if not p.sick and h.rng.chance(risk):
                 p.sick = "простуда"
                 h.journal.line(f"{p.label()} слёг: жар, кашель.", 1)
+    if eff.get("кража_в_доме"):
+        _scripted_theft(h)
+    if eff.get("смерть_от_холода"):
+        _scripted_cold_death(h)
     spread_panic(h)
+
+
+def _scripted_theft(h):
+    """GDD 21: «день 5 — первая кража в доме».
+
+    Скриптовое событие должно уметь запускать происшествие, а не только двигать
+    шкалы: смысл этого слоя по документу — «игрок учит расписание и вмешивается»,
+    а вмешаться в прибавку паники нельзя. Если дом уже обворовали сам собой,
+    сценарий молчит — расписание задаёт первый раз, а не лишний.
+    """
+    from . import conflict
+    if h.stats.get("краж") or h.stats.get("попыток_кражи"):
+        return
+    люди = h.alive()
+    if len(люди) < 2:
+        return
+    вор = max(люди, key=lambda p: p.trait("жадность") - p.trait("лояльность") + p.desperation() * 3)
+    цели = [p for p in люди if p.id != вор.id]
+    if not цели:
+        return
+    жертва = max(цели, key=lambda p: вор.loot_value(p.id))
+    conflict.steal(h, вор, жертва)
+
+
+def _scripted_cold_death(h):
+    """GDD 21: «день 14 — смерть первого соседа от холода».
+
+    Тоже только если дом ещё никого не потерял: расписание — это то, что
+    случается «если игрок не вмешался», а не добавка к уже случившемуся.
+    """
+    from . import conflict
+    from .util import vb
+    if h.stats.get("смертей"):
+        return
+    люди = [p for p in h.alive() if not p.dependents]
+    if len(люди) < 3:
+        return
+    жертва = min(люди, key=lambda p: p.warmth + p.health * 0.5)
+    жертва.health = 0.0
+    жертва.cause = "холод"
+    жертва.died_day = h.day
+    h.journal.line(f"† {жертва.name} не {vb(жертва.sex, 'проснулся')}. "
+                   f"В квартире было минус четыре.", 2)
+    conflict.on_death(h, жертва)
 
 
 def outing_danger(h):

@@ -25,14 +25,20 @@ def stealth(npc):
     return clamp(s, 0.08, 0.95)
 
 
-def take_from(h, victim, taker, greed):
-    """Перекладывание чужого себе. greed 0..1 — какая доля запаса уходит."""
+def take_from(h, victim, taker, greed, limit=None):
+    """Перекладывание чужого себе. greed 0..1 — какая доля запаса уходит.
+
+    limit — сколько единиц одного ресурса можно унести за раз. Ночью вор уносит
+    то, что влезает в сумку, а не весь шкаф; при осаде выносят без ограничений.
+    """
     moved = {}
     for res in ("еда", "топливо", "лекарства", "вода", "патроны", "материалы"):
         have = victim.stock.get(res, 0.0)
         if have <= 0:
             continue
         amount = have * greed
+        if limit is not None:
+            amount = min(amount, limit)
         amount = float(int(amount)) if res != "лекарства" else round(amount)
         if amount <= 0 and have >= 1 and h.rng.chance(greed):
             amount = 1.0
@@ -99,7 +105,8 @@ def steal(h, thief, target):
     thief.bump("попыток_кражи")
     h.bump("попыток_кражи")
     if h.rng.chance(p):
-        moved = take_from(h, target, thief, greed=h.rng.uni(0.25, 0.5))
+        moved = take_from(h, target, thief, greed=h.rng.uni(0.25, 0.5),
+                          limit=b["кража_унос_макс"])
         thief.memory.append(f"д{h.day}:украл:{target.id}")
         thief.bump("краж")
         h.bump("краж")
@@ -139,9 +146,8 @@ def steal(h, thief, target):
             h.journal.line(f"{thief.short} {vb(thief.sex, 'вырвался')} и {vb(thief.sex, 'убежал')} по лестнице.", 1)
         elif target.trait("вспыльчивость") >= 6 or target.power() > thief.power() * 1.3:
             fight(h, [target], [thief], place=f"кв.{target.apt}", reason="вор в квартире")
-        for w in h.others(target):
-            if w.id != thief.id and h.rng.chance(0.5):
-                social.adjust(w, thief.id, trust=-1.2, hate=12)
+        видели = [w for w in h.others(target) if w.id != thief.id and h.rng.chance(0.5)]
+        social.judge(h, thief, "воровство", hate=12.0, trust=-1.2, witnesses=видели)
         return ("пойман", {})
     else:
         social.register_incident(h, "кража", f"{target.short} {vb(target.sex, 'проснулся')} от возни в прихожей. Кто-то убежал по лестнице.")
@@ -150,10 +156,36 @@ def steal(h, thief, target):
         return ("сорвалось", {})
 
 
+def cut_ties(h, person):
+    """Разорвать все связи выбывшего: союзы, сожительство в обе стороны.
+
+    Одно место на смерть и на изгнание. Пока это было только в on_death,
+    гость изгнанного навсегда оставался с living_with — а значит, по правилу
+    «печку топит хозяин», не мог затопить собственную и замерзал.
+    """
+    for other in h.people.values():
+        other.allies.discard(person.id)
+    person.allies.clear()
+    for gid in sorted(person.guests):
+        g = h.get(gid)
+        if g and g.alive and not g.exiled:
+            g.living_with = None
+            g.warmth = clamp(g.warmth - 15)
+            occupy_flat(h, g)
+            h.journal.line(f"{g.short} {vb(g.sex, 'вернулся')} в свою выстывшую квартиру.", 1)
+        elif g:
+            g.living_with = None
+    person.guests.clear()
+    if person.living_with:
+        host = h.get(person.living_with)
+        if host:
+            host.guests.discard(person.id)
+        person.living_with = None
+
+
 def exile(h, person, by=None, reason="воровство"):
     """Дом выставляет человека за дверь. Почти всегда — смертный приговор,
     но руки формально чистые (GDD 12.5: изгнание в списке действий NPC)."""
-    from .model import EmptyFlat
     person.exiled = True
     person.cause = f"{vb(person.sex, 'изгнан')} из дома ({reason})"
     person.died_day = h.day
@@ -162,11 +194,43 @@ def exile(h, person, by=None, reason="воровство"):
     h.journal.line(f"{who} вывели {person.form('acc')} на улицу и закрыли дверь подъезда.", 2)
     h.note(f"{person.short} изгнан ({reason})")
     social.house_shock(h, panic=10, mood=-12)
-    flat = EmptyFlat(apt=person.apt, floor=person.floor, stock=dict(person.stock), owner_died=person.id)
-    h.empty.append(flat)
+    cut_ties(h, person)
+    flat = release_flat(h, person)
+    for res, v in person.stock.items():
+        flat.stock[res] = flat.stock.get(res, 0.0) + v
     person.stock = {}
     if person.dependents:
         _orphan(h, person)
+
+
+def release_flat(h, person):
+    """Вернуть пустую квартиру этого жильца, заведя её только если её ещё нет.
+
+    Переезд к соседу уже делает квартиру пустой; если потом хозяин умирает,
+    вторая запись про ту же квартиру позволяет разобрать её дважды.
+    """
+    from .model import EmptyFlat
+    for f in h.empty:
+        if f.apt == person.apt:
+            f.owner_died = f.owner_died or person.id
+            return f
+    flat = EmptyFlat(apt=person.apt, floor=person.floor, stock={}, owner_died=person.id)
+    h.empty.append(flat)
+    return flat
+
+
+def occupy_flat(h, person):
+    """Человек вернулся в свою квартиру — она больше не пустая.
+
+    Иначе квартира живого жильца остаётся в списке на разбор, и соседи
+    таскают доски из-под человека, который в ней сидит.
+    """
+    for f in list(h.empty):
+        if f.apt == person.apt and not (f.body and f.body.get("порций", 0) > 0):
+            for res, v in f.stock.items():
+                if v:
+                    person.stock[res] = person.stock.get(res, 0.0) + v
+            h.empty.remove(f)
 
 
 def reveal_taboo(h, eater, witness=None):
@@ -189,6 +253,7 @@ def reveal_taboo(h, eater, witness=None):
         social.adjust(p, eater.id, trust=-9.0, hate=b["людоедство_ненависть"])
         p.allies.discard(eater.id)
         eater.allies.discard(p.id)
+    social.judge(h, eater, "табу", hate=b["людоедство_ненависть"] * 0.4, trust=-2.0)
     social.house_shock(h, panic=b["людоедство_паника_дома"], mood=-22)
     _verdict_taboo(h, eater)
 
@@ -305,6 +370,7 @@ def fight(h, side_a, side_b, place="", reason=""):
             gun = shooter.weapon in ("пистолет", "дробовик", "винтовка") and shooter.stock.get("патроны", 0) > 0
             if gun:
                 shooter.stock["патроны"] = shooter.stock.get("патроны", 0) - 1
+                h.stats["израсходовано_патроны"] = h.stats.get("израсходовано_патроны", 0) + 1
                 social.emit(h, shooter, 5, "выстрел", night=True)
                 social.house_shock(h, panic=b["паника_от_выстрела"], mood=-6)
                 h.bump("выстрелов")
@@ -324,10 +390,13 @@ def fight(h, side_a, side_b, place="", reason=""):
                 injury = "огнестрел" if gun else h.rng.pick(["ушиб", "порез", "перелом"])
                 victim.injuries.append(injury)
                 h.journal.line(f"{victim.short} {vb(victim.sex, 'получил')} {injury} ({shooter.short}). {place}", 1)
-                if gun and h.rng.chance(b["бой_шанс_смерти_огнестрел"]):
+                добьёт = b["бой_шанс_смерти_огнестрел"] if gun else b["бой_шанс_смерти_холодное"]
+                # третье попадание почти всегда последнее (GDD 17)
+                добьёт *= 1.0 + 0.6 * max(0, len(victim.injuries) - 2)
+                if h.rng.chance(добьёт):
                     victim.health = 0.0
                     victim.alive = False
-                    victim.cause = vb(victim.sex, "убит") + " выстрелом"
+                    victim.cause = vb(victim.sex, "убит") + (" выстрелом" if gun else " в драке")
                     victim.died_day = h.day
                     h.journal.line(f"{victim.short} не {vb(victim.sex, 'дожил')} до утра.", 2)
                     on_death(h, victim, killer=shooter)
@@ -369,7 +438,6 @@ def scuffle(h, a, b_npc, place=""):
 
 def on_death(h, dead, killer=None, quiet=False):
     """Смерть в доме: паника, настроение, осиротевший ребёнок, пустая квартира."""
-    from .model import EmptyFlat
     b = h.B
     dead.alive = False
     if dead.died_day is None:
@@ -381,35 +449,21 @@ def on_death(h, dead, killer=None, quiet=False):
             if p.id == killer.id:
                 continue
             social.adjust(p, killer.id, trust=-2.5, hate=25 + 15 * p.t01("лояльность"))
-    # мёртвый выпадает из всех союзов — иначе он годами числится в списке
-    for other in h.people.values():
-        other.allies.discard(dead.id)
-    dead.allies.clear()
+    # мёртвый выпадает из всех союзов и из чужих квартир
+    cut_ties(h, dead)
     social.register_incident(h, "смерть", None)
     h.note(f"{dead.short}: {dead.cause}")
-
-    # гости хозяина остаются на улице собственной пустой квартиры
-    for gid in list(dead.guests):
-        g = h.get(gid)
-        if g and g.alive:
-            g.living_with = None
-            g.warmth = clamp(g.warmth - 15)
-            h.journal.line(f"{g.short} {vb(g.sex, 'вернулся')} в свою выстывшую квартиру.", 1)
-    dead.guests.clear()
-    if dead.living_with:
-        host = h.get(dead.living_with)
-        if host:
-            host.guests.discard(dead.id)
 
     # ребёнок остаётся один (GDD 12.6: семья как моральный центр)
     if dead.dependents > 0:
         _orphan(h, dead)
 
     # квартира становится пустой и доступной (GDD 12.2)
-    flat = EmptyFlat(apt=dead.apt, floor=dead.floor, stock=dict(dead.stock), owner_died=dead.id)
+    flat = release_flat(h, dead)
+    for res, v in dead.stock.items():
+        flat.stock[res] = flat.stock.get(res, 0.0) + v
     flat.body = {"кто": dead.short, "вин": dead.form("acc"), "падеж": dead.form("gen"), "день": h.day,
                  "порций": h.B["тело_порций"], "тронуто": False}
-    h.empty.append(flat)
     dead.stock = {}
 
 
@@ -452,13 +506,21 @@ def consider_raid(h, npc):
 
     «Рейд запускается, когда паника выше половины и высока либо ненависть,
     либо осведомлённость.»
+
+    Пороги из документа больше не делятся на агрессивность дома: когда они
+    делились, «паника выше половины» на практике означала «выше четверти»,
+    и записанное в GDD условие переставало описывать игру. Агрессивность
+    теперь двигает только поведение — совесть, вербовку, готовность откупиться
+    и осторожность вора, — а не саму формулу запуска.
     """
     b = h.B
     A = aggr(h)
-    if npc.panic < b["налёт_порог_паники"] / A:
+    # ворота нормальности стоят первыми: пока жизнь ещё похожа на обычную,
+    # человек до чужой двери просто не додумывается — какой бы ни была паника.
+    # Раньше эта проверка стояла после паники и не срабатывала ни разу
+    if npc.normalcy > b["нормальность_потолок_налёта"]:
         return None
-    # пока жизнь ещё похожа на обычную, к чужой двери не идут
-    if npc.normalcy > b["нормальность_потолок_налёта"] * A:
+    if npc.panic < b["налёт_порог_паники"]:
         return None
     if npc.health < 35 or len(npc.injuries) >= 2:
         return None
@@ -472,7 +534,7 @@ def consider_raid(h, npc):
             continue
         hate = npc.hate.get(t.id, 0.0)
         aware = npc.aware.get(t.id, 0.0)
-        if hate < b["налёт_порог_ненависти"] / A and aware < b["налёт_порог_осведомлённости"] / A:
+        if hate < b["налёт_порог_ненависти"] and aware < b["налёт_порог_осведомлённости"]:
             continue
         want = npc.loot_value(t.id) * (0.5 + npc.t01("жадность"))
         want *= 0.6 + npc.desperation() * 1.4
@@ -481,12 +543,10 @@ def consider_raid(h, npc):
         # укреплённая квартира защищает от вора и приманивает налёт (GDD 16)
         want += (1.0 - theft_chance(h, npc, t)) * 2.6
         # страх перед хозяином: чем сильнее сосед, тем меньше желания.
-        # но человек считает не себя одного, а тех, кого может привести —
-        # поэтому вожак с двумя приятелями идёт туда, куда один бы не сунулся
-        crew_size = 1 + sum(1 for p in h.others(npc)
-                            if p.id != t.id and p.health > 40
-                            and (p.trust.get(npc.id, 3.0) >= b["налёт_вербовка_доверие"] / A
-                                 or p.group == "агрессивные"))
+        # человек считает не себя одного, а тех, кого реально может привести.
+        # Считаем тем же кодом, что и собирает группу, — иначе вожак идёт туда,
+        # куда его группа не пойдёт, и остаётся у двери один
+        crew_size = len(recruit(h, npc, t))
         fear = t.power() * (1.4 - npc.t01("храбрость")) * 1.5
         fear /= 1.0 + 0.45 * (crew_size - 1)
         fear += t.shelter.get("дверь", 0) * 0.8
@@ -496,6 +556,11 @@ def consider_raid(h, npc):
         conscience = npc.t01("лояльность") * 5.5 * (1.0 - npc.desperation() * 0.5) / A
         conscience += 3.5 if t.id in npc.allies else 0.0   # на своего идти тяжело
         conscience += 1.2 if t.dependents else 0.0   # к матери с ребёнком идут последними
+        # в одиночку к чужой двери идут только те, кто явно сильнее хозяина:
+        # GDD 16 говорит о группе, а один человек у двери — это не осада,
+        # а разговор через цепочку
+        if crew_size < b["налёт_минимум_группы"] and npc.power() < t.power() * b["налёт_соло_превосходство"]:
+            continue
         score = want - fear - conscience
         if best is None or score > best[1]:
             best = (t, score)
@@ -505,28 +570,48 @@ def consider_raid(h, npc):
 
 
 def recruit(h, leader, target):
-    """Состав группы (GDD 16): агрессивные идут сразу, нейтралы — если обе шкалы высоки."""
+    """Состав группы ровно по GDD 16.
+
+    «Состав — агрессивная группа; при высоких обеих шкалах к ней присоединяются
+    нейтралы.» Значит, к вожаку идут по трём разным причинам, и путать их нельзя:
+
+      · свои          — те, кто уже в агрессивном ядре дома (GDD 12.4);
+      · злые лично    — те, у кого своя ненависть к этой двери;
+      · нейтралы      — те, у кого высоки ОБЕ шкалы: и паника, и осведомлённость
+                        о запасах цели, и кто при этом доверяет вожаку.
+
+    Раньше доверие к вожаку требовалось от всех, включая агрессивное ядро,
+    и на дверь приходил один человек: средний состав налёта был 1.4.
+    """
     b = h.B
+    A = aggr(h)
     crew = [leader]
     for p in h.others(leader):
-        if p.id == target.id or p.health < 40:
+        if p.id == target.id or p.health < 40 or len(p.injuries) >= 2:
             continue
         # свою же дверь не ломают: под одной крышей — значит на одной стороне
         if p.living_with == target.id or target.living_with == p.id:
             continue
+        if p.living_with == leader.id or leader.living_with == p.id:
+            свой_кров = True          # с кем живёшь, за тем и идёшь
+        else:
+            свой_кров = False
         trust = p.trust.get(leader.id, 3.0)
-        if trust < b["налёт_вербовка_доверие"] / aggr(h) and p.group != "агрессивные":
+
+        ядро = p.group == "агрессивные"
+        злой = p.hate.get(target.id, 0.0) >= b["налёт_порог_ненависти"]
+        нейтрал = (p.panic >= b["налёт_нейтралы_порог"]
+                   and p.aware.get(target.id, 0.0) >= b["налёт_нейтралы_порог"]
+                   and trust >= b["налёт_вербовка_доверие"])
+        if not (ядро or злой or нейтрал or (свой_кров and trust >= b["налёт_вербовка_доверие"])):
             continue
-        A = aggr(h)
-        aggressive = (p.group == "агрессивные") or p.hate.get(target.id, 0) > 35 / A
-        both_high = (p.panic > b["налёт_нейтралы_порог"] / A
-                     and p.aware.get(target.id, 0) > b["налёт_нейтралы_порог"] / A)
-        if not (aggressive or both_high):
-            continue
+
         pull = p.desperation() * 2.0 + p.t01("жадность") * 1.5 + trust * 0.25
+        pull += p.hate.get(target.id, 0.0) / 30.0
+        pull += 1.0 if ядро else 0.0
         pull -= p.t01("лояльность") * 2.2 + (1.2 if target.id in p.allies else 0.0)
         pull -= (1.0 - p.t01("храбрость")) * 1.5
-        if pull > 0.8 / A:
+        if pull > b["налёт_порог_вербовки"] / A:
             crew.append(p)
     return crew
 
@@ -574,6 +659,7 @@ def run_siege(h, leader, target):
                        f"с кем ещё вчера {vb(p.sex, 'держался')} вместе.", 2)
         h.note(f"предательство: {p.short} против {target.form('gen')}")
         social.adjust(target, p.id, trust=-6.0, hate=35)
+        social.judge(h, p, "предательство", hate=10.0, trust=-1.0)
     h.bump("налётов")
     leader.bump("налётов")
     names = ", ".join(p.short for p in crew)
@@ -648,17 +734,52 @@ def run_siege(h, leader, target):
 
     tools = sum(tool_weight(p) for p in crew) * (1.0 + 0.22 * (len(crew) - 1))
     social.emit(h, target, 5, "взлом", night=True)
-    door_broken = tools > target.door_strength() * h.rng.uni(0.75, 1.35)
+
+    # GDD 16, стадия «Дверь»: «время на подготовку, побег через окно/чердак, засада».
+    # Пока дверь держат, у хозяина есть эти минуты — и это его выбор, а не бросок
+    # на следующей стадии, куда побег был перенесён раньше
+    прочность = target.door_strength()
+    держит = tools <= прочность * h.rng.uni(0.75, 1.35)
+    if держит or прочность >= 2.0:
+        уйти = (1.0 - target.t01("храбрость")) * b["побег_за_трусость"]
+        уйти += b["побег_за_превосходство"] * clamp(attack_power / max(0.5, def_power) - 1.0, 0.0, 2.0)
+        уйти -= b["побег_за_иждивенцев"] if target.dependents else 0.0
+        if len(defenders) > 1:
+            уйти *= 0.4                    # при своих не бегут
+        if h.rng.chance(clamp(уйти, 0.0, 0.9)):
+            moved = {}
+            for p in crew:
+                m = take_from(h, target, p, greed=b["налёт_доля_пустой_квартиры"] / len(crew))
+                for k, v in m.items():
+                    moved[k] = moved.get(k, 0) + v
+            target.warmth = clamp(target.warmth - 25)
+            h.journal.line(f"{target.short} {vb(target.sex, 'ушёл')} через окно на пожарную лестницу, "
+                           f"пока били дверь. Квартиру вынесли: {_fmt(moved)}.", 2)
+            _house_learns(h, target, crew)
+            h.bump("исход_сбежал")
+            return "сбежал"
+        # засада: тот, кто ждёт за дверью с топором, встречает первого вошедшего
+        if not держит and target.weapon != "нет" and target.t01("храбрость") > 0.55 and h.rng.chance(b["засада_шанс"]):
+            первый = h.rng.pick(crew)
+            первый.injuries.append(h.rng.pick(["ушиб", "порез"]))
+            первый.health = clamp(первый.health - h.rng.uni(10, 22))
+            h.journal.line(f"{target.short} {vb(target.sex, 'ждал')} за дверью. "
+                           f"{первый.short} {vb(первый.sex, 'получил')} первым.", 2)
+            for p in crew:
+                p.panic = clamp(p.panic + 10)
+
+    door_broken = not держит
     if not door_broken:
         # стены и потолок — только объединённой группой (GDD 16)
-        if len(crew) >= 3 and h.rng.chance(0.4):
+        if len(crew) >= 3 and h.rng.chance(b["стены_шанс"]):
             h.journal.line(f"Дверь кв.{target.apt} выдержала — тогда полезли через стену из пустой квартиры.", 2)
             door_broken = True
         else:
             h.journal.line(f"Дверь кв.{target.apt} выдержала. Били долго, ушли под утро.", 2)
             target.panic = clamp(target.panic + 14)
             target.mood = clamp(target.mood - 10)
-            target.shelter["дверь"] = max(0, target.shelter.get("дверь", 0) - 1)   # дверь повело
+            # дверь повело
+            target.shelter["дверь"] = max(0, target.shelter.get("дверь", 0) - b["дверь_ломается_за"])
             for p in crew:
                 social.adjust(p, target.id, hate=8, aware=12)
             _house_learns(h, target, crew)
@@ -667,22 +788,12 @@ def run_siege(h, leader, target):
 
     # ---- стадия 3: прорыв ----
     h.journal.line(f"Дверь кв.{target.apt} вынесли.", 2)
-    escape = target.t01("храбрость") < 0.4 and h.rng.chance(0.35)
-    surrender = def_power < attack_power * 0.6 or target.t01("храбрость") < 0.35
+    # GDD 16, «Прорыв»: сдаться, отбиваться или бежать. Бежать было поздно —
+    # это решалось, пока дверь ещё держали
+    surrender = (def_power < attack_power * b["сдаться_превосходство"]
+                 or target.t01("храбрость") < b["сдаться_трусость"])
 
-    if escape:
-        moved = {}
-        for p in crew:
-            m = take_from(h, target, p, greed=0.8 / len(crew))
-            for k, v in m.items():
-                moved[k] = moved.get(k, 0) + v
-        target.warmth = clamp(target.warmth - 25)
-        h.journal.line(f"{target.short} {vb(target.sex, 'ушёл')} через окно на пожарную лестницу. Квартиру вынесли: {_fmt(moved)}.", 2)
-        _house_learns(h, target, crew)
-        h.bump("исход_сбежал")
-        return "сбежал"
-
-    if surrender and not any(d.weapon != "нет" for d in defenders):
+    if surrender:
         moved = {}
         for p in crew:
             m = take_from(h, target, p, greed=0.75 / len(crew))
@@ -691,9 +802,11 @@ def run_siege(h, leader, target):
         h.journal.line(f"{target.short} не {vb(target.sex, 'стал')} драться. Забрали: {_fmt(moved)}.", 2)
         for p in crew:
             social.adjust(target, p.id, hate=b["ненависть_за_налёт"], trust=-5.0)
-        # изгнание — если вожак злой
+        # изгнание — если вожак злой (GDD 16: «сдаться — потеря запасов,
+        # возможно, изгнание»). Раньше эта ветка стояла за условием
+        # «ни у кого из защитников нет даже ножа» и не случалась ни разу
         if ((leader.trait("вспыльчивость") >= 7 or leader.hate.get(target.id, 0) > 70)
-                and h.rng.chance(0.35) and not target.dependents):
+                and h.rng.chance(b["изгнание_после_налёта"]) and not target.dependents):
             exile(h, target, by=leader, reason="налёт")
             h.bump("исход_изгнан")
             return "изгнан"
@@ -703,6 +816,13 @@ def run_siege(h, leader, target):
 
     # драка
     res = fight(h, crew, defenders, place=f"кв.{target.apt}", reason="налёт")
+    if not target.alive:
+        # GDD 16 называет «убит» отдельным исходом осады. Раньше гибель цели
+        # засчитывалась как «ограблен», и в статистике этого исхода не было вовсе.
+        # Запасы убитого уже лежат в его квартире — она теперь пустая и открытая
+        _house_learns(h, target, crew)
+        h.bump("исход_убит")
+        return "убит"
     if res == "a":
         moved = {}
         for p in [c for c in crew if c.alive]:
@@ -730,4 +850,8 @@ def _house_learns(h, target, crew):
         for c in crew:
             if p.id == c.id:
                 continue
-            social.adjust(p, c.id, trust=-1.2 * p.t01("лояльность") * 2, hate=10 + 12 * p.t01("лояльность"), aware=8)
+            social.adjust(p, c.id, trust=-1.2 * p.t01("лояльность") * 2,
+                          hate=10 + 12 * p.t01("лояльность"), aware=8)
+    # и отдельно — по личной мерке каждого (GDD 12.1)
+    for c in crew:
+        social.judge(h, c, "насилие", hate=8.0, trust=-0.6)

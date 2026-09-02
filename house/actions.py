@@ -8,32 +8,33 @@
 from .util import clamp, norm, vb, gform
 from . import social, conflict
 
-# ключ: (часы, громкость, вид шума)
+# ключ: (громкость, вид шума). Часы лежат в balance.json -> "часы_действий":
+# держать их в двух местах — верный способ поменять одно и забыть другое.
 COST = {
-    "поесть":       (0.5, 2, "готовка"),
-    "попить":       (0.3, 1, "шаги"),
-    "топить_снег":  (1.5, 2, "готовка"),
-    "топить":       (0.5, 1, "буржуйка"),
-    "генератор":    (0.5, 5, "генератор"),
-    "утепление":    (1.5, 3, "ремонт"),
-    "дверь":        (3.0, 3, "дверь"),
-    "буржуйка":     (4.0, 3, "ремонт"),
-    "разбор":       (3.0, 3, "разбор"),
-    "вылазка":      (6.0, 2, "возвращение"),
-    "наблюдение":   (1.0, 0, "шаги"),
-    "разговор":     (0.5, 1, "шаги"),
-    "попросить":    (0.5, 1, "шаги"),
-    "поделиться":   (0.5, 1, "шаги"),
-    "обмен":        (0.7, 1, "шаги"),
-    "лечить":       (1.0, 1, "шаги"),
-    "отдых":        (2.0, 0, None),
-    "быт":          (1.5, 1, "шаги"),
-    "переехать":    (2.0, 2, "шаги"),
-    "отнять":       (1.0, 3, "ссора"),
-    "кража_днём":   (1.5, 3, "взлом"),
-    "тело":         (2.0, 2, "разбор"),
-    "поесть_мясо":  (0.7, 2, "готовка"),
-    "вынести":      (3.0, 2, "разбор"),
+    "поесть":       (1, "готовка"),
+    "попить":       (1, "шаги"),
+    "топить_снег":  (1, "готовка"),
+    "топить":       (1, "буржуйка"),
+    "генератор":    (5, "генератор"),
+    "утепление":    (3, "ремонт"),
+    "дверь":        (3, "дверь"),
+    "буржуйка":     (3, "ремонт"),
+    "разбор":       (3, "разбор"),
+    "вылазка":      (2, "возвращение"),
+    "наблюдение":   (0, "шаги"),
+    "разговор":     (1, "шаги"),
+    "попросить":    (1, "шаги"),
+    "поделиться":   (1, "шаги"),
+    "обмен":        (1, "шаги"),
+    "лечить":       (1, "шаги"),
+    "отдых":        (0, None),
+    "быт":          (1, "шаги"),
+    "переехать":    (2, "шаги"),
+    "отнять":       (3, "ссора"),
+    "кража_днём":   (3, "взлом"),
+    "тело":         (2, "разбор"),
+    "поесть_мясо":  (1, "готовка"),
+    "вынести":      (3, "разбор"),
 }
 
 
@@ -96,13 +97,42 @@ NOTABLE = {"буржуйка": 1, "дверь": 1, "утепление": 1, "г�
            "попросить": 1, "поделиться": 1, "обмен": 1, "лечить": 1}
 
 
-def hours(key, npc):
-    h = COST[key][0]
+def порция(h, npc, b):
+    """Сколько сытости даёт одна порция еды.
+
+    GDD 12.1: умения полезны игроку и группе. Повар вытягивает из той же банки
+    больше — и кормит не только себя, но и всех, кто с ним под одной крышей.
+    """
+    cooks = "повар" in npc.skills
+    if not cooks:
+        for other_id in ([npc.living_with] if npc.living_with else []) + sorted(npc.guests):
+            o = h.get(other_id)
+            if o and o.alive and not o.exiled and "повар" in o.skills:
+                cooks = True
+                break
+    return b["еда_за_порцию"] * ((1.0 + b["повар_прибавка"]) if cooks else 1.0)
+
+
+def spend(h, npc, res, amount):
+    """Израсходовать ресурс безвозвратно и записать это.
+
+    Съеденное, сожжённое и потраченное на стройку уходит из мира. Пока это
+    не считалось, баланс дома не сходился, и настоящую утечку было не отличить
+    от нормальной траты.
+    """
+    have = npc.stock.get(res, 0.0)
+    used = min(amount, have)
+    npc.stock[res] = have - used
+    h.stats["израсходовано_" + res] = h.stats.get("израсходовано_" + res, 0.0) + used
+    return used
+
+
+def hours(key, npc, b):
+    """Сколько часов занимает действие. Числа — из balance.json, не из кода."""
+    v = b["часы_действий"][key]
     if key == "буржуйка" and ("слесарь" in npc.skills or "электрик" in npc.skills):
-        h -= 1.5
-    if key == "вылазка":
-        h = 6.0
-    return h
+        v -= b["часы_ремонта_за_умение"]
+    return v
 
 
 # ---------------------------------------------------------------- выбор
@@ -125,7 +155,7 @@ def gather(h, npc):
     def add(key, score, target=None):
         if score <= 0:
             return
-        if hours(key, npc) > npc.time_left + 0.001:
+        if hours(key, npc, b) > npc.time_left + 0.001:
             return
         if used_day(h, npc, key) >= lim_day.get(key, 99):
             return
@@ -244,6 +274,20 @@ def gather(h, npc):
     # --- люди ---
     for t in h.others(npc):
         if t.away:
+            # хозяина нет дома: поговорить не с кем, но квартира стоит пустая.
+            # Раньше эта ветка была ниже по циклу, за `continue`, и не достигалась
+            # никогда — дневная кража из GDD 12.5 была мёртвым кодом
+            if npc.confidence(t.id) > 0.2:
+                greed = npc.loot_value(t.id) * (0.4 + npc.t01("жадность") * 0.8)
+                score = (greed * (0.4 + des) - npc.t01("лояльность") * 4.0
+                         - (1.0 - conflict.stealth(npc)) * 3.0)
+                score += npc.hate.get(t.id, 0) / 25.0
+                score -= t.shelter.get("дверь", 0) * 1.4
+                # днём ломать чужую дверь страшнее, чем ночью: в подъезде люди,
+                # шум слышно всем, и объяснить себя нечем
+                score -= b["кража_днём_решимость"]
+                score -= len([o for o in h.others(npc) if not o.away]) * 0.5
+                add("кража_днём", score * norm_gate(npc, "кража", b), t)
             continue
         trust = npc.trust.get(t.id, 3.0)
         # наблюдение
@@ -319,12 +363,6 @@ def gather(h, npc):
         # лечение
         if "медик" in npc.skills and npc.stock.get("лекарства", 0) >= 1 and (t.injuries or t.sick):
             add("лечить", 5.0 + npc.t01("лояльность") * 3.0 + trust * 0.3, t)
-        # кража днём, пока хозяина нет
-        if t.away and npc.confidence(t.id) > 0.2:
-            greed = npc.loot_value(t.id) * (0.4 + npc.t01("жадность") * 0.8)
-            score = greed * (0.4 + des) - npc.t01("лояльность") * 4.0 - (1.0 - conflict.stealth(npc)) * 3.0
-            score += npc.hate.get(t.id, 0) / 25.0
-            add("кража_днём", score, t)
 
     # --- себя ---
     if npc.stock.get("лекарства", 0) >= 1 and (npc.injuries or npc.sick):
@@ -347,13 +385,24 @@ def _trade_score(h, a, b_npc):
     return clamp(gain * 1.2 + a.trust.get(b_npc.id, 3.0) * 0.2, 0.0, 9.0)
 
 
+TRADABLE = ("еда", "топливо", "лекарства", "материалы", "вода")
+
+
 def find_deal(h, a, b_npc):
-    """Найти сделку, выгодную обоим. Возвращает ((что отдаю, сколько), (что беру, сколько))."""
+    """Найти сделку, выгодную обоим. Возвращает ((что отдаю, сколько), (что беру, сколько)).
+
+    Стоимость единицы считается один раз на человека, а не заново в каждой паре:
+    `value_of` линейна по количеству, а количество в сделке всегда единица,
+    поэтому результат тот же до последнего бита, а времени уходит вчетверо меньше.
+    Эта функция — самое горячее место симуляции, через неё шло 60% всего времени.
+    """
+    va = {r: social.value_of(a, r, 1.0) for r in TRADABLE}
+    vb = {r: social.value_of(b_npc, r, 1.0) for r in TRADABLE}
     best = None
-    for give in ("еда", "топливо", "лекарства", "материалы", "вода"):
+    for give in TRADABLE:
         if a.stock.get(give, 0) < 2:
             continue
-        for get_ in ("еда", "топливо", "лекарства", "материалы", "вода"):
+        for get_ in TRADABLE:
             if get_ == give:
                 continue
             if a.believed(b_npc.id, get_) < 1.5 and b_npc.stock.get(get_, 0) < 1:
@@ -361,8 +410,8 @@ def find_deal(h, a, b_npc):
             if b_npc.stock.get(get_, 0) < 1:
                 continue
             n = 1.0
-            mine_gain = social.value_of(a, get_, n) - social.value_of(a, give, n)
-            their_gain = social.value_of(b_npc, give, n) - social.value_of(b_npc, get_, n)
+            mine_gain = va[get_] - va[give]
+            their_gain = vb[give] - vb[get_]
             if mine_gain > 0.2 and their_gain > 0.2:
                 score = mine_gain + their_gain
                 if best is None or score > best[0]:
@@ -374,6 +423,7 @@ def find_deal(h, a, b_npc):
 
 def choose_and_do(h, npc):
     """Один ход одного человека. Возвращает True, если действие совершено."""
+    npc.away = False          # раз он снова берётся за дело — значит, он дома
     opts = gather(h, npc)
     # если ничего толкового не осталось — день на этом и заканчивается.
     # без этого порога человек от нечего делать идёт разбирать чужую квартиру
@@ -392,21 +442,20 @@ def choose_and_do(h, npc):
 
 def execute(h, npc, key, target):
     b = h.B
-    spent = hours(key, npc)
+    spent = hours(key, npc, b)
     if key == "вылазка":
         spent = min(h.rng.uni(b["вылазка_часы_мин"], b["вылазка_часы_макс"]), npc.time_left)
     npc.time_left -= spent
     mark(h, npc, key, target)
     npc.stats["часы_работы"] = npc.stats.get("часы_работы", 0) + (spent if key in ("утепление", "дверь", "буржуйка", "разбор", "вылазка") else 0)
-    lvl, kind = COST[key][1], COST[key][2]
+    lvl, kind = COST[key]
     said = None
 
     if key == "поесть":
         need = npc.eaters()
         have = npc.stock.get("еда", 0.0)
-        used = min(need, have)
-        npc.stock["еда"] = have - used
-        npc.satiety = clamp(npc.satiety + b["еда_за_порцию"] * (used / need))
+        used = spend(h, npc, "еда", need)
+        npc.satiety = clamp(npc.satiety + порция(h, npc, b) * (used / need))
         h.stats["съедено"] = h.stats.get("съедено", 0) + used
         # горячая еда пахнет сильнее — и выдаёт хозяина всему подъезду
         social.smell(h, npc, hot=npc.burning or (h.power_on and npc.shelter.get("обогреватель")))
@@ -414,9 +463,8 @@ def execute(h, npc, key, target):
 
     elif key == "поесть_мясо":
         need = npc.eaters()
-        used = min(need, npc.stock.get("мясо", 0.0))
-        npc.stock["мясо"] = npc.stock.get("мясо", 0.0) - used
-        npc.satiety = clamp(npc.satiety + b["еда_за_порцию"] * (used / need))
+        used = spend(h, npc, "мясо", need)
+        npc.satiety = clamp(npc.satiety + порция(h, npc, b) * (used / need))
         npc.mood = clamp(npc.mood - b["людоедство_настроение_за_раз"])
         social.smell(h, npc, hot=True)
         said = None
@@ -424,9 +472,10 @@ def execute(h, npc, key, target):
     elif key == "попить":
         if h.water_on:
             npc.hydration = clamp(npc.hydration + b["вода_за_порцию"])
+            # из-под крана вода в запас не идёт, но и из мира не уходит
             said = f"{npc.short} {vb(npc.sex, 'набрал')} воды из-под крана"
         else:
-            npc.stock["вода"] = max(0.0, npc.stock.get("вода", 0.0) - npc.eaters())
+            spend(h, npc, "вода", npc.eaters())
             npc.hydration = clamp(npc.hydration + b["вода_за_порцию"])
             said = f"{npc.short} {vb(npc.sex, 'достал')} воду из запаса"
 
@@ -444,41 +493,42 @@ def execute(h, npc, key, target):
             npc.burning = True
             how = "на горячей печке" if already else "затопив печку"
         if npc.stock.get("топливо", 0) < cost and npc.stock.get("материалы", 0) >= b["мебель_за_топку"]:
-            npc.stock["материалы"] -= b["мебель_за_топку"]   # в ход пошла мебель
+            spend(h, npc, "материалы", b["мебель_за_топку"])   # в ход пошла мебель
             cost = 0.0
             how = "на мебели"
-        npc.stock["топливо"] = max(0.0, npc.stock.get("топливо", 0) - cost)
+        spend(h, npc, "топливо", cost)
         npc.stock["вода"] = npc.stock.get("вода", 0) + b["снег_вода"]
+        h.stats["натоплено_вода"] = h.stats.get("натоплено_вода", 0) + b["снег_вода"]
         said = (f"{npc.short} {vb(npc.sex, 'натопил')} снега {how}"
                 + (f" (-{cost:g} топлива)" if cost else ""))
 
     elif key == "топить":
         if npc.stock.get("топливо", 0) >= 1:
-            npc.stock["топливо"] = npc.stock.get("топливо", 0) - 1
+            spend(h, npc, "топливо", 1)
             said = f"{npc.short} {vb(npc.sex, 'затопил')} буржуйку"
         else:
-            npc.stock["материалы"] = npc.stock.get("материалы", 0) - b["мебель_за_топку"]
+            spend(h, npc, "материалы", b["мебель_за_топку"])
             said = f"{npc.short} {vb(npc.sex, 'разломал')} мебель и {vb(npc.sex, 'затопил')} ею"
         npc.burning = True
 
     elif key == "генератор":
-        npc.stock["топливо"] = npc.stock.get("топливо", 0) - 2
+        spend(h, npc, "топливо", 2)
         npc.mood = clamp(npc.mood + 10)
         npc.warmth = clamp(npc.warmth + 8)
         said = f"{npc.short} {vb(npc.sex, 'запустил')} генератор — на весь подъезд гул и свет в окне"
 
     elif key == "утепление":
-        npc.stock["материалы"] = npc.stock.get("материалы", 0) - b["утепление_материалы"]
+        spend(h, npc, "материалы", b["утепление_материалы"])
         npc.shelter["утепление"] = npc.shelter.get("утепление", 0) + 1
         said = f"{npc.short} {vb(npc.sex, 'утеплил')} окна (уровень {npc.shelter['утепление']})"
 
     elif key == "дверь":
-        npc.stock["материалы"] = npc.stock.get("материалы", 0) - b["дверь_материалы"]
+        spend(h, npc, "материалы", b["дверь_материалы"])
         npc.shelter["дверь"] = npc.shelter.get("дверь", 0) + 1
         said = f"{npc.short} {vb(npc.sex, 'укрепил')} дверь (уровень {npc.shelter['дверь']})"
 
     elif key == "буржуйка":
-        npc.stock["материалы"] = npc.stock.get("материалы", 0) - b["буржуйка_материалы"]
+        spend(h, npc, "материалы", b["буржуйка_материалы"])
         npc.shelter["буржуйка"] = True
         said = f"{npc.short} {vb(npc.sex, 'собрал')} буржуйку"
         h.note(f"{npc.short} {vb(npc.sex, 'собрал')} буржуйку")
@@ -497,6 +547,10 @@ def execute(h, npc, key, target):
         if flat.stripped < b["разбор_максимум"]:
             npc.stock["материалы"] = npc.stock.get("материалы", 0) + b["разбор_материалов"]
             got["материалы"] = got.get("материалы", 0) + b["разбор_материалов"]
+            # доски из стен — это приход в мир, а не перекладывание; считаем,
+            # иначе баланс материалов в доме не сходится
+            h.stats["наразобрано_материалы"] = (h.stats.get("наразобрано_материалы", 0)
+                                                + b["разбор_материалов"])
         flat.stripped += 1
         if flat.owner_died and sum(v for k, v in got.items() if k != "материалы") > 0:
             npc.mood = clamp(npc.mood - 5 * npc.t01("лояльность"))
@@ -537,13 +591,14 @@ def execute(h, npc, key, target):
             target.favors[npc.id] = target.favors.get(npc.id, 0) + 1
             target.ask_record(npc.id)["я_дал"] = h.day
             npc.ask_record(target.id)["дали"] += 0.5   # он мне не отказывал, я сам принёс
+            social.judge(h, npc, "щедрость", trust=0.35)
             said = f"{npc.short} {'сама занесла' if npc.sex == 'ж' else 'сам занёс'} еду {target.form('dat')}"
 
     elif key == "обмен":
         said = _trade(h, npc, target)
 
     elif key == "лечить":
-        npc.stock["лекарства"] = npc.stock.get("лекарства", 0) - 1
+        spend(h, npc, "лекарства", 1)
         if target.injuries:
             target.injuries.pop()
         target.sick = None
@@ -564,6 +619,7 @@ def execute(h, npc, key, target):
         flat.body["порций"] -= take
         flat.body["тронуто"] = True
         npc.stock["мясо"] = npc.stock.get("мясо", 0) + take
+        h.stats["принесено_мясо"] = h.stats.get("принесено_мясо", 0) + take
         npc.mood = clamp(npc.mood - b["людоедство_настроение"])
         npc.panic = clamp(npc.panic + 12)
         npc.stats["переступил"] = 1
@@ -626,12 +682,12 @@ def execute(h, npc, key, target):
         social.adjust(victim, npc.id, trust=-5.0, hate=b["ненависть_за_налёт"] * 0.8, aware=15)
         social.register_incident(h, "отъём", None)
         # это видят и слышат: разбой в подъезде не спрячешь
-        for w in h.others(npc):
-            if w.id == victim.id:
-                continue
-            if h.rng.chance(0.8):
-                social.adjust(w, npc.id, trust=-2.5, hate=20 + 12 * w.t01("лояльность"), aware=8)
-                w.panic = clamp(w.panic + 7)
+        видели = [w for w in h.others(npc) if w.id != victim.id and h.rng.chance(0.8)]
+        for w in видели:
+            social.adjust(w, npc.id, aware=8)
+            w.panic = clamp(w.panic + 7)
+        # разбой каждый мерит своей меркой (GDD 12.1, «Ценности»)
+        social.judge(h, npc, "насилие", hate=20 + 12 * 0.5, trust=-2.5, witnesses=видели)
         said = None
 
     elif key == "переехать":
@@ -661,8 +717,7 @@ def execute(h, npc, key, target):
                            f"в кв.{host.apt} — топят одну печку на двоих.", 2)
             h.note(f"{npc.short} {vb(npc.sex, 'переехал')} к {host.form('dat')}")
             # своя квартира остаётся пустой, и это все понимают
-            from .model import EmptyFlat
-            h.empty.append(EmptyFlat(apt=npc.apt, floor=npc.floor, stock={}))
+            conflict.release_flat(h, npc)
         else:
             social.adjust(npc, host.id, trust=-1.0, hate=10)
             npc.ask_record(host.id)["отказ_переезд"] = h.day
@@ -783,6 +838,9 @@ def _outing(h, npc, dur):
 
     take = b["вылазка_добыча_база"] * h.scav_richness * h.rng.uni(0.5, 1.4)
     take *= 0.8 + npc.t01("храбрость") * 0.5
+    # охотник умеет ходить по зимнему лесу и знает, где смотреть (GDD 12.1, 12.6)
+    if "охотник" in npc.skills:
+        take *= 1.0 + b["охотник_добыча"]
     got = {}
     for _ in range(int(take) + (1 if h.rng.chance(take % 1) else 0)):
         res = h.rng.weighted([("еда", 31), ("топливо", 31), ("материалы", 19), ("вода", 9), ("лекарства", 4), ("патроны", 2)])
@@ -797,7 +855,10 @@ def _outing(h, npc, dur):
     txt = f"{npc.short} {vb(npc.sex, 'ходил')} на улицу ({dur:.0f} ч): "
     txt += ", ".join(f"{k} {v}" for k, v in got.items()) if got else "пусто"
 
-    if h.rng.chance(b["вылазка_шанс_травмы"] * danger):
+    hurt_risk = b["вылазка_шанс_травмы"] * danger
+    if "охотник" in npc.skills:
+        hurt_risk *= b["охотник_травма"]
+    if h.rng.chance(hurt_risk):
         inj = h.rng.pick(["ушиб", "порез", "перелом", "обморожение"])
         npc.injuries.append(inj)
         npc.health = clamp(npc.health - h.rng.uni(8, 20))
@@ -807,14 +868,20 @@ def _outing(h, npc, dur):
             lost = {k: v for k, v in list(npc.stock.items()) if v > 0}
             res = h.rng.pick(list(lost)) if lost else None
             if res:
-                npc.stock[res] = max(0, npc.stock[res] - h.rng.rint(1, 2))
+                had = npc.stock[res]
+                npc.stock[res] = max(0, had - h.rng.rint(1, 2))
+                # это единственное место, где ресурс уходит из мира насовсем;
+                # без счётчика баланс дома не сходится и утечку не отличить от бага
+                h.stats["потеряно_" + res] = h.stats.get("потеряно_" + res, 0) + (had - npc.stock[res])
             npc.panic = clamp(npc.panic + 15)
             txt += "; во дворе отняли часть добычи"
         else:
             npc.panic = clamp(npc.panic + 8)
             txt += "; на обратном пути кто-то шёл следом"
 
-    npc.away = False
+    # квартира стоит пустой, пока хозяин не вернулся к своему следующему делу.
+    # Раньше away снимался здесь же, поэтому «пока хозяина нет» не видел никто
+    # и дневная кража была недостижима (GDD 12.5).
     npc.stats["день_вылазки"] = h.day      # его видели с пакетами
     h.journal.line(txt, 1)
     # возвращение с пакетами видно всем (GDD 13)

@@ -49,9 +49,13 @@ def emit(h, src, level, kind, night=False, text_for=None):
                 p *= 0.45
         if src.shelter.get("звукоизоляция"):
             p *= b["шум_звукоизоляция"]
-        # пустая квартира между этажами глушит
-        if any(abs(f.floor - src.floor) <= 1 for f in h.empty):
-            p *= 0.9
+        # пустая квартира МЕЖДУ источником и слушателем глушит (GDD 13).
+        # Раньше проверялось только соседство с источником, поэтому множитель
+        # был одинаков для всех и к третьей неделе включён всегда
+        лестница = range(min(src.floor, other.floor), max(src.floor, other.floor) + 1)
+        между = sum(1 for f in h.empty if f.floor in лестница)
+        if между:
+            p *= b["шум_пустая_квартира"] ** между
         if h.rng.chance(clamp(p, 0.0, 0.97)):
             heard.append(other)
             _hear(h, other, src, kind, level)
@@ -241,6 +245,26 @@ def house_shock(h, panic=0.0, mood=0.0, note=None):
             p.mood = clamp(p.mood + mood)
     if note:
         h.journal.line(note, 2)
+
+
+def judge(h, actor, tag, hate=0.0, trust=0.0, witnesses=None):
+    """Дом оценивает поступок. У каждого своя мерка (GDD 12.1, «Ценности»).
+
+    Одно и то же — раздать последнее или отнять на лестнице — для Лиды и для
+    Игоря весит по-разному. Без этого «ценности» лежали в данных строкой
+    и не значили ничего.
+    """
+    k = h.B["ценности_вес"]
+    for w in (witnesses if witnesses is not None else h.others(actor)):
+        if w.id == actor.id:
+            continue
+        сила = 1.0
+        v = w.values or {}
+        if tag in (v.get("не_терпит") or ()):
+            сила += k
+        if tag in (v.get("ценит") or ()):
+            сила -= k * 0.5 if hate > 0 else -k
+        adjust(w, actor.id, hate=hate * сила, trust=trust * сила)
 
 
 def register_incident(h, kind, text):
