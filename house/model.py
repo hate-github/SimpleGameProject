@@ -1,8 +1,12 @@
 # -*- coding: utf-8 -*-
 """Модель данных: жилец, пустая квартира, дом.
 
-Здесь только состояние и простые производные величины.
-Всё, что «решает» и «происходит», лежит в actions.py, social.py, conflict.py, engine.py.
+Состояние и производные от него величины. «Простые» они не все: здесь же
+живут боевая сила (power), тепловая модель квартиры (room_temp) и то,
+как состояние тела превращается в скорость работы (speed) и шанс успеха
+(success) — потому что это свойства человека и дома, а не решения.
+
+Решения — в actions.py, social.py, conflict.py и engine.py.
 """
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Any

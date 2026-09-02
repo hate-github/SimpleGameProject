@@ -8,6 +8,7 @@
 import math
 import random
 import re
+import zlib
 
 
 def clamp(v, lo=0.0, hi=100.0):
@@ -30,7 +31,22 @@ class Rng:
     """Обёртка над random.Random — чтобы нигде в коде не было глобального рандома."""
 
     def __init__(self, seed):
+        self.seed = seed
         self.r = random.Random(seed)
+
+    def branch(self, tag):
+        """Отдельный поток случайности от того же зерна.
+
+        GDD 21: «Распределение случайных событий фиксируется зерном жизни,
+        чтобы игрок не чувствовал несправедливости при повторе». С одним общим
+        потоком это не выполняется: стоит игроку сделать хоть что-то иначе —
+        и весь календарь погоды съезжает, потому что решения жильцов тянут
+        числа из той же ленты. Мир получает свою.
+
+        crc32, а не hash(): встроенный хэш строк в Python зависит от
+        PYTHONHASHSEED, и зерно перестало бы быть зерном.
+        """
+        return Rng(zlib.crc32(tag.encode("utf-8")) ^ (self.seed * 2654435761 & 0xFFFFFFFF))
 
     def chance(self, p):
         return self.r.random() < p

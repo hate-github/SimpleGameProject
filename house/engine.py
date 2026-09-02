@@ -137,6 +137,7 @@ class Simulation:
     # ------------------------------------------------------------ цикл
     def run(self):
         h = self.h
+        world.build_calendar(h, self.events, self.days)
         for _ in range(self.days):
             self.one_day()
             if not h.alive():
@@ -158,6 +159,7 @@ class Simulation:
         social.daily_decay(h)
         social.spread_panic(h)
         self._firsts(h)
+        h.journal.сводка_дня(h)
         h.journal.flush_day(h)
         h.journal.panel(h)
 
@@ -188,6 +190,9 @@ class Simulation:
             p.time_left = h.B["часов_бодрствования"]
             p.burning = False
             p.away = False
+            # без сброса в поле висело вчерашнее решение, и вор прикидывал
+            # шанс кражи по позавчерашнему дежурству жертвы
+            p.tonight = "спать"
             p.stats["часы_работы"] = 0
         # обнаружение ночных пропаж (GDD 4.4 — сводка утром)
         losses = h.mods.pop("пропажи", [])
@@ -203,7 +208,9 @@ class Simulation:
             guard += 1
             acted = False
             for p in h.rng.shuffled(h.alive()):
-                if p.time_left < 0.3 or p.health <= 0:
+                # список составлен в начале прохода, а за это время человека
+                # могли выставить на мороз или убить — проверяем ещё раз
+                if p.time_left < 0.3 or p.health <= 0 or not p.alive or p.exiled:
                     continue
                 if actions.choose_and_do(h, p):
                     acted = True

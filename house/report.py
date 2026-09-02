@@ -59,6 +59,25 @@ class Journal:
             self.w(prefix + t)
         self.buf.clear()
 
+    def сводка_дня(self, h):
+        """Что заметили соседи (GDD 4.4).
+
+        Главный инструмент обучения по документу: игрок должен понимать,
+        чем живёт дом, до того как это его убьёт. Формулировки написаны
+        в NOISE_MEANING и до сих пор никуда не выводились.
+        """
+        if self.verbosity < 1:
+            return
+        сводка = h.mods.pop("сводка", {})
+        for pid in sorted(сводка):
+            p = h.people.get(pid)
+            if not p or not p.alive or p.exiled:
+                continue
+            строки = сводка[pid][:3]
+            if строки:
+                self.line(f"{p.short} за день заметил{'а' if p.sex == 'ж' else ''}: "
+                          + "; ".join(строки), 1)
+
     def panel(self, h):
         """Скрытые шкалы — для дизайнера, не для игрока."""
         if self.verbosity < 1:

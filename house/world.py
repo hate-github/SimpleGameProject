@@ -9,6 +9,32 @@
 from .util import clamp
 
 
+def build_calendar(h, events_data, days):
+    """Составить календарь внешних событий на всю жизнь заранее (GDD 21).
+
+    Один раз, своим потоком случайности, до первого действия. Тогда вмешательство
+    игрока меняет дом, но не погоду — и повтор жизни ощущается честным.
+    """
+    rng = h.rng.branch("мир")
+    календарь = {}
+    последние = {}
+    for день in range(1, days + 1):
+        pool = []
+        for ev in events_data.get("случайные", []):
+            lo, hi = ev.get("окно", [1, 99])
+            if not (lo <= день <= hi):
+                continue
+            if день - последние.get(ev["id"], -99) < h.B["событие_перерыв_дней"]:
+                continue
+            pool.append((ev, ev.get("вес", 5)))
+        if not pool or not rng.chance(h.B["шанс_случайного_события"]):
+            continue
+        ev = rng.weighted(pool)
+        последние[ev["id"]] = день
+        календарь[день] = ev["id"]
+    h.mods["календарь"] = календарь
+
+
 def start_of_day(h, events_data):
     """Новое утро: погода, отключения, события."""
     h.day += 1
@@ -36,13 +62,37 @@ def start_of_day(h, events_data):
         h.network = clamp(1.0 - h.day / float(b["день_потери_связи"]), 0.0, 1.0)
 
     # --- скриптовое событие дня ---
+    # GDD 21: «одинаковы в каждой жизни, ЕСЛИ ИГРОК НЕ ВМЕШАЛСЯ». Значит,
+    # у события может быть условие отмены — иначе «эпидемия, если игрок
+    # не помог медику» непроверяема, а именно она и названа в документе
     for ev in events_data.get("скриптовые", []):
-        if ev["день"] == h.day:
-            h.journal.event(ev["текст"], scripted=True)
-            apply_effects(h, ev.get("эффекты", {}))
+        if ev["день"] != h.day:
+            continue
+        if _отменено(h, ev.get("отменяется_если")):
+            h.journal.line(ev.get("текст_отмены", "…обошлось."), 1)
+            h.bump("событий_отменено")
+            continue
+        h.journal.event(ev["текст"], scripted=True)
+        apply_effects(h, ev.get("эффекты", {}))
 
     # --- случайное внешнее событие ---
     _roll_random_event(h, events_data)
+
+
+def _отменено(h, условие):
+    """Сработало ли условие отмены скриптового события."""
+    if not условие:
+        return False
+    вид = условие.get("вид")
+    if вид == "жив_с_умением":
+        return any(условие["умение"] in p.skills and p.health > условие.get("здоровье", 40)
+                   for p in h.alive())
+    if вид == "нет_происшествий":
+        from .social import recent_incidents
+        return recent_incidents(h, условие.get("дней", 5)) == 0
+    if вид == "все_в_тепле":
+        return all(p.warmth > условие.get("тепло", 45) for p in h.alive())
+    return False
 
 
 def _tick_mods(h):
@@ -58,23 +108,15 @@ def _tick_mods(h):
 
 
 def _roll_random_event(h, events_data):
-    pool = []
-    last = h.mods.setdefault("последние_события", {})
+    """Событие дня берётся из календаря, составленного до начала жизни."""
+    eid = h.mods.get("календарь", {}).get(h.day)
+    if not eid:
+        return
     for ev in events_data.get("случайные", []):
-        lo, hi = ev.get("окно", [1, 99])
-        if not (lo <= h.day <= hi):
-            continue
-        if h.day - last.get(ev["id"], -99) < 6:
-            continue
-        pool.append((ev, ev.get("вес", 5)))
-    if not pool:
-        return
-    if not h.rng.chance(h.B.get("шанс_случайного_события", 0.45)):
-        return
-    ev = h.rng.weighted(pool)
-    last[ev["id"]] = h.day
-    h.journal.event(ev["текст"])
-    apply_effects(h, ev.get("эффекты", {}))
+        if ev["id"] == eid:
+            h.journal.event(ev["текст"])
+            apply_effects(h, ev.get("эффекты", {}))
+            return
 
 
 def apply_effects(h, eff):
@@ -94,10 +136,17 @@ def apply_effects(h, eff):
     if "связь" in eff:
         h.network = clamp(h.network + eff["связь"], 0.0, 1.0)
     if "температура" in eff:
+        # GDD 21: внешнее событие «никогда не убивает само по себе». Поэтому
+        # похолодание бьёт по улице, но не проламывает то, что человек успел
+        # построить: у сдвига есть предел, и он тем меньше, чем лучше утеплена
+        # квартира. Раньше одно похолодание стоило дому полчеловека выживших
         t = eff["температура"]
-        h.mods["температура_сдвиг"] = t["градусов"]
+        сдвиг = t["градусов"]
+        if сдвиг < 0:
+            сдвиг = max(сдвиг, -h.B["событие_холод_потолок"])
+        h.mods["температура_сдвиг"] = сдвиг
         h.mods["температура_дней"] = t["дней"]
-        h.outside += t["градусов"]
+        h.outside += сдвиг
     if "опасность_вылазки" in eff:
         d = eff["опасность_вылазки"]
         h.mods["опасность_множитель"] = d["множитель"]
