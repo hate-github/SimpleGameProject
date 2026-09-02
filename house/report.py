@@ -6,6 +6,8 @@
 """
 import sys
 
+from .util import clamp
+
 BAR = "─" * 78
 
 
@@ -96,9 +98,17 @@ class Journal:
 
 
 def daily_chat(h, lines):
-    """Общий чат жильцов (GDD 19). Пока есть связь — главный канал слухов."""
+    """Общий чат жильцов (GDD 19: «основной канал общения и слухов»).
+
+    Чат не декорация: каждая реплика что-то делает с домом, иначе обрыв связи
+    на десятый день ничего не меняет, а GDD 12.5 обещает, что об этом «игрок
+    узнаёт из чата». Темы соответствуют разд. 14: припасы, безопасность,
+    подозрения, личное.
+    """
+    from . import social
     if h.network <= 0:
         return
+    b = h.B
     rng = h.rng
     people = h.alive()
     if not people:
@@ -129,9 +139,40 @@ def daily_chat(h, lines):
         others = [o for o in people if o.id != p.id]
         who = rng.pick(others) if others else p
         text = text.replace("{кто}", who.short).replace("{кв}", str(who.apt))
-        if rng.chance(0.55 + 0.04 * p.trait("общительность")):
-            h.journal.chat(p.short, text)
-            said += 1
+        if not rng.chance(0.55 + 0.04 * p.trait("общительность")):
+            continue
+        h.journal.chat(p.short, text)
+        said += 1
+
+        # --- а вот теперь то, чего у чата не было: последствия ---
+        слышат = [o for o in others if rng.chance(h.network)]
+        if key == "просьба":
+            # «у меня кончается» — это заявление на весь подъезд
+            for o in слышат:
+                social.adjust(o, p.id, aware=b["чат_осведомлённость"])
+                social.note_signal(o, p.id, "еда", 0.5, 0.3)
+                social.add_panic(o, b["чат_паника_от_просьбы"])
+        elif key == "паника":
+            for o in слышат:
+                social.add_panic(o, b["чат_паника"] * (0.7 + 0.6 * o.t01("вспыльчивость")))
+        elif key == "подозрение":
+            # реплика называет соседа по имени — и дом это запоминает
+            if who.id != p.id:
+                social.judge(h, who, "воровство",
+                             hate=b["чат_подозрение_ненависть"], trust=-0.4,
+                             witnesses=слышат)
+                social.adjust(p, who.id, hate=b["чат_подозрение_ненависть"], trust=-0.5)
+                h.mods.setdefault("названы_в_чате", {})[who.id] = h.day
+                h.bump("обвинений_в_чате")
+        elif key == "тоска":
+            for o in слышат:
+                o.mood = clamp(o.mood + b["чат_настроение"])
+                social.adjust(o, p.id, trust=b["чат_доверие"])
+        elif key == "быт":
+            for o in слышат:
+                o.mood = clamp(o.mood + b["чат_настроение"] * 0.5)
+                social.adjust(o, p.id, trust=b["чат_доверие"] * 0.5)
+        p.stats["день_разговора"] = h.day
 
 
 # ---------------------------------------------------------------- финал

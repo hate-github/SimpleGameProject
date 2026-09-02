@@ -313,6 +313,11 @@ def suspect(h, victim, exclude=None, real=None):
         w += victim.hate.get(other.id, 0.0) / 20.0
         w += (5.0 - victim.trust.get(other.id, 3.0)) * 0.4
         w += other.stats.get("краж", 0) * 2.5          # репутация вора
+        # кого называли в чате, того и подозревают: слово в общем чате
+        # работает как наговор (GDD 14, тема «подозрения»)
+        назван = h.mods.get("названы_в_чате", {}).get(other.id, -99)
+        if h.day - назван <= b["чат_подозрение_дней"]:
+            w += b["чат_подозрение_вес"]
         w += max(0.0, 1.0 - other.days_of("еда") / 4.0) * victim.confidence(other.id) * 2.0
         if any(f"слышал" in m and other.id in m and f"д{h.day}" in m for m in victim.memory):
             w += 1.5
@@ -347,8 +352,15 @@ def suspect(h, victim, exclude=None, real=None):
 # ---------------------------------------------------------------- бой
 
 def fight(h, side_a, side_b, place="", reason=""):
-    """Короткий и смертельный бой (GDD 17). Возвращает ('a'|'b'|'ничья')."""
+    """Короткий и смертельный бой (GDD 17). Возвращает ('a'|'b'|'ничья').
+
+    Численное превосходство решает объёмом ударов, а не поправкой к меткости:
+    бьёт каждый, кто пришёл. Пока за раунд от стороны бил ровно один человек,
+    трое голыми руками забивали одного в 0.4% боёв — при том что документ
+    обещает «два-три попадания убивают любого».
+    """
     b = h.B
+    ранены_сейчас = set()
     rounds = 0
     while rounds < 4:
         rounds += 1
@@ -358,16 +370,22 @@ def fight(h, side_a, side_b, place="", reason=""):
             break
         pa = sum(p.power() for p in a_alive)
         pb = sum(p.power() for p in b_alive)
-        # кто попадает в этом раунде
+        # кто попадает в этом раунде: бросок у каждого бойца свой
+        удары = []
         for att, dfn, pw_att, pw_dfn in ((a_alive, b_alive, pa, pb), (b_alive, a_alive, pb, pa)):
             if not att or not dfn:
                 continue
-            shooter = h.rng.pick(att)
             hit_p = clamp(0.35 + 0.4 * (pw_att / max(0.3, pw_att + pw_dfn)), 0.15, 0.9)
-            if not h.rng.chance(hit_p):
-                continue
+            for боец in att:
+                if h.rng.chance(hit_p):
+                    удары.append((боец, dfn))
+        for shooter, dfn in удары:
+            dfn = [x for x in dfn if x.alive and x.health > 0]
+            if not dfn:
+                break
             victim = h.rng.pick(dfn)
-            gun = shooter.weapon in ("пистолет", "дробовик", "винтовка") and shooter.stock.get("патроны", 0) > 0
+            from .model import FIREARMS
+            gun = shooter.weapon in FIREARMS and shooter.stock.get("патроны", 0) > 0
             if gun:
                 shooter.stock["патроны"] = shooter.stock.get("патроны", 0) - 1
                 h.stats["израсходовано_патроны"] = h.stats.get("израсходовано_патроны", 0) + 1
@@ -387,8 +405,9 @@ def fight(h, side_a, side_b, place="", reason=""):
                 h.note(f"{shooter.short} {vb(shooter.sex, 'убил')} {victim.form('acc')}")
                 on_death(h, victim, killer=shooter)
             else:
-                injury = "огнестрел" if gun else h.rng.pick(["ушиб", "порез", "перелом"])
+                injury = "огнестрел" if gun else h.rng.pick(["ушиб руки", "порез руки", "перелом ноги"])
                 victim.injuries.append(injury)
+                ранены_сейчас.add(victim.id)
                 h.journal.line(f"{victim.short} {vb(victim.sex, 'получил')} {injury} ({shooter.short}). {place}", 1)
                 добьёт = b["бой_шанс_смерти_огнестрел"] if gun else b["бой_шанс_смерти_холодное"]
                 # третье попадание почти всегда последнее (GDD 17)
@@ -409,12 +428,14 @@ def fight(h, side_a, side_b, place="", reason=""):
         if not b_alive:
             return "a"
         for side, other, tag in ((b_alive, a_alive, "a"), (a_alive, b_alive, "b")):
-            hurt = [p for p in side if p.injuries]
+            # раненым считается тот, кому досталось СЕЙЧАС, а не тот, у кого
+            # ушиб с прошлой недели: старые травмы уже учтены в power()
+            hurt = [p for p in side if p.id in ранены_сейчас]
             if not hurt:
                 continue
             nerve = sum(p.t01("храбрость") for p in side) / len(side)
             nerve += 0.2 * (len(side) - len(other)) - 0.25 * len(hurt) / len(side)
-            if h.rng.chance(clamp(0.75 - nerve * 0.6, 0.1, 0.9)):
+            if h.rng.chance(clamp(b["бой_порог_морали"] - nerve * 0.6, 0.1, 0.9)):
                 return tag
     return "ничья"
 
@@ -550,7 +571,8 @@ def consider_raid(h, npc):
         fear = t.power() * (1.4 - npc.t01("храбрость")) * 1.5
         fear /= 1.0 + 0.45 * (crew_size - 1)
         fear += t.shelter.get("дверь", 0) * 0.8
-        if t.weapon in ("винтовка", "дробовик", "пистолет") and npc.aware.get(t.id, 0) > 30:
+        from .model import FIREARMS
+        if t.weapon in FIREARMS and npc.aware.get(t.id, 0) > 30:
             fear += 2.2
         # совесть
         conscience = npc.t01("лояльность") * 5.5 * (1.0 - npc.desperation() * 0.5) / A
@@ -707,7 +729,8 @@ def run_siege(h, leader, target):
 
     # ---- стадия 2: дверь ----
     # угроза оружием часто ценнее выстрела (GDD 17)
-    armed = [d for d in defenders if d.weapon in ("винтовка", "дробовик", "пистолет") and d.stock.get("патроны", 0) > 0]
+    from .model import FIREARMS
+    armed = [d for d in defenders if d.weapon in FIREARMS and d.stock.get("патроны", 0) > 0]
     if armed:
         shooter = armed[0]
         scare = b["угроза_оружием_отпугивает"] * (1.0 - sum(p.t01("храбрость") for p in crew) / len(crew) * 0.6)
@@ -770,8 +793,13 @@ def run_siege(h, leader, target):
 
     door_broken = not держит
     if not door_broken:
-        # стены и потолок — только объединённой группой (GDD 16)
-        if len(crew) >= 3 and h.rng.chance(b["стены_шанс"]):
+        # стены и потолок — отдельная стадия и только объединённой группой
+        # (GDD 16: «при объединённом рейде группа ломает и их; тогда нужны
+        # улучшения 4 уровня или побег»). Арматура в стене — та самая защита
+        # четвёртого уровня, и до сих пор её не существовало
+        стены = target.shelter.get("стены", 0)
+        через_стену = h.rng.chance(b["стены_шанс"] / (1.0 + b["стены_за_уровень"] * стены))
+        if len(crew) >= b["стены_нужно_людей"] and через_стену:
             h.journal.line(f"Дверь кв.{target.apt} выдержала — тогда полезли через стену из пустой квартиры.", 2)
             door_broken = True
         else:
@@ -802,6 +830,28 @@ def run_siege(h, leader, target):
         h.journal.line(f"{target.short} не {vb(target.sex, 'стал')} драться. Забрали: {_fmt(moved)}.", 2)
         for p in crew:
             social.adjust(target, p.id, hate=b["ненависть_за_налёт"], trust=-5.0)
+        # GDD 12.5 называет убийство отдельным действием NPC против NPC, а GDD 11
+        # ставит «убийство безоружного» в самый тяжёлый вес. До сих пор смерть
+        # могла случиться только как побочный результат драки
+        решимость = (leader.t01("вспыльчивость") + leader.hate.get(target.id, 0) / 100.0
+                     - leader.t01("лояльность") * 1.5)
+        if (решимость > b["добить_решимость"] and not target.dependents
+                and h.rng.chance(b["добить_шанс"])):
+            target.health = 0.0
+            target.alive = False
+            target.cause = vb(target.sex, "убит") + " безоружным при налёте"
+            target.died_day = h.day
+            leader.bump("убийств")
+            h.bump("убийств")
+            h.bump("убийств_безоружных")
+            h.journal.line(f"{target.short} не {vb(target.sex, 'сопротивлялся')}. "
+                           f"{leader.short} {vb(leader.sex, 'убил')} {target.form('acc')} всё равно.", 2)
+            h.note(f"{leader.short} {vb(leader.sex, 'убил')} безоружного {target.form('acc')}")
+            social.judge(h, leader, "насилие", hate=b["ненависть_за_налёт"], trust=-4.0)
+            on_death(h, target, killer=leader)
+            _house_learns(h, target, crew)
+            h.bump("исход_убит")
+            return "убит"
         # изгнание — если вожак злой (GDD 16: «сдаться — потеря запасов,
         # возможно, изгнание»). Раньше эта ветка стояла за условием
         # «ни у кого из защитников нет даже ножа» и не случалась ни разу

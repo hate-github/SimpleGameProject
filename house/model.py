@@ -208,8 +208,11 @@ class NPC:
         return max(0.15, p)
 
     def door_strength(self) -> float:
-        """Прочность двери для стадии осады «Дверь» (GDD 16)."""
-        return 1.0 + 1.6 * self.shelter.get("дверь", 0)
+        """Прочность двери для стадии осады «Дверь» (GDD 16).
+
+        Стальные листы — уровень 3 убежища, они добавляются к засову.
+        """
+        return 1.0 + 1.6 * self.shelter.get("дверь", 0) + 1.2 * self.shelter.get("листы", 0)
 
     def believed(self, other_id: str, res: str) -> float:
         """Сколько, по мнению этого NPC, у другого есть ресурса."""
@@ -300,6 +303,16 @@ class House:
     def floor_gap(self, a: NPC, b: NPC) -> int:
         return abs(a.floor - b.floor)
 
+    def powered(self, npc: NPC) -> bool:
+        """Есть ли в этой квартире электричество (GDD 15, уровень 3).
+
+        Либо в доме ещё не отключили свет, либо человек завёл свой генератор —
+        ради этого он его и собирал, платя за это шумом на весь подъезд.
+        """
+        if self.power_on:
+            return True
+        return npc.shelter.get("питание") == self.day
+
     def room_temp(self, npc: NPC, burning: Optional[bool] = None) -> float:
         """Температура в квартире (GDD 15: утепление, буржуйка, обогреватель)."""
         b = self.B
@@ -316,7 +329,7 @@ class House:
         t += npc.shelter.get("утепление", 0) * b["утепление_градус_за_уровень"]
         if burning and npc.shelter.get("буржуйка"):
             t += b["буржуйка_градусов"]
-        if self.power_on and npc.shelter.get("обогреватель"):
+        if self.powered(npc) and npc.shelter.get("обогреватель"):
             t += b["обогреватель_градусов"]
         return t
 
