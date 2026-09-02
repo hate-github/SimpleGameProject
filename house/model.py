@@ -63,6 +63,7 @@ class NPC:
     shelter: Dict[str, Any] = field(default_factory=dict)
     dependents: int = 0
     dependent_name: str = ""
+    dependent_acc: str = ""    # «взял Ваню»
 
     # --- состояние (GDD 6.1). 100 = хорошо, 0 = критично ---
     satiety: float = 85.0

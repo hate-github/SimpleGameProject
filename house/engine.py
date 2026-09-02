@@ -50,6 +50,7 @@ class Simulation:
                 traits=dict(d["черты"]), stock=dict(d["запасы"]),
                 weapon=d.get("оружие", "нет"), shelter=dict(d.get("убежище", {})),
                 dependents=d.get("иждивенцы", 0), dependent_name=d.get("иждивенец_имя", ""),
+                dependent_acc=d.get("иждивенец_вин", ""),
             )
             h.people[p.id] = p
         # стартовые отношения

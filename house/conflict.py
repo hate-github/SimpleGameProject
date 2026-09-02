@@ -344,7 +344,7 @@ def on_death(h, dead, killer=None, quiet=False):
         other.allies.discard(dead.id)
     dead.allies.clear()
     social.register_incident(h, "смерть", None)
-    h.note(f"умер {dead.short}: {dead.cause}")
+    h.note(f"{dead.short}: {dead.cause}")
 
     # гости хозяина остаются на улице собственной пустой квартиры
     for gid in list(dead.guests):
@@ -374,6 +374,7 @@ def on_death(h, dead, killer=None, quiet=False):
 def _orphan(h, dead):
     """Кого-то надо взять к себе. Или не взять."""
     name = dead.dependent_name or "ребёнок"
+    name_acc = dead.dependent_acc or name
     candidates = []
     for p in h.alive():
         w = p.trait("лояльность") * 1.8 + p.trust.get(dead.id, 3.0) * 0.8 - p.desperation() * 3.5
@@ -385,8 +386,9 @@ def _orphan(h, dead):
         taker.dependents += 1
         taker.dependent_name = name
         taker.mood = clamp(taker.mood + 6)
+        taker.dependent_acc = name_acc
         h.journal.line(f"{name} остался один. {taker.short} {vb(taker.sex, 'забрал')} его к себе.", 2)
-        h.note(f"{taker.short} {vb(taker.sex, 'взял')} {name}")
+        h.note(f"{taker.short} {vb(taker.sex, 'взял')} {name_acc}")
         for p in h.alive():
             social.adjust(p, taker.id, trust=1.0)
     else:
