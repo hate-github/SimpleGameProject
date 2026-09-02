@@ -29,6 +29,7 @@ COST = {
     "отдых":        (2.0, 0, None),
     "быт":          (1.5, 1, "шаги"),
     "переехать":    (2.0, 2, "шаги"),
+    "отнять":       (1.0, 3, "ссора"),
     "кража_днём":   (1.5, 3, "взлом"),
     "тело":         (2.0, 2, "разбор"),
     "поесть_мясо":  (0.7, 2, "готовка"),
@@ -77,6 +78,7 @@ def most_needed(npc):
     "генератор": 0.45,
     "утепление": 0.28,    # это и в обычную зиму делают
     "переехать": 0.88,    # признать, что в своей квартире не выжить
+    "отнять": 1.15,       # в мирное время это называется разбоем
     "вылазка": 0.18,
 }
 
@@ -295,6 +297,23 @@ def gather(h, npc):
             move -= npc.t01("храбрость") * 1.5      # гордость
             move += 1.5 if t.id in npc.allies else 0.0
             add("переехать", move, t)
+        # отнять на лестнице: без двери, без замка, лицом к лицу
+        A = conflict.aggr(h)
+        ratio = npc.power() / max(0.2, t.power())
+        # ловят того, кого видели с пакетами; случайная встреча на лестнице — редкость
+        met = (t.stats.get("день_вылазки") == h.day) or h.rng.chance(0.08)
+        trigger = des > 0.40 or npc.hate.get(t.id, 0) > 35
+        if met and trigger and ratio > b["отъём_порог_силы"] / A and npc.loot_value(t.id) > 1.5:
+            take = (des * 3.5 + npc.hate.get(t.id, 0) / 18.0) * (0.4 + npc.t01("жадность"))
+            take *= min(2.2, ratio)
+            take -= b["отъём_решимость"]
+            take -= npc.t01("лояльность") * 5.0 / A
+            take -= len([o for o in h.others(npc) if t.id in o.allies]) * 1.6
+            take -= 2.0 if t.id in npc.allies else 0.0
+            take -= 1.5 if t.dependents else 0.0
+            # дом закрывается против того, кто уже отнимал: это страшнее совести
+            take -= len([o for o in h.others(npc) if o.hate.get(npc.id, 0) > 50]) * 1.8
+            add("отнять", take, t)
         # обмен
         add("обмен", _trade_score(h, npc, t), t)
         # лечение
@@ -586,6 +605,35 @@ def execute(h, npc, key, target):
                        f"Больше в той квартире брать нечего.", 2)
         said = None
 
+    elif key == "отнять":
+        victim = target
+        npc.bump("отъёмов")
+        h.bump("отъёмов")
+        # смысл разбоя в том, что слабый не сопротивляется
+        scared = victim.t01("храбрость") * 3.0 + victim.power() * 1.2 < npc.power() * 2.6
+        if scared or h.rng.chance(0.75):
+            moved = conflict.take_carried(h, victim, npc, limit=b["отъём_максимум"])
+            h.journal.line(f"{npc.short} {vb(npc.sex, 'зажал')} {victim.form('acc')} на лестнице "
+                           f"и {vb(npc.sex, 'забрал')} {conflict._fmt(moved)}.", 2)
+            victim.mood = clamp(victim.mood - 14)
+            victim.panic = clamp(victim.panic + 16)
+        else:
+            h.journal.line(f"{npc.short} {vb(npc.sex, 'полез')} к {victim.form('dat')} на лестнице — "
+                           f"{victim.short} не {vb(victim.sex, 'отдал')}.", 2)
+            won = conflict.scuffle(h, npc, victim, place="на лестнице")
+            if won:
+                conflict.take_carried(h, victim, npc, limit=b["отъём_максимум"] * 0.5)
+        social.adjust(victim, npc.id, trust=-5.0, hate=b["ненависть_за_налёт"] * 0.8, aware=15)
+        social.register_incident(h, "отъём", None)
+        # это видят и слышат: разбой в подъезде не спрячешь
+        for w in h.others(npc):
+            if w.id == victim.id:
+                continue
+            if h.rng.chance(0.8):
+                social.adjust(w, npc.id, trust=-2.5, hate=20 + 12 * w.t01("лояльность"), aware=8)
+                w.panic = clamp(w.panic + 7)
+        said = None
+
     elif key == "переехать":
         host = target
         # хозяин решает: греть двоих дороже, но вдвоём не так страшно
@@ -767,6 +815,7 @@ def _outing(h, npc, dur):
             txt += "; на обратном пути кто-то шёл следом"
 
     npc.away = False
+    npc.stats["день_вылазки"] = h.day      # его видели с пакетами
     h.journal.line(txt, 1)
     # возвращение с пакетами видно всем (GDD 13)
     social.emit(h, npc, 2, "возвращение", night=False)

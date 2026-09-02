@@ -44,6 +44,30 @@ def take_from(h, victim, taker, greed):
     return moved
 
 
+def take_carried(h, victim, taker, limit):
+    """Отнять то, что человек несёт в руках, а не весь его шкаф.
+
+    На лестнице у него пакет, а не квартира: забирают несколько единиц,
+    начиная с самого ценного.
+    """
+    moved = {}
+    left = int(max(1, round(limit)))
+    for res in ("еда", "топливо", "лекарства", "вода", "патроны", "материалы"):
+        if left <= 0:
+            break
+        have = int(victim.stock.get(res, 0.0))
+        if have <= 0:
+            continue
+        amount = min(have, left, max(1, round(have * 0.3)))
+        if amount <= 0:
+            continue
+        victim.stock[res] = victim.stock.get(res, 0.0) - amount
+        taker.stock[res] = taker.stock.get(res, 0.0) + amount
+        moved[res] = amount
+        left -= amount
+    return moved
+
+
 def _fmt(moved):
     if not moved:
         return "ничего"
@@ -102,7 +126,8 @@ def steal(h, thief, target):
         # обычно просто выставляет вора, а не убивает его.
         from .model import FIREARMS
         armed = target.weapon in FIREARMS and target.stock.get("патроны", 0) > 0
-        if armed and h.rng.chance(0.62 + 0.03 * (10 - thief.trait("храбрость"))):
+        scare = (0.62 + 0.03 * (10 - thief.trait("храбрость"))) / aggr(h)
+        if armed and h.rng.chance(scare):
             h.journal.line(f"{target.short} {vb(target.sex, 'вышел') if target.sex != 'ж' else 'вышла'} "
                            f"со стволом. {thief.short} {vb(thief.sex, 'ушёл')} без разговоров.", 1)
             thief.panic = clamp(thief.panic + 18)
@@ -323,6 +348,23 @@ def fight(h, side_a, side_b, place="", reason=""):
             if h.rng.chance(clamp(0.75 - nerve * 0.6, 0.1, 0.9)):
                 return tag
     return "ничья"
+
+
+def scuffle(h, a, b_npc, place=""):
+    """Потасовка из-за пакета: не бой из GDD 17, а короткая свалка.
+
+    Кто-то получает по рёбрам, кто-то отпускает сумку. Насмерть — только
+    если в ход пошло оружие, и то редко.
+    """
+    strong, weak = (a, b_npc) if a.power() >= b_npc.power() else (b_npc, a)
+    weak.injuries.append(h.rng.pick(["ушиб", "порез"]))
+    weak.health = clamp(weak.health - h.rng.uni(8, 18))
+    if h.rng.chance(0.35):
+        strong.injuries.append("ушиб")
+        strong.health = clamp(strong.health - h.rng.uni(4, 10))
+    social.emit(h, a, 4, "ссора", night=False)
+    h.journal.line(f"Возились на площадке. {weak.short} {vb(weak.sex, 'ушёл')} с разбитым лицом.", 1)
+    return strong is a
 
 
 def on_death(h, dead, killer=None, quiet=False):
@@ -583,6 +625,7 @@ def run_siege(h, leader, target):
     if armed:
         shooter = armed[0]
         scare = b["угроза_оружием_отпугивает"] * (1.0 - sum(p.t01("храбрость") for p in crew) / len(crew) * 0.6)
+        scare /= aggr(h)
         if h.rng.chance(clamp(scare, 0.05, 0.95)):
             h.journal.line(f"{shooter.short} {'вышла' if shooter.sex == 'ж' else 'вышел'} на площадку со стволом. Разошлись без слова.", 2)
             for p in crew:
@@ -612,7 +655,10 @@ def run_siege(h, leader, target):
             h.journal.line(f"Дверь кв.{target.apt} выдержала — тогда полезли через стену из пустой квартиры.", 2)
             door_broken = True
         else:
-            h.journal.line(f"Дверь кв.{target.apt} выдержала. Побились и ушли.", 2)
+            h.journal.line(f"Дверь кв.{target.apt} выдержала. Били долго, ушли под утро.", 2)
+            target.panic = clamp(target.panic + 14)
+            target.mood = clamp(target.mood - 10)
+            target.shelter["дверь"] = max(0, target.shelter.get("дверь", 0) - 1)   # дверь повело
             for p in crew:
                 social.adjust(p, target.id, hate=8, aware=12)
             _house_learns(h, target, crew)
