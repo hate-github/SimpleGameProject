@@ -8,7 +8,7 @@
 import json
 import os
 
-from .util import Rng, clamp, norm
+from .util import Rng, clamp, norm, vb
 from .model import NPC, House, EmptyFlat
 from . import world, social, actions, conflict, report
 
@@ -227,7 +227,7 @@ class Simulation:
         # вожаком налёта становится самый злой и жадный, а не просто самый смелый
         for p in sorted(h.alive(), key=lambda x: -(x.trait("жадность") + x.trait("вспыльчивость")
                                                    + x.trait("храбрость") * 0.5 - x.trait("лояльность"))):
-            if raid_done or not p.alive:
+            if raid_done or not p.alive or p.exiled:
                 continue
             t = conflict.consider_raid(h, p)
             if t:
@@ -236,12 +236,13 @@ class Simulation:
                 h.mods["последний_налёт"] = h.day
                 raid_done = True
 
-        # кражи
+        # кражи. Список составлен до осады, а осада могла кого-то из него убить
+        # или выставить на мороз — поэтому проверяем обоих ещё раз
         for p in h.rng.shuffled(h.alive()):
-            if p.tonight != "кража":
+            if p.tonight != "кража" or not p.alive or p.exiled:
                 continue
             t = targets.get(p.id)
-            if t and t.alive:
+            if t and t.alive and not t.exiled:
                 conflict.steal(h, p, t)
 
         # сон
@@ -258,7 +259,11 @@ class Simulation:
             else:
                 slept = 11.0 if p.rest < 35 else (9.5 if p.rest < 60 else 8.0)
             p.slept = slept
-            p.rest = clamp(p.rest + slept * h.B["сон_за_час"] - h.B["часов_бодрствования"] * h.B["бодрствование_за_час"])
+            # обезвоженный спит хуже — это единственное, что GDD 6.1 обещает
+            # жажде помимо самой смерти, и до сих пор этого не было
+            качество = 1.0 - h.B["сон_за_жажду"] * (1.0 - norm(p.hydration, 15, 70))
+            p.rest = clamp(p.rest + slept * h.B["сон_за_час"] * качество
+                           - h.B["часов_бодрствования"] * h.B["бодрствование_за_час"])
 
     def _decide_night(self, h, p):
         b = h.B
@@ -343,6 +348,10 @@ class Simulation:
                 for w in h.others(p):
                     social.adjust(w, p.id, aware=2.5 * room_mates)
 
+            # обморожение — это про холод, а не про случайный пик на улице (GDD 6.2)
+            if p.warmth < b["критичный_порог"] and not p.hurt("обморож")                     and h.rng.chance(b["обморожение_шанс"]):
+                p.injuries.append(h.rng.pick(["обморожение рук", "обморожение ног"]))
+                h.journal.line(f"{p.short} {vb(p.sex, 'отморозил')} пальцы.", 1)
             # болезнь от холода
             if not p.sick and p.warmth < 32 and h.rng.chance(b["болезнь_шанс_на_холоде"]):
                 p.sick = "простуда"
@@ -355,12 +364,24 @@ class Simulation:
             dmg += len(p.injuries) * b["травма_урон_в_день"]
             if p.sick:
                 dmg += b["болезнь_урон_в_день"]
+            # урон и восстановление считаются отдельно, а не «или-или»: пока
+            # регенерация стояла в elif, больной не мог поправиться в принципе,
+            # потому что болезнь всегда даёт урон (GDD 6.2 обещает четыре пути
+            # лечения, а работал один — аптечка)
             if dmg > 0:
                 p.health = clamp(p.health - dmg)
-            elif min(p.satiety, p.hydration, p.warmth, p.rest) > b["порог_восстановления"]:
+            if min(p.satiety, p.hydration, p.warmth, p.rest) > b["порог_восстановления"]:
                 p.health = clamp(p.health + b["здоровье_восстановление"])
-            if p.injuries and p.health > 40 and h.rng.chance(0.28):
+            if p.injuries and p.health > 40 and h.rng.chance(b["рана_заживает"]):
                 p.injuries.pop()      # раны всё-таки затягиваются
+            # болезнь проходит сама — в тепле, в сытости и выспавшись (GDD 6.2)
+            if p.sick:
+                шанс = b["болезнь_проходит"]
+                if p.warmth > 55 and p.rest > 60 and p.satiety > 45:
+                    шанс *= b["болезнь_проходит_в_тепле"]
+                if h.rng.chance(шанс):
+                    p.sick = None
+                    h.journal.line(f"{p.short} {vb(p.sex, 'отлежался')} — жар спал.", 1)
 
             # паника растёт и от настоящей нужды, и от веры, что не хватит
             # (GDD 12.3: паника — это «вера, что скоро всё кончится»)

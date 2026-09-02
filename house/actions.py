@@ -92,6 +92,9 @@ def norm_gate(npc, key, b):
     return clamp(b["нормальность_порог"] - npc.normalcy * w, 0.02, 1.0)
 
 
+# действия, у которых есть чем провалиться: тратится материал, страдает рука
+СТРОЙКА = {"утепление": "окна", "дверь": "дверь", "буржуйка": "буржуйку"}
+
 # что стоит показывать в обычном режиме, а что — только с --подробно
 NOTABLE = {"буржуйка": 1, "дверь": 1, "утепление": 1, "генератор": 1, "разбор": 1,
            "попросить": 1, "поделиться": 1, "обмен": 1, "лечить": 1}
@@ -127,11 +130,21 @@ def spend(h, npc, res, amount):
     return used
 
 
+# работа, а не быт: только на неё влияет состояние тела
+РАБОТА = {"утепление", "дверь", "буржуйка", "разбор", "вылазка", "топить_снег", "вынести", "тело"}
+
+
 def hours(key, npc, b):
-    """Сколько часов занимает действие. Числа — из balance.json, не из кода."""
+    """Сколько часов занимает действие (GDD 5), с поправкой на состояние (GDD 6.1).
+
+    Голодный, промёрзший и не спавший человек делает ту же работу дольше.
+    Разговор и еда от этого не растягиваются — растягивается труд.
+    """
     v = b["часы_действий"][key]
     if key == "буржуйка" and ("слесарь" in npc.skills or "электрик" in npc.skills):
         v -= b["часы_ремонта_за_умение"]
+    if key in РАБОТА:
+        v *= npc.speed(b)
     return v
 
 
@@ -155,6 +168,8 @@ def gather(h, npc):
     def add(key, score, target=None):
         if score <= 0:
             return
+        if key in СТРОЙКА and npc.hurt("руки"):
+            return                    # разбитой рукой не строят (GDD 6.2)
         if hours(key, npc, b) > npc.time_left + 0.001:
             return
         if used_day(h, npc, key) >= lim_day.get(key, 99):
@@ -318,9 +333,12 @@ def gather(h, npc):
             add("попросить", ask, t)
         # поделиться
         gave_me_today = h.mods.get("контакты", {}).get((t.id, npc.id, "поделиться"), 0)
-        if (npc.secure("еда") > b["порог_излишка"] and t.desperation() > 0.5
+        # видно не чужой шкаф, а чужое лицо: делятся с тем, кто КАЖЕТСЯ голодным
+        его_еда = social.believed_days(npc, t, "еда")
+        if (npc.secure("еда") > b["порог_излишка"]
                 and npc.confidence(t.id) > 0.3 and not gave_me_today
-                and npc.days_of("еда") > t.days_of("еда") + 1.0):
+                and его_еда < b["помощь_порог_дней"]
+                and npc.days_of("еда") > его_еда + 1.0):
             give = npc.t01("лояльность") * 4.0 + trust * 0.5 - npc.t01("жадность") * 2.0 - des * 4.0
             if t.id in npc.allies:
                 give += 2.0
@@ -361,7 +379,9 @@ def gather(h, npc):
         # обмен
         add("обмен", _trade_score(h, npc, t), t)
         # лечение
-        if "медик" in npc.skills and npc.stock.get("лекарства", 0) >= 1 and (t.injuries or t.sick):
+        # GDD 6.2: «помощь NPC-медика (если есть доверие)»
+        if ("медик" in npc.skills and npc.stock.get("лекарства", 0) >= 1
+                and (t.injuries or t.sick) and t.trust.get(npc.id, 3.0) >= b["лечение_доверие"]):
             add("лечить", 5.0 + npc.t01("лояльность") * 3.0 + trust * 0.3, t)
 
     # --- себя ---
@@ -389,15 +409,22 @@ TRADABLE = ("еда", "топливо", "лекарства", "материал�
 
 
 def find_deal(h, a, b_npc):
-    """Найти сделку, выгодную обоим. Возвращает ((что отдаю, сколько), (что беру, сколько)).
+    """Найти сделку, которую ОБЕ стороны сочтут выгодной (GDD 18).
 
-    Стоимость единицы считается один раз на человека, а не заново в каждой паре:
-    `value_of` линейна по количеству, а количество в сделке всегда единица,
-    поэтому результат тот же до последнего бита, а времени уходит вчетверо меньше.
-    Эта функция — самое горячее место симуляции, через неё шло 60% всего времени.
+    Главное: инициатор не знает правды о чужом складе. И что у соседа есть,
+    и насколько соседу это нужно, он прикидывает по своей оценке — той самой,
+    ради которой построены шум, запах и слухи. Раньше здесь трижды читался
+    настоящий `b_npc.stock`, и осведомлённость в обмене не участвовала вовсе.
+
+    Стоимость единицы считается по одному разу на человека: `value_of` линейна
+    по количеству, а количество в сделке всегда единица. Это самое горячее
+    место симуляции, через него шло 60% всего времени.
     """
+    b = h.B
     va = {r: social.value_of(a, r, 1.0) for r in TRADABLE}
-    vb = {r: social.value_of(b_npc, r, 1.0) for r in TRADABLE}
+    # как, по мнению a, живёт b_npc — а не как он живёт на самом деле
+    vb = {r: social.value_of(b_npc, r, 1.0, days=social.believed_days(a, b_npc, r))
+          for r in TRADABLE}
     best = None
     for give in TRADABLE:
         if a.stock.get(give, 0) < 2:
@@ -405,9 +432,8 @@ def find_deal(h, a, b_npc):
         for get_ in TRADABLE:
             if get_ == give:
                 continue
-            if a.believed(b_npc.id, get_) < 1.5 and b_npc.stock.get(get_, 0) < 1:
-                continue
-            if b_npc.stock.get(get_, 0) < 1:
+            # предлагают за то, что у соседа, по-твоему, есть
+            if a.believed(b_npc.id, get_) < b["обмен_порог_веры"]:
                 continue
             n = 1.0
             mine_gain = va[get_] - va[give]
@@ -450,6 +476,22 @@ def execute(h, npc, key, target):
     npc.stats["часы_работы"] = npc.stats.get("часы_работы", 0) + (spent if key in ("утепление", "дверь", "буржуйка", "разбор", "вылазка") else 0)
     lvl, kind = COST[key]
     said = None
+
+    # у работы есть шанс провала (GDD 7: «провал — потеря материалов, травма руки»)
+    if key in СТРОЙКА and not h.rng.chance(npc.success(b)):
+        потеря = b[{"утепление": "утепление_материалы", "дверь": "дверь_материалы",
+                    "буржуйка": "буржуйка_материалы"}[key]] * b["провал_доля_материалов"]
+        spend(h, npc, "материалы", потеря)
+        npc.mood = clamp(npc.mood - 5)
+        текст = f"{npc.short} {vb(npc.sex, 'взялся')} за {СТРОЙКА[key]}, но {vb(npc.sex, 'испортил')} материал"
+        if h.rng.chance(b["провал_шанс_травмы"]):
+            npc.injuries.append(h.rng.pick(["ушиб руки", "порез руки"]))
+            npc.health = clamp(npc.health - h.rng.uni(4, 10))
+            текст += f" и {vb(npc.sex, 'рассадил')} руку"
+        h.journal.line(текст + ".", 1)
+        if lvl and kind:
+            social.emit(h, npc, lvl, kind, night=False)
+        return
 
     if key == "поесть":
         need = npc.eaters()
@@ -598,11 +640,20 @@ def execute(h, npc, key, target):
         said = _trade(h, npc, target)
 
     elif key == "лечить":
+        # медик умеет то, чего не умеет сам себе перевязывающий (GDD 12.6:
+        # «единственная возможность лечить серьёзные травмы и болезни»)
+        медик = "медик" in npc.skills
         spend(h, npc, "лекарства", 1)
-        if target.injuries:
-            target.injuries.pop()
-        target.sick = None
-        target.health = clamp(target.health + 18)
+        if медик:
+            target.injuries.clear()
+            target.sick = None
+            target.health = clamp(target.health + b["лечение_медиком"])
+        else:
+            if target.injuries:
+                target.injuries.pop()
+            if target.sick and h.rng.chance(b["самолечение_болезнь"]):
+                target.sick = None
+            target.health = clamp(target.health + b["лечение_самому"])
         if target.id != npc.id:
             social.adjust(target, npc.id, trust=b["доверие_за_лечение"], hate=-12)
             target.mood = clamp(target.mood + 10)
@@ -816,8 +867,21 @@ def _trade(h, a, b_npc):
     if not deal:
         return None
     (give, gn), (get_, tn) = deal
-    if b_npc.stock.get(get_, 0) < tn or a.stock.get(give, 0) < gn:
+    if a.stock.get(give, 0) < gn:
         return None
+    if b_npc.stock.get(get_, 0) < tn:
+        # пришёл менять на то, чего у соседа нет: сходил зря и понял, что ошибся
+        social.note_signal(a, b_npc.id, get_, 0.0, 0.6)
+        social.adjust(a, b_npc.id, aware=6)
+        h.bump("сделок_сорвалось")
+        return (f"{a.short} {vb(a.sex, 'предложил')} {b_npc.form('dat')} мену, "
+                f"но {RES_GEN.get(get_, get_)} у {b_npc.form('gen')} не оказалось")
+    # сосед считает выгоду по СВОИМ настоящим запасам — и может отказаться
+    их = social.value_of(b_npc, give, gn) - social.value_of(b_npc, get_, tn)
+    if их <= 0:
+        social.adjust(a, b_npc.id, aware=4)
+        h.bump("сделок_отклонено")
+        return f"{b_npc.short} не {vb(b_npc.sex, 'стал')} меняться с {a.form('ins')}"
     a.stock[give] -= gn
     b_npc.stock[give] = b_npc.stock.get(give, 0) + gn
     b_npc.stock[get_] -= tn
@@ -859,7 +923,7 @@ def _outing(h, npc, dur):
     if "охотник" in npc.skills:
         hurt_risk *= b["охотник_травма"]
     if h.rng.chance(hurt_risk):
-        inj = h.rng.pick(["ушиб", "порез", "перелом", "обморожение"])
+        inj = h.rng.pick(["ушиб ноги", "порез руки", "перелом ноги", "ушиб руки"])
         npc.injuries.append(inj)
         npc.health = clamp(npc.health - h.rng.uni(8, 20))
         txt += f"; {vb(npc.sex, 'вернулся') if npc.sex != 'ж' else 'вернулась'} с травмой ({inj})"
