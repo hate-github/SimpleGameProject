@@ -1,0 +1,336 @@
+# -*- coding: utf-8 -*-
+"""Сборка и главный цикл: день — ночь — расчёт.
+
+День: у каждого 16 часов, он тратит их на действия (GDD 5).
+Ночь: сон, дежурство, кражи и налёты (GDD 4.3 «Ночью происходит основной риск»).
+Утро: сводка (GDD 4.4) — что заметили соседи, что пропало, кто что слышал.
+"""
+import json
+import os
+
+from .util import Rng, clamp, norm
+from .model import NPC, House, EmptyFlat
+from . import world, social, actions, conflict, report
+
+DATA = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data")
+
+
+def load_json(name):
+    with open(os.path.join(DATA, name), encoding="utf-8") as f:
+        return json.load(f)
+
+
+class Simulation:
+    def __init__(self, seed=1, days=30, verbosity=1, secrets=False, stream=None):
+        self.seed = seed
+        self.days = days
+        self.balance = load_json("balance.json")
+        self.npcs_data = load_json("npcs.json")
+        self.events = load_json("events.json")
+        try:
+            self.lines = load_json("lines.json")
+        except FileNotFoundError:
+            self.lines = {}
+        self.h = House(rng=Rng(seed), B=self.balance)
+        self.h.mods["реплики_быт"] = self.lines.get("быт", [])
+        self.h.journal = report.Journal(verbosity=verbosity, secrets=secrets, stream=stream)
+        self._build()
+
+    # ------------------------------------------------------------ сборка
+    def _build(self):
+        h = self.h
+        for f in self.npcs_data.get("пустые_квартиры", []):
+            h.empty.append(EmptyFlat(apt=f["кв"], floor=f["этаж"], stock=dict(f.get("запасы", {}))))
+        for d in self.npcs_data["жильцы"]:
+            p = NPC(
+                id=d["id"], name=d["имя"], short=d["коротко"], apt=d["кв"], floor=d["этаж"],
+                age=d["возраст"], role=d["роль"], sex=d.get("пол", "м"), skills=list(d.get("умения", [])),
+                gen=d.get("коротко_род", ""), dat=d.get("коротко_дат", ""),
+                acc=d.get("коротко_вин", ""), ins=d.get("коротко_твор", ""),
+                traits=dict(d["черты"]), stock=dict(d["запасы"]),
+                weapon=d.get("оружие", "нет"), shelter=dict(d.get("убежище", {})),
+                dependents=d.get("иждивенцы", 0), dependent_name=d.get("иждивенец_имя", ""),
+            )
+            h.people[p.id] = p
+        # стартовые отношения
+        for d in self.npcs_data["жильцы"]:
+            p = h.people[d["id"]]
+            for other in h.people.values():
+                if other.id == p.id:
+                    continue
+                p.trust[other.id] = 3.0
+                p.hate[other.id] = 0.0
+                p.aware[other.id] = 15.0 + (10.0 if other.floor == p.floor else 0.0)
+                p.est[other.id] = {"еда": 3.0, "топливо": 3.0, "лекарства": 0.5, "материалы": 1.0}
+            for k, v in d.get("доверие_старт", {}).items():
+                p.trust[k] = float(v)
+            for k, v in d.get("ненависть_старт", {}).items():
+                p.hate[k] = float(v)
+            for k, v in d.get("осведомлённость_старт", {}).items():
+                p.aware[k] = float(v)
+
+    # ------------------------------------------------------------ цикл
+    def run(self):
+        h = self.h
+        for _ in range(self.days):
+            self.one_day()
+            if not h.alive():
+                h.journal.line("В подъезде не осталось никого.", 2)
+                h.journal.flush_day(h)
+                break
+        return h
+
+    def one_day(self):
+        h = self.h
+        world.start_of_day(h, self.events)
+        self._morning(h)
+        self._day(h)
+        report.daily_chat(h, self.lines)
+        self._night(h)
+        self._upkeep(h)
+        social.alliance_check(h)
+        social.update_groups(h)
+        social.daily_decay(h)
+        social.spread_panic(h)
+        self._firsts(h)
+        h.journal.flush_day(h)
+        h.journal.panel(h)
+
+    # ------------------------------------------------------------ утро
+    def _morning(self, h):
+        b_n = h.B
+        h.mods["контакты"] = {}      # сколько раз кто к кому подходил сегодня
+        h.mods["сделано"] = {}       # сколько раз кто повторил одно действие
+        for p in h.alive():
+            # чем дольше метель, тем меньше веры, что она кончится (GDD 12.3:
+            # паника — это «вера, что скоро всё кончится»)
+            p.horizon = min(h.B["горизонт_потолок"],
+                            h.B["горизонт_старт"] + h.day * h.B["горизонт_за_день"]
+                            + p.panic * h.B["горизонт_за_панику"]
+                            + p.trait("жадность") * h.B["горизонт_за_жадность"])
+            # нормальность: пока свет горит и батареи тёплые, крайние поступки
+            # просто не приходят в голову. Падает от календаря, отключений,
+            # происшествий, паники и — сильнее всего — от чужого примера
+            infra = ((not h.heating) + (not h.water_on) + (not h.power_on) + (h.network <= 0))
+            n = 1.0
+            n -= h.day * b_n["нормальность_за_день"]
+            n -= infra * b_n["нормальность_за_отключение"]
+            n -= social.recent_incidents(h, 6) * b_n["нормальность_за_происшествие"]
+            n -= (p.panic / 100.0) * b_n["нормальность_за_панику"]
+            n -= p.stats.get("видел_чужое", 0) * b_n["нормальность_за_чужой_пример"]
+            n += (p.trait("лояльность") - 5.0) * b_n["нормальность_за_лояльность"]
+            p.normalcy = clamp(n, 0.0, 1.0)
+            p.time_left = h.B["часов_бодрствования"]
+            p.burning = False
+            p.away = False
+            p.stats["часы_работы"] = 0
+        # обнаружение ночных пропаж (GDD 4.4 — сводка утром)
+        losses = h.mods.pop("пропажи", [])
+        for thief_id, victim_id in losses:
+            victim = h.get(victim_id)
+            if victim and victim.alive and h.rng.chance(h.B["кража_шанс_заметить_пропажу"]):
+                conflict.notice_theft(h, victim, thief_id=thief_id)
+
+    # ------------------------------------------------------------ день
+    def _day(self, h):
+        guard = 0
+        while guard < 200:
+            guard += 1
+            acted = False
+            for p in h.rng.shuffled(h.alive()):
+                if p.time_left < 0.3 or p.health <= 0:
+                    continue
+                if actions.choose_and_do(h, p):
+                    acted = True
+            if not acted:
+                break
+
+    # ------------------------------------------------------------ ночь
+    def _night(self, h):
+        targets = {}
+        for p in h.alive():
+            mode, target = self._decide_night(h, p)
+            p.tonight = mode
+            targets[p.id] = target
+
+        # налёт — максимум один за ночь и не каждую ночь: после осады дом
+        # несколько дней отходит (GDD 16 — рейд это событие, а не быт)
+        raid_done = h.day - h.mods.get("последний_налёт", -99) < h.B["налёт_перерыв_дней"]
+        # вожаком налёта становится самый злой и жадный, а не просто самый смелый
+        for p in sorted(h.alive(), key=lambda x: -(x.trait("жадность") + x.trait("вспыльчивость")
+                                                   + x.trait("храбрость") * 0.5 - x.trait("лояльность"))):
+            if raid_done or not p.alive:
+                continue
+            t = conflict.consider_raid(h, p)
+            if t:
+                p.tonight = "налёт"
+                conflict.run_siege(h, p, t)
+                h.mods["последний_налёт"] = h.day
+                raid_done = True
+
+        # кражи
+        for p in h.rng.shuffled(h.alive()):
+            if p.tonight != "кража":
+                continue
+            t = targets.get(p.id)
+            if t and t.alive:
+                conflict.steal(h, p, t)
+
+        # сон
+        for p in h.alive():
+            if p.rest < 35 and p.tonight == "дежурить":
+                p.tonight = "спать"      # человек просто не выдерживает ещё одну ночь
+            if p.rest < 25 and p.tonight in ("кража", "дежурить"):
+                p.tonight = "спать"     # на ногах уже не стоит
+            if p.tonight == "дежурить":
+                slept = 4.5
+                p.bump("ночей_дежурства")
+            elif p.tonight in ("кража", "налёт"):
+                slept = 5.5
+            else:
+                slept = 11.0 if p.rest < 35 else (9.5 if p.rest < 60 else 8.0)
+            p.slept = slept
+            p.rest = clamp(p.rest + slept * h.B["сон_за_час"] - h.B["часов_бодрствования"] * h.B["бодрствование_за_час"])
+
+    def _decide_night(self, h, p):
+        b = h.B
+        tired = 1.0 - norm(p.rest, 20, 80)
+        opts = [(("спать", None), 2.5 + tired * 6.0)]
+
+        gate = actions.norm_gate
+        wealth = p.stock.get("еда", 0) * 0.6 + p.stock.get("топливо", 0) * 0.3
+        watch = p.panic / 100.0 * 3.0 + social.recent_incidents(h) * 0.8 + wealth * 0.10 - tired * 6.0
+        watch += p.stats.get("обокрали", 0) * 2.0
+        watch -= p.t01("лояльность") * 0.5
+        if p.dependents:
+            watch += 1.0
+        opts.append((("дежурить", None), watch * gate(p, "дежурить", b)))
+
+        for t in h.others(p):
+            if not t.alive:
+                continue
+            if t.living_with:
+                continue           # его нет дома, он у соседа
+            # сытый и незлой человек ночью не лезет к соседу
+            A = conflict.aggr(h)
+            if p.desperation() < 0.30 / A and p.hate.get(t.id, 0) < 25 / A:
+                continue
+            greed = p.loot_value(t.id) * (0.35 + p.t01("жадность") * 0.9)
+            score = greed * (0.35 + p.desperation() * 1.3)
+            score -= p.t01("лояльность") * 4.5
+            score -= (1.0 - conflict.stealth(p)) * 3.5
+            score -= t.shelter.get("дверь", 0) * 1.2
+            score += p.hate.get(t.id, 0) / 22.0
+            score -= 2.0 if t.id in p.allies else 0.0
+            score -= t.power() * 0.6
+            # человек прикидывает шансы: в укреплённую дверь при дежурстве не лезут
+            chance = conflict.theft_chance(h, p, t)
+            if chance < b["кража_порог_шанса"] / A:
+                continue
+            score *= 0.45 + chance
+            # страх последствий: обжёгся сам, видел, как за это убивали и выгоняли
+            score -= p.stats.get("поймали", 0) * 1.8 / A
+            score -= h.stats.get("убийств", 0) * 0.9 / A
+            score -= h.stats.get("изгнаний", 0) * 1.1 / A
+            opts.append((("кража", t), score * gate(p, "кража", b)))
+
+        temp = b["температура_выбора"] + (p.panic / 100.0) * b["температура_выбора_паника"]
+        return h.rng.softmax_pick(opts, temp)
+
+    # ------------------------------------------------------------ расчёт суток
+    def _upkeep(self, h):
+        b = h.B
+        for p in list(h.alive()):
+            work = p.stats.get("часы_работы", 0) or 0
+            drain = b["расход_сытости"] + work * b["расход_сытости_за_час_работы"]
+            if p.warmth < 40:
+                drain += b["расход_сытости_на_холоде"]
+            p.satiety = clamp(p.satiety - drain)
+            p.hydration = clamp(p.hydration - b["расход_жажды"])
+
+            room = h.room_temp(p)
+            p.warmth = clamp(p.warmth + (room - b["комфортная_температура"]) * b["тепло_за_градус"])
+
+            comfort = (p.satiety + p.hydration + p.warmth + p.rest) / 4.0
+            p.mood = clamp(p.mood + (comfort - 55) * b["настроение_от_комфорта"]
+                           - p.panic * 0.035 + b["настроение_метель"])
+            if p.stats.get("день_разговора") != h.day:
+                p.mood = clamp(p.mood + b["настроение_одиночество"])
+
+            # теснота: нервы, чужой кашель и общий котёл
+            room_mates = len(p.guests) + (1 if p.living_with else 0)
+            if room_mates:
+                p.mood = clamp(p.mood - b["теснота_настроение"] * room_mates)
+                for other_id in list(p.guests) + ([p.living_with] if p.living_with else []):
+                    o = h.get(other_id)
+                    if o and o.alive:
+                        social.adjust(p, o.id, trust=-b["теснота_доверие"])
+                        # в одной комнате болезнь переходит почти наверняка
+                        if o.sick and not p.sick and h.rng.chance(b["теснота_зараза"]):
+                            p.sick = "простуда"
+                            h.journal.line(f"{p.label()} слёг вслед за соседом по комнате.", 1)
+                # соседи видят, что в одной квартире собрались несколько запасов
+                for w in h.others(p):
+                    social.adjust(w, p.id, aware=2.5 * room_mates)
+
+            # болезнь от холода
+            if not p.sick and p.warmth < 32 and h.rng.chance(b["болезнь_шанс_на_холоде"]):
+                p.sick = "простуда"
+                h.journal.line(f"{p.label()} закашлял.", 1)
+
+            dmg = 0.0
+            for v in (p.satiety, p.hydration, p.warmth, p.rest):
+                if v < b["критичный_порог"]:
+                    dmg += (b["критичный_порог"] - v) * b["здоровье_за_критичное"]
+            dmg += len(p.injuries) * b["травма_урон_в_день"]
+            if p.sick:
+                dmg += b["болезнь_урон_в_день"]
+            if dmg > 0:
+                p.health = clamp(p.health - dmg)
+            elif min(p.satiety, p.hydration, p.warmth, p.rest) > b["порог_восстановления"]:
+                p.health = clamp(p.health + b["здоровье_восстановление"])
+            if p.injuries and p.health > 40 and h.rng.chance(0.28):
+                p.injuries.pop()      # раны всё-таки затягиваются
+
+            # паника растёт и от настоящей нужды, и от веры, что не хватит
+            # (GDD 12.3: паника — это «вера, что скоро всё кончится»)
+            social.add_panic(p, b["паника_от_отчаяния"] * max(p.desperation(), p.insecurity() * 0.85)
+                             - b["паника_спад_в_день"] * (0.4 + 0.6 * p.mood / 100.0))
+            # у тревоги есть дно, и оно поднимается само: двадцатый день метели
+            # без света, воды и новостей пугает независимо от того, что в шкафу.
+            # Это и есть «вера, что скоро всё кончится» из GDD 12.3
+            infra = ((not h.heating) + (not h.water_on) + (not h.power_on) + (h.network <= 0))
+            floor = min(b["паника_дно_потолок"],
+                        h.day * b["паника_дно_за_день"] + infra * b["паника_дно_за_отключение"])
+            floor *= 0.6 + 0.08 * p.trait("вспыльчивость")
+            if p.panic < floor:
+                p.panic += (floor - p.panic) * b["паника_дно_притяжение"]
+
+            if p.health <= 0:
+                p.cause = self._cause(p)
+                p.died_day = h.day
+                h.journal.line(f"† {p.name} {'умерла' if p.sex == 'ж' else 'умер'}. {p.cause}.", 2)
+                conflict.on_death(h, p)
+
+    def _cause(self, p):
+        """Отчего именно человек умер — по самой провалившейся потребности."""
+        from .util import vb
+        worst = min([(p.satiety, "голод"), (p.hydration, "обезвоживание"),
+                     (p.warmth, "холод"), (p.rest, "истощение")], key=lambda x: x[0])
+        if p.injuries and worst[0] > 20:
+            return vb(p.sex, "умер") + " от невылеченных ран"
+        if p.sick and worst[0] > 20:
+            return vb(p.sex, "умер") + " от болезни без лечения"
+        return worst[1]
+
+    # ------------------------------------------------------------ диагностика
+    def _firsts(self, h):
+        s = h.stats
+        if s.get("налётов") and "первый_налёт_день" not in s:
+            s["первый_налёт_день"] = h.day
+        if s.get("смертей") and "первая_смерть_день" not in s:
+            s["первая_смерть_день"] = h.day
+        if s.get("союзов_заключено") and "первый_союз_день" not in s:
+            s["первый_союз_день"] = h.day
+        if s.get("краж") and "первая_кража_день" not in s:
+            s["первая_кража_день"] = h.day
