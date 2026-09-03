@@ -212,6 +212,7 @@ class Simulation:
         report.daily_chat(h, self.lines)
         self._night(h)
         self._upkeep(h)
+        social.проверить_обещания(h)
         social.alliance_check(h)
         social.update_groups(h)
         social.daily_decay(h)
@@ -306,6 +307,7 @@ class Simulation:
             h.mods.pop("мастер_занят_" + мастер.id, None)
             social.adjust(p, мастер.id, trust=2.0, hate=-10)
             social.adjust(мастер, p.id, trust=1.0)
+            social.сдержал(h, мастер, p, "сделать", "буржуйка")
             h.bump("печей_на_заказ")
             h.journal.line(f"{мастер.short} {vb(мастер.sex, 'принёс')} {p.form('dat')} "
                            f"буржуйку. Расплатились: "

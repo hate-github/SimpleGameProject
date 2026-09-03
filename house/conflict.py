@@ -143,6 +143,8 @@ def steal(h, thief, target):
     # свою первую кражу человек себе не забывает: после неё чужая дверь
     # перестаёт быть чужой (GDD 11)
     social.переступил(h, thief, "кража")
+    # и если он обещал к этой двери не подходить — слово нарушено
+    social.нарушил(h, thief, target, "не_делать", target.id)
     if h.rng.chance(p):
         moved = take_from(h, target, thief, greed=h.rng.uni(0.25, 0.5),
                           limit=b["кража_унос_макс"])
@@ -891,6 +893,8 @@ def run_siege(h, leader, target):
     leader.bump("налётов")
     for p in crew:
         social.переступил(h, p, "налёт")
+        # тот, кто в прошлый раз пообещал не приходить, пришёл снова
+        social.нарушил(h, p, target, "не_делать", target.id)
     names = ", ".join(p.short for p in crew)
     social.register_incident(h, "налёт", f"НАЛЁТ. {names} — к двери кв.{target.apt} ({target.short}).")
     social.emit(h, target, 3, "ссора", night=True)
@@ -922,6 +926,8 @@ def run_siege(h, leader, target):
         for p in crew:
             social.adjust(p, target.id, hate=-12)
             social.adjust(target, p.id, hate=30, trust=-3.0)
+            # уговор у двери: «больше не придём». Слово, которое можно нарушить
+            social.обещать(h, p, target, "не_делать", target.id)
         _house_learns(h, target, crew)
         h.bump("исход_откупился")
         return "откупился"
@@ -931,6 +937,7 @@ def run_siege(h, leader, target):
         for p in crew:
             social.adjust(p, target.id, hate=-6)
             social.adjust(target, p.id, hate=20, trust=-2.0)
+            social.обещать(h, p, target, "не_делать", target.id)
         h.bump("исход_переубедил")
         return "переубедил"
 

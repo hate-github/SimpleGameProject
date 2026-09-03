@@ -191,7 +191,7 @@ def most_needed(npc):
 # в пунктике не должна тихо ничего не делать (см. engine.validate_data).
 ПУНКТИК_КЛЮЧИ = set(COST) | {
     "кража", "дежурить", "убить_соседа", "налёт_вожак", "налёт_вербовка",
-    "горизонт_пол", "ненависть_спад", "прощение",
+    "горизонт_пол", "ненависть_спад", "прощение", "ложь",
 }
 
 # Решения, у которых веса черт лежат в данных (NPC.вес_черт). Тоже для проверки.
@@ -952,6 +952,8 @@ def execute(h, npc, key, target):
             h.mods["заказ_" + npc.id] = {"мастер": мастер.id, "готово": h.day + срок}
             h.mods["мастер_занят_" + мастер.id] = npc.id
             social.adjust(npc, мастер.id, trust=0.8)
+            # это и есть обещание «сделать»: с этого дня у мастера есть срок
+            social.обещать(h, мастер, npc, "сделать", "буржуйка", дней=срок + 1)
             said = (f"{npc.short} {vb(npc.sex, 'сговорился')} с {мастер.form('ins')}: "
                     f"тот сделает буржуйку за {срок} дн.")
         else:
@@ -1114,6 +1116,7 @@ def execute(h, npc, key, target):
                     social.note_signal(сосед, target.id, "еда",
                                        сосед.believed(target.id, "еда") + n, 0.5)
             social.judge(h, npc, "щедрость", trust=0.35)
+            social.проверить_наговор(h, npc, target)
             said = f"{npc.short} {'сама занесла' if npc.sex == 'ж' else 'сам занёс'} еду {target.form('dat')}"
 
     elif key == "вернуть":
@@ -1132,6 +1135,9 @@ def execute(h, npc, key, target):
         npc.mood = clamp(npc.mood + 3)
         target.mood = clamp(target.mood + 4)
         h.bump("долгов_возвращено")
+        # сдержанное слово стоит больше самого возврата (GDD 14)
+        social.сдержал(h, npc, target, "отдать")
+        social.проверить_наговор(h, npc, target)
         said = (f"{npc.short} {vb(npc.sex, 'занёс')} банку {target.form('dat')} — "
                 f"{'отдала' if npc.sex == 'ж' else 'отдал'} долг")
 
@@ -1162,6 +1168,7 @@ def execute(h, npc, key, target):
             target.health = clamp(target.health + b["лечение_самому"])
         if target.id != npc.id:
             social.adjust(target, npc.id, trust=b["доверие_за_лечение"], hate=-12)
+            social.проверить_наговор(h, npc, target)
             target.mood = clamp(target.mood + 10)
             npc.mood = clamp(npc.mood + b["настроение_от_помощи"])
             target.favors[npc.id] = target.favors.get(npc.id, 0) + 1
@@ -1222,6 +1229,7 @@ def execute(h, npc, key, target):
         victim = target
         npc.bump("отъёмов")
         h.bump("отъёмов")
+        social.нарушил(h, npc, victim, "не_делать", victim.id)
         # смысл разбоя в том, что слабый не сопротивляется
         scared = victim.t01("храбрость") * 3.0 + victim.power() * 1.2 < npc.power() * 2.6
         if scared or h.rng.chance(0.75):
@@ -1429,6 +1437,9 @@ def _ask(h, npc, target):
         give += 1.8
     if target.favors.get(npc.id, 0):
         give += 1.0
+    # с тем, кто уже врал или не сдержал слова, дела не ведут. И отказ этот
+    # не про жадность — просто ему больше не верят (GDD 14)
+    give -= target.не_верю.get(npc.id, 0.0) * b["обещание_вес_репутации"]
     res = most_needed(npc)
     has = target.stock.get(res, 0)
     # откроет ли он вообще (GDD 14: просьба без доверия сама по себе опасна).
@@ -1495,18 +1506,39 @@ def _ask(h, npc, target):
         rec["подряд"] = 0
         target.ask_record(npc.id)["я_дал"] = h.day     # я ему дал — теперь не прошу сам
         h.bump("помощи")
+        # «верну к пятнице»: у долга появляется срок, а у слова — цена
+        обещание = social.обещать(h, npc, target, "отдать", res)
+        # и заодно: если про пришедшего кто-то говорил «он вор», а он вот
+        # стоит и просит банку, а не берёт молча, — наговор всплывает
+        social.проверить_наговор(h, npc, target)
+        хвост = f", {vb(npc.sex, 'обещал')} вернуть" if обещание else ""
         return (f"{npc.short} {vb(npc.sex, 'попросил')} {RES_GEN.get(res, res)} "
-                f"у {target.form('gen')} — дали")
+                f"у {target.form('gen')} — дали{хвост}")
     else:
+        # соврать про свои запасы — самый дешёвый отказ из всех: сосед уходит
+        # не злым, а сочувствующим, и оценка твоего шкафа у него падает.
+        # Пока это не разоблачат (запах, дым, увиденный шкаф)
+        врёт = has >= 2 and social.решает_врать(h, target, npc, "своё")
+        if врёт:
+            social.соврал(h, target, npc, "своё", res)
+            social.note_signal(npc, target.id, res, b["ложь_оценка"], 0.7)
         # отказ тем обиднее, чем нужнее было: и когда кончается, и когда невмоготу
         social.adjust(npc, target.id, trust=b["доверие_за_отказ"],
-                      hate=b["ненависть_за_отказ"] * (0.7 + нужда(npc)))
+                      hate=(b["ненависть_за_отказ"] * (0.7 + нужда(npc))
+                            * (b["ложь_смягчает_отказ"] if врёт else 1.0)))
         rec["отказали"] += 1
         rec["подряд"] += 1
-        # «жмётся — значит есть». Отказ выдаёт запасы не хуже наблюдения
-        social.adjust(npc, target.id, aware=b["отказ_осведомлённость"])
+        # «жмётся — значит есть». Отказ выдаёт запасы не хуже наблюдения —
+        # но не тогда, когда в отказе поверили
+        if not врёт:
+            social.adjust(npc, target.id, aware=b["отказ_осведомлённость"])
         npc.mood = clamp(npc.mood - 6)
         h.bump("отказов")
+        if врёт:
+            сам = "самой" if target.sex == "ж" else "самого"
+            return (f"{npc.short} {vb(npc.sex, 'просил')} {RES_GEN.get(res, res)} "
+                    f"у {target.form('gen')} — {vb(target.sex, 'сказал')}, "
+                    f"что у {сам} нет")
         if долг >= b["долг_предел"]:
             return (f"{npc.short} {vb(npc.sex, 'попросил')} {RES_GEN.get(res, res)} "
                     f"у {target.form('gen')} — {vb(target.sex, 'напомнил')}, "
@@ -1646,6 +1678,10 @@ def _outing(h, npc, dur, выбор=None):
     h.места[место] = max(b["вылазка_минимум_богатства"],
                          осталось - b["вылазка_истощение_за_ход"] * м.карман)
     npc.места[место] = h.места[место]      # сходил — знает точно
+    # и заодно узнал, кто говорил, что тут пусто (GDD 14)
+    if h.места[место] > b["вылазка_пусто_порог"]:
+        for кто in h.others(npc):
+            social.проверить_ложь(h, кто, npc, "место", место)
 
     тепло_одежды = 1.0 - b["одежда_холод"] * npc.одежда
     npc.warmth = clamp(npc.warmth - b["вылазка_холод_за_час"] * dur * тепло_одежды

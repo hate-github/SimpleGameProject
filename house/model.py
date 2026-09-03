@@ -143,6 +143,10 @@ class NPC:
     дал: Dict[str, float] = field(default_factory=dict)   # кому и сколько я отдал
     ключи: set = field(default_factory=set)   # от каких квартир у него ключи
     asking: Dict[str, Dict[str, float]] = field(default_factory=dict)  # память о просьбах
+    # --- слово (GDD 14) ---
+    врал: List[Dict[str, Any]] = field(default_factory=list)      # что я кому наговорил
+    обещал: List[Dict[str, Any]] = field(default_factory=list)    # и что обещал
+    не_верю: Dict[str, float] = field(default_factory=dict)        # кто мне уже врал
 
     # --- служебное ---
     alive: bool = True
