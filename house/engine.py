@@ -36,7 +36,23 @@ def validate_data(balance, npcs, events):
     жильца, а несуществующий эффект события не делает ничего и никто не замечает.
     """
     from .model import WEAPONS
+    from .actions import ПУНКТИК_КЛЮЧИ, ВЕСА_КЛЮЧИ
     bad = []
+
+    # характер в данных: пунктики и веса черт. Опечатка здесь — это молча
+    # ничего не делающее правило, то есть ровно тот случай, который в симуляции
+    # никак иначе не заметить
+    пунктики = balance.get("пунктики", {})
+    for имя, сдвиги in пунктики.items():
+        for ключ in сдвиги:
+            if ключ not in ПУНКТИК_КЛЮЧИ:
+                bad.append(f"пунктик «{имя}» сдвигает «{ключ}», а такого места в коде нет")
+    for решение, веса in balance.get("веса_черт", {}).items():
+        if решение not in ВЕСА_КЛЮЧИ:
+            bad.append(f"веса_черт: решение «{решение}» никто не спрашивает")
+        for черта in веса:
+            if черта not in ЧЕРТЫ:
+                bad.append(f"веса_черт[{решение}]: нет такой черты «{черта}»")
 
     ids = [d["id"] for d in npcs["жильцы"]]
     dupes = {i for i in ids if ids.count(i) > 1}
@@ -63,6 +79,9 @@ def validate_data(balance, npcs, events):
         if not (0.2 <= скорость <= 3.0):
             bad.append(f"{d['id']}: нормальность_скорость = {скорость}, "
                        f"а должна быть 0.2..3.0")
+        for п in d.get("пунктики", []):
+            if п not in пунктики:
+                bad.append(f"{d['id']}: пунктика «{п}» нет в balance.json")
 
     apts = [d["кв"] for d in npcs["жильцы"]] + [f["кв"] for f in npcs.get("пустые_квартиры", [])]
     if len(apts) != len(set(apts)):
@@ -126,6 +145,7 @@ class Simulation:
                 id=d["id"], name=d["имя"], short=d["коротко"], apt=d["кв"], floor=d["этаж"],
                 age=d["возраст"], role=d["роль"], sex=d.get("пол", "м"), skills=list(d.get("умения", [])),
                 values=dict(d.get("ценности") or {}),
+                пунктики=list(d.get("пунктики") or []),
                 gen=d.get("коротко_род", ""), dat=d.get("коротко_дат", ""),
                 acc=d.get("коротко_вин", ""), ins=d.get("коротко_твор", ""),
                 traits=dict(d["черты"]), stock=dict(d["запасы"]),
@@ -200,6 +220,9 @@ class Simulation:
                             h.B["горизонт_старт"] + h.day * h.B["горизонт_за_день"]
                             + p.panic * h.B["горизонт_за_панику"]
                             + p.trait("жадность") * h.B["горизонт_за_жадность"])
+            # запасливый считает вперёд с самого начала, не дожидаясь страха
+            p.horizon = max(p.horizon, min(h.B["горизонт_потолок"],
+                                           p.пунктик("горизонт_пол")))
             # нормальность — состояние, а не формула. Падает в момент события
             # (social.видел: отключение, происшествие, смерть, чужой пример,
             # свой первый крайний поступок), а здесь только два медленных
@@ -367,9 +390,10 @@ class Simulation:
         wealth = p.stock.get("еда", 0) * 0.6 + p.stock.get("топливо", 0) * 0.3
         watch = p.panic / 100.0 * 3.0 + social.recent_incidents(h) * 0.8 + wealth * 0.10 - tired * 6.0
         watch += p.stats.get("обокрали", 0) * 2.0
-        watch -= p.t01("лояльность") * 0.5
+        watch += p.вес_черт("дежурить")
         if p.dependents:
             watch += 1.0
+        watch += p.пунктик("дежурить")
         opts.append((("дежурить", None), watch * gate(p, "дежурить", b)))
 
         # тот, с кем он делит комнату: ночью до него два метра и никакой двери
@@ -378,8 +402,10 @@ class Simulation:
         for c in соседи:
             if not (c and c.alive and not c.exiled):
                 continue
-            opts.append((("убить_соседа", c),
-                         conflict.оценка_убийства(h, p, c) * gate(p, "убить_соседа", b)))
+            ночью = (conflict.оценка_убийства(h, p, c)
+                     + p.пунктик("убить_соседа")
+                     + actions.своя_мерка(p, "убить_соседа", b))
+            opts.append((("убить_соседа", c), ночью * gate(p, "убить_соседа", b)))
 
         for t in h.others(p):
             if not t.alive:
@@ -402,7 +428,8 @@ class Simulation:
                 score -= b["кража_только_принёс"]
             # и то, что в доме уже неспокойно: происшествия, отказы, чужая злость
             score += social.напряжение_дома(h, p) * b["кража_за_напряжение"]
-            score -= p.t01("лояльность") * 4.5
+            score += p.вес_черт("кража")
+            score += p.пунктик("кража") + actions.своя_мерка(p, "кража", b)
             score -= (1.0 - conflict.stealth(p)) * 3.5
             score -= t.shelter.get("дверь", 0) * 1.2
             score += p.hate.get(t.id, 0) / 22.0

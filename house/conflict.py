@@ -775,7 +775,7 @@ def consider_raid(h, npc):
         if t.weapon in FIREARMS and npc.aware.get(t.id, 0) > 30:
             fear += 2.2
         # совесть
-        conscience = npc.t01("лояльность") * 5.5 * (1.0 - npc.desperation() * 0.5) / A
+        conscience = npc.вес_черт("налёт_совесть") * (1.0 - npc.desperation() * 0.5) / A
         conscience += 3.5 if t.id in npc.allies else 0.0   # на своего идти тяжело
         conscience += 1.2 if t.dependents else 0.0   # к матери с ребёнком идут последними
         # в одиночку к чужой двери идут только те, кто явно сильнее хозяина:
@@ -787,7 +787,7 @@ def consider_raid(h, npc):
             if npc.desperation() < b["налёт_нечего_терять"]:
                 continue
             fear *= b["налёт_соло_страх"]     # он понимает, на что идёт
-        score = want - fear - conscience
+        score = want - fear - conscience + npc.пунктик("налёт_вожак")
         if best is None or score > best[1]:
             best = (t, score)
     if best and best[1] >= b["налёт_порог_желания"] / A:
@@ -832,11 +832,12 @@ def recruit(h, leader, target):
         if not (ядро or злой or нейтрал or (свой_кров and trust >= b["налёт_вербовка_доверие"])):
             continue
 
-        pull = p.desperation() * 2.0 + p.t01("жадность") * 1.5 + trust * 0.25
+        pull = p.desperation() * 2.0 + p.вес_черт("налёт_вербовка") + trust * 0.25
         pull += p.hate.get(target.id, 0.0) / 30.0
         pull += 1.0 if ядро else 0.0
-        pull -= p.t01("лояльность") * 2.2 + (1.2 if target.id in p.allies else 0.0)
-        pull -= (1.0 - p.t01("храбрость")) * 1.5
+        pull -= 1.2 if target.id in p.allies else 0.0
+        pull -= 1.5
+        pull += p.пунктик("налёт_вербовка")
         if pull > b["налёт_порог_вербовки"] / A:
             crew.append(p)
     return crew
