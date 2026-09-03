@@ -706,7 +706,10 @@ def consider_raid(h, npc):
         return None
     if npc.panic < b["налёт_порог_паники"]:
         return None
-    if npc.health < 35 or len(npc.injuries) >= 2:
+    # «нечего терять»: умирающий идёт и разбитым, и один — просто почти
+    # наверняка неудачно. Пока это был запрет, 26% случаев «рядом сытый сосед,
+    # а я умираю от голода» упирались именно в него
+    if (npc.health < 35 or len(npc.injuries) >= 2) and npc.desperation() < b["налёт_нечего_терять"]:
         return None
     # налёт — это всегда либо нужда, либо личное
     if npc.desperation() < 0.30 / A and max(list(npc.hate.values()) or [0]) < 50 / A:
@@ -755,8 +758,12 @@ def consider_raid(h, npc):
         # в одиночку к чужой двери идут только те, кто явно сильнее хозяина:
         # GDD 16 говорит о группе, а один человек у двери — это не осада,
         # а разговор через цепочку
-        if crew_size < b["налёт_минимум_группы"] and npc.power() < t.power() * b["налёт_соло_превосходство"]:
-            continue
+        соло = (crew_size < b["налёт_минимум_группы"]
+                and npc.power() < t.power() * b["налёт_соло_превосходство"])
+        if соло:
+            if npc.desperation() < b["налёт_нечего_терять"]:
+                continue
+            fear *= b["налёт_соло_страх"]     # он понимает, на что идёт
         score = want - fear - conscience
         if best is None or score > best[1]:
             best = (t, score)

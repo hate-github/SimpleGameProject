@@ -50,6 +50,7 @@ class Flat:
     owner_died: Optional[str] = None
     body: Optional[Dict[str, Any]] = None   # тело хозяина, если он умер дома
     вложено: float = 0.0                    # сколько материалов в неё вбито
+    костёр: int = -99                       # день, когда в ней жгли костёр
 
     @property
     def id(self) -> str:
@@ -128,6 +129,7 @@ class NPC:
     guests: set = field(default_factory=set)
     allies: set = field(default_factory=set)
     favors: Dict[str, int] = field(default_factory=dict)
+    дал: Dict[str, float] = field(default_factory=dict)   # кому и сколько я отдал
     ключи: set = field(default_factory=set)   # от каких квартир у него ключи
     asking: Dict[str, Dict[str, float]] = field(default_factory=dict)  # память о просьбах
 
@@ -192,6 +194,22 @@ class NPC:
         """
         return not self.living_with
 
+    def могу_топить(self) -> float:
+        """Насколько топливо для него вообще ресурс.
+
+        Без буржуйки дрова не сжечь: обогреватель ест электричество, генератор
+        надо сперва собрать. Считать их такой же нуждой, как еду, — значит
+        заставить человека без печки паниковать из-за мёртвого груза
+        и ходить просить дрова у соседей.
+        """
+        if not self.топит_сам():
+            return 0.0
+        if self.shelter.get("буржуйка"):
+            return 1.0
+        if self.stock.get("материалы", 0.0) >= 4.0:
+            return 0.5      # есть из чего собрать — запасается не зря
+        return 0.15
+
     def insecurity(self) -> float:
         """0..1 — «мне не хватит».
 
@@ -200,16 +218,15 @@ class NPC:
         и паника — но не преступление.
         """
         части = [1.0 - min(1.0, self.secure("еда")),
-                 1.0 - min(1.0, self.secure("вода"))]
-        if self.топит_сам():
-            части.append((1.0 - min(1.0, self.secure("топливо"))) * 0.9)
+                 1.0 - min(1.0, self.secure("вода")),
+                 (1.0 - min(1.0, self.secure("топливо"))) * 0.9 * self.могу_топить()]
         return clamp(max(части), 0.0, 1.0)
 
     def desperation(self) -> float:
         """0..1 — «я умираю». Физическая нужда: вот это толкает на кражу и налёт."""
         food = 1.0 - norm(min(self.days_of("еда"), 10), 0, 6)
         water = 1.0 - norm(min(self.days_of("вода"), 10), 0, 4)
-        fuel = (1.0 - norm(min(self.days_of("топливо"), 10), 0, 6)) if self.топит_сам() else 0.0
+        fuel = (1.0 - norm(min(self.days_of("топливо"), 10), 0, 6)) * self.могу_топить()
         # телесная часть включается только когда правда плохо, иначе
         # человек «в отчаянии» каждый день перед ужином
         body = 1.0 - norm(min(self.satiety, self.warmth, self.hydration), 5, 40)
@@ -413,6 +430,9 @@ class House:
             t += b["буржуйка_градусов"]
         if powered and flat.shelter.get("обогреватель"):
             t += b["обогреватель_градусов"]
+        # костёр посреди комнаты: греет хуже печки, дымит и может спалить дом
+        if flat.костёр == self.day:
+            t += b["костёр_градусов"]
         return t
 
     def чей(self, flat: Flat) -> Optional[NPC]:

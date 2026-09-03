@@ -221,6 +221,15 @@ def _hear(h, listener, src, kind, level, дом=None):
             сводка.append(строка)
     gain = b["осведомлённость_за_шум"] * (0.6 + 0.15 * level)
     adjust(listener, src.id, aware=gain)
+    # про воду прямых сигналов не бывает — её можно только вывести: у кого
+    # горит печь, тот наверняка топит на ней и снег, потому что это выгодно.
+    # Догадаться дано не каждому, и это единственное место, где решает
+    # сообразительность
+    if kind in ("буржуйка", "генератор") and not h.water_on:
+        if h.rng.chance(listener.t01("сообразительность") * b["догадка_про_воду"]):
+            note_signal(listener, src.id, "вода",
+                        min(listener.believed(src.id, "вода") + 1.4, 5.0), 0.35)
+            listener.memory.append(f"д{h.day}:догадался:вода:{src.id}")
     if res:
         cur = listener.believed(src.id, res)
         # звук говорит «у него это есть», но не «у него этого гора»:
@@ -246,7 +255,7 @@ def observe(h, watcher, target):
         from . import conflict
         conflict.reveal_taboo(h, target, witness=watcher)
     adjust(watcher, target.id, aware=b["осведомлённость_за_наблюдение"])
-    for res in ("еда", "топливо", "лекарства"):
+    for res in ("еда", "топливо", "лекарства", "вода"):
         true_v = target.stock.get(res, 0.0)
         noise = h.rng.uni(0.75, 1.25)
         note_signal(watcher, target.id, res, true_v * noise, 0.75)

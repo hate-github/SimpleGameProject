@@ -15,6 +15,8 @@ COST = {
     "попить":       (1, "шаги"),
     "топить_снег":  (1, "готовка"),
     "топить":       (1, "буржуйка"),
+    "костёр":       (2, "буржуйка"),
+    "заказать_печь": (1, "шаги"),
     "генератор":    (5, "генератор"),
     "утепление":    (3, "ремонт"),
     "дверь":        (3, "дверь"),
@@ -25,6 +27,7 @@ COST = {
     "разговор":     (1, "шаги"),
     "попросить":    (1, "шаги"),
     "поделиться":   (1, "шаги"),
+    "вернуть":      (1, "шаги"),
     "обмен":        (1, "шаги"),
     "лечить":       (1, "шаги"),
     "отдых":        (0, None),
@@ -99,6 +102,7 @@ def most_needed(npc):
     "тело": 1.10,
     "дежурить": 0.85,     # не спать, слушая лестницу
     "буржуйка": 0.62,     # признать, что отопления больше не будет
+    "костёр": 0.95,       # разжечь огонь посреди комнаты в жилом доме
     "генератор": 0.45,
     "утепление": 0.28,    # это и в обычную зиму делают
     "переехать": 0.88,    # признать, что в своей квартире не выжить
@@ -271,6 +275,24 @@ def gather(h, npc):
             нужен += thirsty * 3.0
         add("генератор", нужен - fear * 3.0 * (0.4 if npc.shelter.get("звукоизоляция") else 1.0))
 
+    # костёр: у кого нет печки, а мёрзнуть больше нельзя. Опасно, дымно
+    # и всё равно лучше, чем замёрзнуть
+    if (not npc.shelter.get("буржуйка") and npc.топит_сам()
+            and h.where(npc).костёр != h.day
+            and (npc.stock.get("материалы", 0) >= b["костёр_материалы"]
+                 or npc.stock.get("топливо", 0) >= 1)):
+        add("костёр", cold * 9.0 + max(0.0, (10 - room)) * 0.4 - 1.5)
+
+    # заказать буржуйку у того, кто умеет: своя-то ему нужна самому,
+    # а вот сделать похожую он может — за еду и топливо (GDD 18, бартер)
+    if not npc.shelter.get("буржуйка") and npc.топит_сам() and not h.mods.get("заказ_" + npc.id):
+        for m in h.others(npc):
+            if not any(u in m.skills for u in ("слесарь", "электрик")):
+                continue
+            if npc.stock.get("еда", 0) + npc.stock.get("топливо", 0) < b["печь_цена"]:
+                continue
+            add("заказать_печь", 3.0 + cold * 5.0 + npc.trust.get(m.id, 3.0) * 0.3, m)
+
     # --- убежище (GDD 15) ---
     mats = npc.stock.get("материалы", 0)
     # смотрят не только на сегодня: метель с каждым днём злее, и это все знают
@@ -418,7 +440,7 @@ def gather(h, npc):
         # разговор
         talk = npc.t01("общительность") * 3.0 + trust * 0.3
         talk += (1.0 - norm(npc.mood, 20, 80)) * 2.0
-        talk -= npc.hate.get(t.id, 0) / 25.0
+        talk -= npc.hate.get(t.id, 0) / 12.0     # к тому, кого не выносишь, не идут
         talk -= npc.panic / 100.0
         add("разговор", talk, t)
         # просьба — о том, чего не хватает: еда, вода или топливо.
@@ -434,6 +456,11 @@ def gather(h, npc):
             can_ask = False                      # сам ему на днях отдал последнее
         if can_ask and des > 0.35 and npc.believed(t.id, need_res) > 1.5:
             ask = des * 6.0 * (0.3 + trust / 10.0) - npc.t01("храбрость") * 0.8
+            # к тому, кого ненавидишь, идут только если совсем припёрло —
+            # и понимая, что у двери может начаться драка
+            ask -= npc.hate.get(t.id, 0.0) / 14.0 * (1.5 - des)
+            # и не идут к тому, кому уже задолжали: стыдно
+            ask -= npc.ask_record(t.id).get("должен", 0.0) * b["долг_вес"]
             # к щедрому идут первым, к скупому не идут вовсе
             ask *= b["просьба_вес_памяти"] + (2.0 - b["просьба_вес_памяти"]) * npc.generosity(t.id)
             add("попросить", ask, t)
@@ -441,16 +468,27 @@ def gather(h, npc):
         gave_me_today = h.mods.get("контакты", {}).get((t.id, npc.id, "поделиться"), 0)
         # видно не чужой шкаф, а чужое лицо: делятся с тем, кто КАЖЕТСЯ голодным
         его_еда = social.believed_days(npc, t, "еда")
-        if (npc.secure("еда") > b["порог_излишка"]
+        # излишек меряется не против собственного горизонта, а против соседа.
+        # Против горизонта он к третьей неделе требовал 32 дней еды и не
+        # выполнялся никогда: щедрость выключалась арифметикой, а не решением.
+        # Своё при этом всё равно первее — за это отвечает `- des * 4` в оценке
+        мои_дни = npc.days_of("еда")
+        излишек = мои_дни / max(1.0, его_еда + 1.0)
+        if (излишек > b["порог_излишка"] and мои_дни > b["помощь_минимум_дней"]
                 and npc.confidence(t.id) > 0.3 and not gave_me_today
                 and его_еда < b["помощь_порог_дней"]
-                and npc.days_of("еда") > его_еда + 1.0):
+                and мои_дни > его_еда + 1.0):
             give = npc.t01("лояльность") * 4.0 + trust * 0.5 - npc.t01("жадность") * 2.0 - des * 4.0
             if t.id in npc.allies:
                 give += 2.0
             if t.dependents:
                 give += 1.5
             add("поделиться", give, t)
+        # вернуть долг: человек помнит, что ему давали, и при излишке отдаёт.
+        # Без этого память была односторонней — должник не возвращал никогда
+        мой_долг = npc.ask_record(t.id).get("должен", 0.0)
+        if мой_долг >= 1.0 and npc.days_of("еда") > b["помощь_минимум_дней"]:
+            add("вернуть", 2.0 + мой_долг * 1.2 + npc.t01("лояльность") * 2.0, t)
         # с раскрытым людоедом дом дел не имеет
         if t.stats.get("раскрыт"):
             continue
@@ -684,6 +722,50 @@ def execute(h, npc, key, target):
             said = f"{npc.short} {vb(npc.sex, 'разломал')} мебель и {vb(npc.sex, 'затопил')} ею"
         npc.burning = True
 
+    elif key == "костёр":
+        flat = h.where(npc)
+        if npc.stock.get("топливо", 0) >= 1:
+            spend(h, npc, "топливо", 1)
+            чем = "на дровах"
+        else:
+            spend(h, npc, "материалы", b["костёр_материалы"])
+            чем = "на мебели"
+        flat.костёр = h.day
+        npc.warmth = clamp(npc.warmth + 6)
+        if h.rng.chance(b["костёр_пожар"]):
+            # то, ради чего это и опасно
+            npc.injuries.append("ожог руки")
+            npc.health = clamp(npc.health - h.rng.uni(8, 18))
+            if flat.shelter.get("утепление", 0) > 0:
+                flat.shelter["утепление"] -= 1
+            flat.вложено = max(0.0, flat.вложено - 2.0)
+            npc.panic = clamp(npc.panic + 20)
+            h.journal.line(f"В кв.{flat.apt} занялось. {npc.short} {vb(npc.sex, 'сбил')} огонь, "
+                           f"но {vb(npc.sex, 'обжёг')} руки, и окна выгорели.", 2)
+            social.house_shock(h, panic=10, mood=-5)
+            social.emit(h, npc, 4, "ссора", night=False)
+            h.bump("пожаров")
+        else:
+            said = f"{npc.short} {vb(npc.sex, 'развёл')} костёр посреди комнаты {чем}"
+
+    elif key == "заказать_печь":
+        мастер = target
+        # мастер решает: своя печка ему нужна самому, а сделать похожую можно
+        готов = (мастер.t01("лояльность") * 4.0 + мастер.trust.get(npc.id, 3.0) * 0.6
+                 + мастер.t01("жадность") * 2.0          # это заработок
+                 - мастер.hate.get(npc.id, 0.0) / 15.0
+                 - (1.0 - min(1.0, мастер.secure("еда"))) * 2.0)
+        if готов > b["печь_согласие"]:
+            срок = b["печь_срок"] - (1 if "слесарь" in мастер.skills else 0)
+            h.mods["заказ_" + npc.id] = {"мастер": мастер.id, "готово": h.day + срок}
+            social.adjust(npc, мастер.id, trust=0.8)
+            said = (f"{npc.short} {vb(npc.sex, 'сговорился')} с {мастер.form('ins')}: "
+                    f"тот сделает буржуйку за {срок} дн.")
+        else:
+            social.adjust(npc, мастер.id, trust=-0.4)
+            said = (f"{мастер.short} не {vb(мастер.sex, 'взялся')} делать печь "
+                    f"{npc.form('dat')} — своя нужна самому")
+
     elif key == "генератор":
         spend(h, h.хозяин_жилья(npc), "топливо", 2)
         npc.shelter["питание"] = h.day     # свет в квартире на сутки (GDD 15)
@@ -809,9 +891,29 @@ def execute(h, npc, key, target):
             target.mood = clamp(target.mood + 8)
             target.favors[npc.id] = target.favors.get(npc.id, 0) + 1
             target.ask_record(npc.id)["я_дал"] = h.day
+            target.ask_record(npc.id)["должен"] = target.ask_record(npc.id).get("должен", 0.0) + 1.0
+            npc.дал[target.id] = npc.дал.get(target.id, 0.0) + 1.0
             npc.ask_record(target.id)["дали"] += 0.5   # он мне не отказывал, я сам принёс
             social.judge(h, npc, "щедрость", trust=0.35)
             said = f"{npc.short} {'сама занесла' if npc.sex == 'ж' else 'сам занёс'} еду {target.form('dat')}"
+
+    elif key == "вернуть":
+        rec = npc.ask_record(target.id)
+        сколько = min(1.0, npc.stock.get("еда", 0.0))
+        if сколько <= 0:
+            return
+        npc.stock["еда"] -= сколько
+        target.stock["еда"] = target.stock.get("еда", 0.0) + сколько
+        rec["должен"] = max(0.0, rec.get("должен", 0.0) - 1.0)
+        target.дал[npc.id] = max(0.0, target.дал.get(npc.id, 0.0) - 1.0)
+        social.adjust(target, npc.id, trust=b["доверие_за_помощь"] * 1.2, hate=-8)
+        social.adjust(npc, target.id, trust=0.4)
+        npc.mood = clamp(npc.mood + 5)
+        target.mood = clamp(target.mood + 6)
+        h.bump("долгов_возвращено")
+        social.judge(h, npc, "щедрость", trust=0.3)
+        said = (f"{npc.short} {vb(npc.sex, 'занёс')} банку {target.form('dat')} — "
+                f"{'отдала' if npc.sex == 'ж' else 'отдал'} долг")
 
     elif key == "обмен":
         said = _trade(h, npc, target)
@@ -1074,6 +1176,10 @@ def _ask(h, npc, target):
     give = target.t01("лояльность") * 5.0 + trust * 0.9
     give -= target.t01("жадность") * 2.5
     give -= target.hate.get(npc.id, 0.0) / 12.0
+    # «я тебе уже трижды давал»: бесконечно отдавать нельзя, и отказ по этой
+    # причине читается иначе, чем жадность
+    долг = target.дал.get(npc.id, 0.0)
+    give -= долг * b["долг_вес"]
     if npc.id in target.allies:
         give += 2.5
     if npc.dependents:
@@ -1082,6 +1188,17 @@ def _ask(h, npc, target):
         give += 1.0
     res = most_needed(npc)
     has = target.stock.get(res, 0)
+    # откроет ли он вообще (GDD 14: просьба без доверия сама по себе опасна).
+    # Через дверь тоже разговаривают, но так почти не дают и почти ничего
+    # друг о друге не узнают
+    откроет = (b["дверь_база_открыть"] + trust * 0.06
+               - target.hate.get(npc.id, 0.0) / b["дверь_ненависть_делитель"]
+               - target.panic / 400.0
+               + (0.15 if npc.id in target.allies else 0.0)
+               - (0.05 if target.dependents else 0.0))
+    через_дверь = not h.rng.chance(clamp(откроет, 0.05, 0.97))
+    if через_дверь:
+        give -= b["просьба_через_дверь"]
     # главное: человек отдаёт только то, что считает лишним для себя.
     # он не знает, сколько ещё терпеть, и считает по своему горизонту
     shortfall = 1.0 - min(1.0, target.secure(res))
@@ -1098,9 +1215,24 @@ def _ask(h, npc, target):
     # что у него пусто. Раньше здесь стояло aware=-5 — просьба почему-то делала
     # просящего менее понятным, хотя та же просьба в чате (report.daily_chat)
     # правильно поднимала осведомлённость и роняла оценку запасов
-    social.adjust(target, npc.id, aware=b["просьба_осведомлённость"])
+    social.adjust(target, npc.id, aware=b["просьба_осведомлённость"] * (0.4 if через_дверь else 1.0))
     social.note_signal(target, npc.id, res, 0.5, 0.35)
-    social.adjust(npc, target.id, aware=12)
+    social.adjust(npc, target.id, aware=12 * (0.3 if через_дверь else 1.0))
+    # открытая дверь и двое на взводе — это не всегда разговор
+    if not через_дверь:
+        жар = (npc.hate.get(target.id, 0.0) + target.hate.get(npc.id, 0.0)) / 200.0
+        жар += (npc.t01("вспыльчивость") + target.t01("вспыльчивость")) * 0.25
+        жар *= 0.5 + npc.desperation()
+        if h.rng.chance(clamp(b["дверь_риск_ссоры"] * жар, 0.0, 0.5)):
+            h.journal.line(f"{npc.short} и {target.short} сцепились в дверях.", 2)
+            conflict.scuffle(h, npc, target, place=f"кв.{target.apt}")
+            social.register_incident(h, "ссора", None)
+            social.adjust(target, npc.id, hate=15, trust=-2.0)
+            social.adjust(npc, target.id, hate=15, trust=-2.0)
+            npc.ask_record(target.id)["последняя"] = h.day
+            npc.ask_record(target.id)["отказали"] += 1
+            npc.ask_record(target.id)["подряд"] += 1
+            return f"{npc.short} {vb(npc.sex, 'пришёл')} просить у {target.form('gen')} — вышла драка"
     цена = b["просьба_цена_доверия"] * (1.0 - min(1.0, trust / 8.0))
     social.adjust(target, npc.id, trust=-цена)
 
@@ -1114,6 +1246,8 @@ def _ask(h, npc, target):
         npc.mood = clamp(npc.mood + 8)
         target.mood = clamp(target.mood + 4)
         npc.favors[target.id] = npc.favors.get(target.id, 0) + 1
+        rec["должен"] = rec.get("должен", 0.0) + 1.0
+        target.дал[npc.id] = target.дал.get(npc.id, 0.0) + 1.0
         rec["дали"] += 1
         rec["подряд"] = 0
         target.ask_record(npc.id)["я_дал"] = h.day     # я ему дал — теперь не прошу сам
@@ -1128,6 +1262,13 @@ def _ask(h, npc, target):
         social.adjust(npc, target.id, aware=b["отказ_осведомлённость"])
         npc.mood = clamp(npc.mood - 6)
         h.bump("отказов")
+        if долг >= b["долг_предел"]:
+            return (f"{npc.short} {vb(npc.sex, 'попросил')} {RES_GEN.get(res, res)} "
+                    f"у {target.form('gen')} — {vb(target.sex, 'напомнил')}, "
+                    f"сколько уже {vb(target.sex, 'отдал')}, и не дал")
+        if через_дверь:
+            return (f"{npc.short} {vb(npc.sex, 'просил')} {RES_GEN.get(res, res)} "
+                    f"у {target.form('gen')} через дверь — не открыли")
         return (f"{npc.short} {vb(npc.sex, 'попросил')} {RES_GEN.get(res, res)} "
                 f"у {target.form('gen')} — отказали")
 
