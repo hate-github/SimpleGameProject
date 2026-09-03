@@ -237,33 +237,25 @@ def exile(h, person, by=None, reason="воровство"):
 
 
 def release_flat(h, person):
-    """Вернуть пустую квартиру этого жильца, заведя её только если её ещё нет.
+    """Квартира выбывшего. Заводить её больше не нужно — она была всегда.
 
-    Переезд к соседу уже делает квартиру пустой; если потом хозяин умирает,
-    вторая запись про ту же квартиру позволяет разобрать её дважды.
+    Пустой её делает не запись в списке, а то, что в ней никто не живёт
+    (House.пустые). Здесь только помечается, чей это был дом: соседи разбирают
+    жильё умершего иначе, чем брошенное.
     """
-    from .model import EmptyFlat
-    for f in h.empty:
-        if f.apt == person.apt:
-            f.owner_died = f.owner_died or person.id
-            return f
-    flat = EmptyFlat(apt=person.apt, floor=person.floor, stock={}, owner_died=person.id)
-    h.empty.append(flat)
+    flat = h.flats[person.apt]
+    flat.owner_died = flat.owner_died or person.id
     return flat
 
 
 def occupy_flat(h, person):
-    """Человек вернулся в свою квартиру — она больше не пустая.
-
-    Иначе квартира живого жильца остаётся в списке на разбор, и соседи
-    таскают доски из-под человека, который в ней сидит.
-    """
-    for f in list(h.empty):
-        if f.apt == person.apt and not (f.body and f.body.get("порций", 0) > 0):
-            for res, v in f.stock.items():
-                if v:
-                    person.stock[res] = person.stock.get(res, 0.0) + v
-            h.empty.remove(f)
+    """Человек вернулся в свою квартиру: забирает то, что в ней осталось."""
+    flat = h.flats.get(person.apt)
+    if flat and not (flat.body and flat.body.get("порций", 0) > 0):
+        for res, v in list(flat.stock.items()):
+            if v:
+                person.stock[res] = person.stock.get(res, 0.0) + v
+                flat.stock[res] = 0.0
 
 
 def reveal_taboo(h, eater, witness=None):

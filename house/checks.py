@@ -71,14 +71,19 @@ def invariants(h):
             if other.id != p.id and p.id in other.allies and other.id not in p.allies:
                 say(f"союз односторонний: {other.short} считает {p.short} союзником, а тот нет")
 
-    # квартиры
-    apts = [f.apt for f in h.empty]
-    for apt in {a for a in apts if apts.count(a) > 1}:
-        say(f"квартира {apt} числится пустой дважды")
-    for f in h.empty:
-        for p in h.alive():
-            if p.apt == f.apt and not p.living_with:
-                say(f"кв.{f.apt} числится пустой, хотя {p.short} в ней живёт")
+    # квартиры. Список пустых теперь считается, а не ведётся руками, поэтому
+    # «дважды пустая» и «пустая под живым» стали невозможны по устройству —
+    # вместо них проверяем то, что теперь может сломаться
+    for p in h.people.values():
+        if p.apt not in h.flats:
+            say(f"{p.short} прописан в кв.{p.apt}, которой нет в доме")
+    занято = {}
+    for p in h.alive():
+        if p.living_with:
+            continue
+        if p.apt in занято:
+            say(f"кв.{p.apt} считают своей двое: {занято[p.apt]} и {p.short}")
+        занято[p.apt] = p.short
 
     return bad
 
@@ -111,7 +116,7 @@ def ledger(h, start):
 def world_total(h, res):
     """Сколько ресурса есть в доме — у живых, у мёртвых и в пустых квартирах."""
     return (sum(p.stock.get(res, 0.0) for p in h.people.values())
-            + sum(f.stock.get(res, 0.0) for f in h.empty))
+            + sum(f.stock.get(res, 0.0) for f in h.flats.values()))
 
 
 def snapshot(h):

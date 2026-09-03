@@ -96,7 +96,7 @@ def emit(h, src, level, kind, night=False, text_for=None):
         # был одинаков для всех и к третьей неделе включён всегда
         сл = место(h, other)
         лестница = range(min(дом.floor, сл.floor), max(дом.floor, сл.floor) + 1)
-        между = sum(1 for f in h.empty if f.floor in лестница)
+        между = sum(1 for f in h.пустые() if f.floor in лестница)
         if между:
             p *= b["шум_пустая_квартира"] ** между
         # заметность идёт своим каналом: по этажам не глохнет, прячут занавески

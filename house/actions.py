@@ -138,6 +138,16 @@ def порция(h, npc, b):
     return b["еда_за_порцию"] * ((1.0 + b["повар_прибавка"]) if cooks else 1.0)
 
 
+def вложить(h, npc, материалов):
+    """Материалы, ушедшие в стены, остаются в стенах.
+
+    Это и есть привязанность к своему углу: человек не бросает квартиру,
+    в которую вбил месяц работы, даже если рядом стоит лучше. Числом, а не
+    отдельной чертой характера, — и потому у каждого своя.
+    """
+    h.where(npc).вложено += материалов
+
+
 def spend(h, npc, res, amount):
     """Израсходовать ресурс безвозвратно и записать это.
 
@@ -220,13 +230,16 @@ def gather(h, npc):
     # снег топят только там, где есть на чём (GDD 15: буржуйка — улучшение 2 уровня).
     # без печки вода становится настоящей проблемой: только запас, обмен или просьба
     can_melt = npc.shelter.get("буржуйка") or (h.powered(npc) and npc.shelter.get("обогреватель"))
-    # топить снег можно и на мебели — раз уж печка всё равно горит
-    есть_чем = (npc.stock.get("топливо", 0) >= b["снег_топливо"]
+    # печка в квартире одна, и дрова к ней общие: за снег гостя платит то же
+    # хозяйство, у которого он греется. Иначе гость топил снег даром — своего
+    # топлива у него нет по устройству
+    очаг = h.хозяин_жилья(npc)
+    есть_чем = (очаг.stock.get("топливо", 0) >= b["снег_топливо"]
                 or npc.stock.get("материалы", 0) >= b["мебель_за_топку"])
     if not h.water_on and can_melt and npc.stock.get("вода", 0) < 4 and есть_чем:
         # снег топят охотнее, когда печка и так нужна: одно действие закрывает
         # и жажду, и холод
-        together = cold * 3.0 if not npc.burning and npc.shelter.get("буржуйка") else 0.0
+        together = cold * 3.0 if not очаг.burning and npc.shelter.get("буржуйка") else 0.0
         add("топить_снег", 2.0 + thirsty * 6.5 + together)
 
     # когда топливо кончилось, в печку идёт мебель — и тогда материалы
@@ -240,7 +253,7 @@ def gather(h, npc):
             need *= 0.7
         add("топить", need)
 
-    if npc.shelter.get("генератор") and npc.stock.get("топливо", 0) >= 2 and not h.power_on:
+    if npc.shelter.get("генератор") and очаг.stock.get("топливо", 0) >= 2 and not h.power_on:
         # генератор — это не грелка, а электричество на сутки: от него работает
         # обогреватель и на нём топят снег (GDD 15, уровень 3)
         нужен = cold * 4.0 + (1.0 - norm(npc.mood, 20, 80)) * 2.0
@@ -282,7 +295,7 @@ def gather(h, npc):
             s += 2.5
         add("дверь", s)
     # квартиру можно разобрать лишь несколько раз — потом там голые стены
-    strippable = [f for f in h.empty
+    strippable = [f for f in h.пустые()
                   if f.stripped < b["разбор_максимум"] or sum(f.stock.values()) > 0]
     if strippable:
         want_mats = 0.0
@@ -300,7 +313,7 @@ def gather(h, npc):
         add("разбор", want_mats - mats * 0.25)
 
     # --- то, до чего доходят на третьей неделе ---
-    bodies = [f for f in h.empty if f.body and f.body["порций"] > 0
+    bodies = [f for f in h.пустые() if f.body and f.body["порций"] > 0
               and h.day - f.body["день"] <= b["тело_порча_дней"]]
     if bodies:
         # вынести тело: так поступают те, кто ещё держится за человеческое
@@ -582,6 +595,7 @@ def execute(h, npc, key, target):
 
     elif key == "топить_снег":
         # на электроплитке, пока есть свет, вода достаётся даром
+        очаг = h.хозяин_жилья(npc)
         on_power = (not npc.shelter.get("буржуйка")) and h.powered(npc) and npc.shelter.get("обогреватель")
         if on_power:
             cost = 0.0
@@ -589,15 +603,15 @@ def execute(h, npc, key, target):
         else:
             # печка уже топится — доплачиваем немного; холодная — платим как за топку,
             # но тогда и квартира прогревается, топливо не выброшено
-            already = npc.burning
+            already = очаг.burning
             cost = b["снег_топливо"] * (b["снег_на_горящей_печке"] if already else 1.0)
-            npc.burning = True
+            очаг.burning = True
             how = "на горячей печке" if already else "затопив печку"
-        if npc.stock.get("топливо", 0) < cost and npc.stock.get("материалы", 0) >= b["мебель_за_топку"]:
+        if очаг.stock.get("топливо", 0) < cost and npc.stock.get("материалы", 0) >= b["мебель_за_топку"]:
             spend(h, npc, "материалы", b["мебель_за_топку"])   # в ход пошла мебель
             cost = 0.0
             how = "на мебели"
-        spend(h, npc, "топливо", cost)
+        spend(h, очаг, "топливо", cost)
         npc.stock["вода"] = npc.stock.get("вода", 0) + b["снег_вода"]
         h.stats["натоплено_вода"] = h.stats.get("натоплено_вода", 0) + b["снег_вода"]
         said = (f"{npc.short} {vb(npc.sex, 'натопил')} снега {how}"
@@ -613,7 +627,7 @@ def execute(h, npc, key, target):
         npc.burning = True
 
     elif key == "генератор":
-        spend(h, npc, "топливо", 2)
+        spend(h, h.хозяин_жилья(npc), "топливо", 2)
         npc.shelter["питание"] = h.day     # свет в квартире на сутки (GDD 15)
         npc.mood = clamp(npc.mood + 10)
         npc.warmth = clamp(npc.warmth + 4)
@@ -626,6 +640,7 @@ def execute(h, npc, key, target):
     elif key in ПОСТРОЙКИ:
         уровень, мат_ключ, _умения, _потолок = ПОСТРОЙКИ[key]
         spend(h, npc, "материалы", b[мат_ключ])
+        вложить(h, npc, b[мат_ключ])
         поле = {"генератор_собрать": "генератор"}.get(key, key)
         if поле == "генератор":
             npc.shelter["генератор"] = True
@@ -640,23 +655,29 @@ def execute(h, npc, key, target):
 
     elif key == "утепление":
         spend(h, npc, "материалы", b["утепление_материалы"])
+        вложить(h, npc, b["утепление_материалы"])
         npc.shelter["утепление"] = npc.shelter.get("утепление", 0) + 1
         said = f"{npc.short} {vb(npc.sex, 'утеплил')} окна (уровень {npc.shelter['утепление']})"
 
     elif key == "дверь":
         spend(h, npc, "материалы", b["дверь_материалы"])
+        вложить(h, npc, b["дверь_материалы"])
         npc.shelter["дверь"] = npc.shelter.get("дверь", 0) + 1
         said = f"{npc.short} {vb(npc.sex, 'укрепил')} дверь (уровень {npc.shelter['дверь']})"
 
     elif key == "буржуйка":
         spend(h, npc, "материалы", b["буржуйка_материалы"])
+        вложить(h, npc, b["буржуйка_материалы"])
         npc.shelter["буржуйка"] = True
         said = f"{npc.short} {vb(npc.sex, 'собрал')} буржуйку"
         h.note(f"{npc.short} {vb(npc.sex, 'собрал')} буржуйку")
 
     elif key == "разбор":
-        pool = [f for f in h.empty
-                if f.stripped < b["разбор_максимум"] or sum(f.stock.values()) > 0] or h.empty
+        пустые = h.пустые()
+        pool = [f for f in пустые
+                if f.stripped < b["разбор_максимум"] or sum(f.stock.values()) > 0] or пустые
+        if not pool:
+            return
         flat = max(pool, key=lambda f: sum(f.stock.values()) + (b["разбор_максимум"] - min(b["разбор_максимум"], f.stripped)))
         got = {}
         for res, amount in list(flat.stock.items()):
@@ -673,10 +694,25 @@ def execute(h, npc, key, target):
             h.stats["наразобрано_материалы"] = (h.stats.get("наразобрано_материалы", 0)
                                                 + b["разбор_материалов"])
         flat.stripped += 1
+        # доски берут не из воздуха: сначала выламывают то, чем квартира
+        # утеплена, потом дверь. Запасная комната и топливо для буржуйки —
+        # один и тот же ресурс, и дом проедает сам себя
+        если_было = None
+        if flat.shelter.get("утепление", 0) > 0:
+            flat.shelter["утепление"] -= 1
+            если_было = "рамы"
+        elif flat.shelter.get("дверь", 0) > 0:
+            flat.shelter["дверь"] -= 1
+            если_было = "дверь"
+        flat.вложено = max(0.0, flat.вложено - b["разбор_материалов"])
         if flat.owner_died and sum(v for k, v in got.items() if k != "материалы") > 0:
             npc.mood = clamp(npc.mood - 5 * npc.t01("лояльность"))
         took = ", ".join(f"{k} {int(v)}" for k, v in got.items() if v)
         said = f"{npc.short} {vb(npc.sex, 'разобрал')} часть кв.{flat.apt}" + (f": {vb(npc.sex, 'взял')} {took}" if took else "")
+        if если_было == "рамы":
+            said += "; окна там теперь голые"
+        elif если_было == "дверь":
+            said += "; дверь снял с петель"
 
     elif key == "вылазка":
         _outing(h, npc, spent, место)
@@ -744,7 +780,7 @@ def execute(h, npc, key, target):
             said = f"{npc.short} {vb(npc.sex, 'обработал')} раны"
 
     elif key == "тело":
-        flat = min([f for f in h.empty if f.body and f.body["порций"] > 0],
+        flat = min([f for f in h.пустые() if f.body and f.body["порций"] > 0],
                    key=lambda f: abs(f.floor - npc.floor))
         take = min(flat.body["порций"], 4.0)
         flat.body["порций"] -= take
@@ -778,7 +814,7 @@ def execute(h, npc, key, target):
         said = None
 
     elif key == "вынести":
-        flat = min([f for f in h.empty if f.body and f.body["порций"] > 0],
+        flat = min([f for f in h.пустые() if f.body and f.body["порций"] > 0],
                    key=lambda f: abs(f.floor - npc.floor))
         name = flat.body.get("вин") or flat.body["кто"]
         flat.body["порций"] = 0.0
@@ -847,8 +883,8 @@ def execute(h, npc, key, target):
             h.journal.line(f"{npc.short} {vb(npc.sex, 'перебрался')} к {host.form('dat')} "
                            f"в кв.{host.apt} — топят одну печку на двоих.", 2)
             h.note(f"{npc.short} {vb(npc.sex, 'переехал')} к {host.form('dat')}")
-            # своя квартира остаётся пустой, и это все понимают
-            conflict.release_flat(h, npc)
+            # своя квартира остаётся пустой сама — в ней просто никто не живёт.
+            # И её начнут разбирать: вернуться потом может быть некуда
         else:
             social.adjust(npc, host.id, trust=-1.0, hate=10)
             npc.ask_record(host.id)["отказ_переезд"] = h.day

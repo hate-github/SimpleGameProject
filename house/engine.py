@@ -9,7 +9,7 @@ import json
 import os
 
 from .util import Rng, clamp, norm, vb
-from .model import NPC, House, EmptyFlat
+from .model import NPC, House, Flat
 from . import world, social, actions, conflict, report
 
 DATA = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data")
@@ -103,7 +103,16 @@ class Simulation:
     def _build(self):
         h = self.h
         for f in self.npcs_data.get("пустые_квартиры", []):
-            h.empty.append(EmptyFlat(apt=f["кв"], floor=f["этаж"], stock=dict(f.get("запасы", {}))))
+            h.flats[f["кв"]] = Flat(apt=f["кв"], floor=f["этаж"],
+                                    shelter=dict(f.get("убежище", {})),
+                                    stock=dict(f.get("запасы", {})))
+        for d in self.npcs_data["жильцы"]:
+            # квартира заводится вместе с жильцом, но принадлежит дому, а не ему:
+            # он может её бросить, её могут занять, и всё, что он в неё вложил,
+            # останется в стенах
+            h.flats[d["кв"]] = Flat(apt=d["кв"], floor=d["этаж"],
+                                    shelter=dict(d.get("убежище", {})),
+                                    вложено=float(d.get("вложено", 3.0)))
         for d in self.npcs_data["жильцы"]:
             p = NPC(
                 id=d["id"], name=d["имя"], short=d["коротко"], apt=d["кв"], floor=d["этаж"],
@@ -112,10 +121,11 @@ class Simulation:
                 gen=d.get("коротко_род", ""), dat=d.get("коротко_дат", ""),
                 acc=d.get("коротко_вин", ""), ins=d.get("коротко_твор", ""),
                 traits=dict(d["черты"]), stock=dict(d["запасы"]),
-                weapon=d.get("оружие", "нет"), shelter=dict(d.get("убежище", {})),
+                weapon=d.get("оружие", "нет"),
                 dependents=d.get("иждивенцы", 0), dependent_name=d.get("иждивенец_имя", ""),
                 dependent_acc=d.get("иждивенец_вин", ""),
             )
+            p._h = h
             h.people[p.id] = p
         # стартовые отношения
         for d in self.npcs_data["жильцы"]:
