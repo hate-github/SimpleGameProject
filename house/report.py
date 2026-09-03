@@ -51,8 +51,10 @@ class Journal:
         if h.network <= 0:
             infra.append("без связи")
         tail = (" · " + ", ".join(infra)) if infra else ""
+        режим = h.mods.get("режим", "метель")
         self.w()
-        self.w(f"══ ДЕНЬ {h.day} · метель · {weather}{tail} " + "═" * max(0, 40 - len(tail)))
+        self.w(f"══ ДЕНЬ {h.day} · {режим} · {weather}{tail} "
+               + "═" * max(0, 40 - len(tail) - (len(режим) - 6)))
         shown = [t for imp, t in self.buf if imp >= (2 if self.verbosity == 0 else (1 if self.verbosity == 1 else 0))]
         for t in shown:
             prefix = "  "
