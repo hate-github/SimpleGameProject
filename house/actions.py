@@ -290,6 +290,15 @@ def gather(h, npc):
         for m in h.others(npc):
             if not any(u in m.skills for u in ("слесарь", "электрик")):
                 continue
+            # у мастера одни руки: пока он делает одну печь, вторую не берёт.
+            # Без очереди Виктор набирал три заказа за день и раздавал их
+            # всем разом на третий — печка выходила дешевле банки тушёнки
+            if h.mods.get("мастер_занят_" + m.id):
+                continue
+            # и материал нужен ему сейчас, а не когда-нибудь: браться за работу,
+            # которую нечем делать, — это не обещание, а отговорка
+            if m.stock.get("материалы", 0) < b["буржуйка_материалы"]:
+                continue
             if npc.stock.get("еда", 0) + npc.stock.get("топливо", 0) < b["печь_цена"]:
                 continue
             add("заказать_печь", 3.0 + cold * 5.0 + npc.trust.get(m.id, 3.0) * 0.3, m)
@@ -756,9 +765,13 @@ def execute(h, npc, key, target):
                  + мастер.t01("жадность") * 2.0          # это заработок
                  - мастер.hate.get(npc.id, 0.0) / 15.0
                  - (1.0 - min(1.0, мастер.secure("еда"))) * 2.0)
-        if готов > b["печь_согласие"]:
+        if h.mods.get("мастер_занят_" + мастер.id):
+            said = (f"{мастер.short} и рад бы, да {vb(мастер.sex, 'занят')}: "
+                    f"печь уже делается не {npc.form('dat')}")
+        elif готов > b["печь_согласие"]:
             срок = b["печь_срок"] - (1 if "слесарь" in мастер.skills else 0)
             h.mods["заказ_" + npc.id] = {"мастер": мастер.id, "готово": h.day + срок}
+            h.mods["мастер_занят_" + мастер.id] = npc.id
             social.adjust(npc, мастер.id, trust=0.8)
             said = (f"{npc.short} {vb(npc.sex, 'сговорился')} с {мастер.form('ins')}: "
                     f"тот сделает буржуйку за {срок} дн.")
@@ -1337,7 +1350,7 @@ def _outing(h, npc, dur, выбор=None):
     Время дороги уже учтено в `dur` — его посчитали до выхода, вместе с выбором
     места (см. execute).
     """
-    from .world import outing_danger
+    from .world import outing_danger, улица_злая
     b = h.B
     npc.away = True
     место, часы_к, богатство_к, риск_к = выбор or выбрать_место(h, npc)
@@ -1371,7 +1384,7 @@ def _outing(h, npc, dur, выбор=None):
         npc.injuries.append(inj)
         npc.health = clamp(npc.health - h.rng.uni(8, 20))
         txt += f"; {vb(npc.sex, 'вернулся') if npc.sex != 'ж' else 'вернулась'} с травмой ({inj})"
-    if h.rng.chance(b["вылазка_шанс_встречи"] * danger):
+    if h.rng.chance(b["вылазка_шанс_встречи"] * danger * улица_злая(h)):
         if h.rng.chance(0.5):
             lost = {k: v for k, v in list(npc.stock.items()) if v > 0}
             res = h.rng.pick(list(lost)) if lost else None

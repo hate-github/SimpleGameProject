@@ -227,6 +227,7 @@ class Simulation:
             мастер = h.get(заказ["мастер"])
             if not (мастер and мастер.alive and not мастер.exiled):
                 h.mods.pop("заказ_" + p.id, None)
+                h.mods.pop("мастер_занят_" + заказ["мастер"], None)
                 continue
             if мастер.stock.get("материалы", 0) < h.B["буржуйка_материалы"]:
                 continue                       # нет материала — заказ ждёт
@@ -244,6 +245,7 @@ class Simulation:
             h.where(p).shelter["буржуйка"] = True
             h.where(p).вложено += h.B["буржуйка_материалы"]
             h.mods.pop("заказ_" + p.id, None)
+            h.mods.pop("мастер_занят_" + мастер.id, None)
             social.adjust(p, мастер.id, trust=2.0, hate=-10)
             social.adjust(мастер, p.id, trust=1.0)
             h.bump("печей_на_заказ")
