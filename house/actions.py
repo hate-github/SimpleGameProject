@@ -31,6 +31,8 @@ COST = {
     "быт":          (1, "шаги"),
     "переехать":    (2, "шаги"),
     "занять":       (2, "разбор"),
+    "съехать":      (2, "шаги"),
+    "выгнать":      (3, "ссора"),
     "отнять":       (3, "ссора"),
     "кража_днём":   (3, "взлом"),
     "тело":         (2, "разбор"),
@@ -101,6 +103,7 @@ def most_needed(npc):
     "утепление": 0.28,    # это и в обычную зиму делают
     "переехать": 0.88,    # признать, что в своей квартире не выжить
     "занять": 0.55,      # перебраться в квартиру, которая тебе не принадлежит
+    "выгнать": 0.80,      # выставить из своей квартиры на мороз
     "отнять": 1.15,       # в мирное время это называется разбоем
     "вылазка": 0.18,
 }
@@ -314,6 +317,23 @@ def gather(h, npc):
             want_mats += 2.0 + des * 3.0
         add("разбор", want_mats - mats * 0.25)
 
+    # --- вместе или порознь (GDD «Съехаться») ---
+    # то же число, которым считают переезд, каждый день пересчитывается заново.
+    # Пока выхода из сожительства не было, пары доживали до конца с взаимной
+    # ненавистью 86 из 100 и продолжали делить одну комнату
+    if npc.living_with:
+        host = h.get(npc.living_with)
+        if host and host.alive and not host.exiled:
+            add("съехать", -social.выгода_соседства(h, npc, host) - b["съехать_порог"], host)
+    for g_id in sorted(npc.guests):
+        g = h.get(g_id)
+        if not (g and g.alive and not g.exiled):
+            continue
+        # выставить может только тот, кто сильнее: слабый хозяин терпит
+        if npc.power() < g.power() * b["выгнать_превосходство"]:
+            continue
+        add("выгнать", -social.выгода_соседства(h, npc, g) - b["выгнать_порог"], g)
+
     # --- занять пустую квартиру (GDD 12): жильё — вещь, и его занимают ---
     # человек уходит не туда, где просто пусто, а туда, где заметно лучше:
     # целая дверь, заклеенные окна, чужая буржуйка. И тем тяжелее ему уйти,
@@ -438,9 +458,9 @@ def gather(h, npc):
                 and npc.warmth < b["переезд_порог_тепла"]
                 and h.room_temp(t, burning=True) > h.room_temp(npc, burning=True) + 4
                 and trust >= b["переезд_доверие"]):
-            move = (1.0 - norm(npc.warmth, 10, 55)) * 7.0 + trust * 0.4
+            move = social.выгода_соседства(h, npc, t) * b["переезд_вес_выгоды"]
+            move += (1.0 - norm(npc.warmth, 10, 55)) * 4.0
             move -= npc.t01("храбрость") * 1.5      # гордость
-            move += 1.5 if t.id in npc.allies else 0.0
             add("переехать", move, t)
         # отнять на лестнице: без двери, без замка, лицом к лицу
         A = conflict.aggr(h)
@@ -890,6 +910,8 @@ def execute(h, npc, key, target):
         yes -= (1.0 - min(1.0, host.secure("еда"))) * 5.5
         yes += 2.0 if npc.id in host.allies else 0.0
         yes += 1.5 if npc.dependents else 0.0
+        # и то же самое, чем он потом будет мерить, не выгнать ли его обратно
+        yes += social.выгода_соседства(h, host, npc) * b["переезд_вес_выгоды"]
         # в однушке с буржуйкой больше двоих не помещается
         yes -= len(host.guests) * b["теснота_отказ"]
         if yes > 4.0 and len(host.guests) < b["переезд_максимум_гостей"]:
@@ -913,6 +935,43 @@ def execute(h, npc, key, target):
             npc.ask_record(host.id)["отказ_переезд"] = h.day
             npc.mood = clamp(npc.mood - 8)
             h.journal.line(f"{npc.short} {vb(npc.sex, 'просил')} пустить к себе. {host.short} не {vb(host.sex, 'пустил')}.", 1)
+        said = None
+
+    elif key == "съехать":
+        host = target
+        дров = 0.0
+        if host.hate.get(npc.id, 0.0) < 40:
+            дров = min(b["выгнать_дров_на_дорогу"], host.stock.get("топливо", 0.0))
+            host.stock["топливо"] = host.stock.get("топливо", 0.0) - дров
+            npc.stock["топливо"] = npc.stock.get("топливо", 0.0) + дров
+        npc.living_with = None
+        host.guests.discard(npc.id)
+        conflict.occupy_flat(h, npc)
+        npc.warmth = clamp(npc.warmth - 8)
+        social.adjust(npc, host.id, trust=-0.5)
+        social.adjust(host, npc.id, trust=-0.5)
+        h.bump("съездов")
+        h.journal.line(f"{npc.short} {vb(npc.sex, 'вернулся')} к себе в кв.{npc.apt}"
+                       + (f" — {host.short} {vb(host.sex, 'дал')} дров на первое время." if дров
+                          else ". Ушёл молча."), 2)
+        h.note(f"{npc.short} {vb(npc.sex, 'съехал')} от {host.form('gen')}")
+        said = None
+
+    elif key == "выгнать":
+        гость = target
+        гость.living_with = None
+        npc.guests.discard(гость.id)
+        conflict.occupy_flat(h, гость)
+        гость.warmth = clamp(гость.warmth - 14)
+        гость.mood = clamp(гость.mood - 14)
+        гость.panic = clamp(гость.panic + 12)
+        social.adjust(гость, npc.id, trust=-4.0, hate=b["ненависть_за_выселение"])
+        social.adjust(npc, гость.id, trust=-1.0)
+        h.bump("выселений")
+        h.journal.line(f"{npc.short} {vb(npc.sex, 'выставил')} {гость.form('acc')} обратно "
+                       f"в кв.{гость.apt}. Разговаривать не о чем.", 2)
+        h.note(f"{npc.short} {vb(npc.sex, 'выгнал')} {гость.form('acc')}")
+        social.judge(h, npc, "жестокость", hate=6.0, trust=-0.8)
         said = None
 
     elif key == "занять":
