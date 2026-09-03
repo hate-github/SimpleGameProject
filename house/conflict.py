@@ -283,22 +283,29 @@ def reveal_taboo(h, eater, witness=None):
     _verdict_taboo(h, eater)
 
 
-def _verdict_taboo(h, eater):
-    """Что дом делает с тем, про кого узнал. Решает быстро — если есть кому."""
-    if not eater.alive or eater.exiled:
+def приговор_дома(h, кого, повод, причина_изгнания):
+    """Что дом делает с тем, про кого узнал. Решает быстро — если есть кому.
+
+    Одно место на два случая: людоед и убийца соседа. Разница только в словах.
+    """
+    if not кого.alive or кого.exiled:
         return
-    judges = [p for p in h.others(eater) if p.health > 35]
-    if len(judges) >= 2 and sum(p.power() for p in judges) > eater.power() * 1.2:
+    judges = [p for p in h.others(кого) if p.health > 35]
+    if len(judges) >= 2 and sum(p.power() for p in judges) > кого.power() * 1.2:
         if h.rng.chance(0.55):
-            exile(h, eater, by=judges[0], reason="то, что нашли у него в квартире")
+            exile(h, кого, by=judges[0], reason=причина_изгнания)
         elif h.rng.chance(0.45):
-            h.journal.line(f"За {eater.form('ins')} пришли ночью.", 2)
-            fight(h, judges, [eater], place=f"кв.{eater.apt}", reason="приговор дома")
+            h.journal.line(f"За {кого.form('ins')} пришли ночью.", 2)
+            fight(h, judges, [кого], place=f"кв.{кого.apt}", reason="приговор дома")
     elif len(judges) >= 1:
         # сил выгнать нет — просто перестают существовать друг для друга
         for p in judges:
-            social.adjust(p, eater.id, trust=-3.0, hate=15)
-        h.journal.line(f"С {eater.form('ins')} больше никто не разговаривает.", 1)
+            social.adjust(p, кого.id, trust=-3.0, hate=15)
+        h.journal.line(f"С {кого.form('ins')} больше никто не разговаривает.", 1)
+
+
+def _verdict_taboo(h, eater):
+    приговор_дома(h, eater, "людоедство", "то, что нашли у него в квартире")
 
 
 def house_verdict(h, thief, victim):
@@ -541,6 +548,113 @@ def _orphan(h, dead):
         h.note(f"{name} остался один — никто не взял")
         social.house_shock(h, panic=10, mood=-14)
         h.bump("детей_брошено")
+
+
+# ---------------------------------------------------------------- ночью, в одной комнате
+
+def оценка_убийства(h, a, victim):
+    """Стоит ли ночью убить того, с кем живёшь.
+
+    Самый тёмный поступок в доме после людоедства, и устроен он иначе, чем
+    налёт: не сила решает, а то, что жертва спит в двух метрах и доверяет.
+    Отсюда и стратегия «втереться»: сначала переехать, потом дождаться ночи.
+    """
+    b = h.B
+    добыча = a.loot_value(victim.id)
+    if a.living_with == victim.id:
+        # хозяйская квартира достанется ему целиком — со стенами и печкой
+        добыча += max(0.0, h.ценность_жилья(h.flats[victim.apt], a)
+                      - h.ценность_жилья(h.flats[a.apt], a))
+    хочу = добыча * (0.25 + a.t01("жадность") * 0.8)
+    хочу += a.hate.get(victim.id, 0.0) / 30.0
+    хочу += a.desperation() * b["убийство_за_отчаяние"]
+    # главное: за нож берутся не от ссоры, а когда разойтись нельзя. Хозяин
+    # может выставить гостя, гость может уйти — если ему есть куда вернуться.
+    # А вот тот, чью квартиру разобрали на доски, пока он грелся у соседа,
+    # заперт с ним в одной комнате, и это совсем другой расчёт
+    if a.living_with == victim.id:
+        своя = h.flats[a.apt]
+        есть_куда = h.flat_temp(своя, burning=social.своя_топится(h, a),
+                                powered=h.power_on) > b["комфортная_температура"] - 8
+    else:
+        есть_куда = a.power() >= victim.power() * b["выгнать_превосходство"]
+    if есть_куда:
+        хочу -= b["убийство_есть_выход"]
+    хочу -= a.t01("лояльность") * b["убийство_совесть"]
+    хочу -= 3.0 if victim.id in a.allies else 0.0
+    хочу -= 2.5 if victim.dependents else 0.0
+    # рядом был он один, и дом это поймёт: чем больше свидетелей вокруг,
+    # тем страшнее. Скрытному страшно меньше
+    хочу -= b["убийство_страх_раскрытия"] * (1.0 + 0.15 * len(h.alive())) * (1.4 - stealth(a))
+    # даже спящий сильный человек может проснуться
+    хочу -= max(0.0, victim.power() - a.power()) * 0.8
+    return хочу
+
+
+def убить_соседа(h, killer, victim):
+    """Ночь в общей квартире. Возвращает True, если получилось."""
+    b = h.B
+    killer.bump("покушений")
+    h.bump("покушений_на_соседа")
+    шанс = b["убийство_база"] + (stealth(killer) - 0.5) * 0.4
+    if killer.weapon in ("нож", "топор"):
+        шанс += 0.10
+    шанс -= victim.power() * 0.05
+    шанс -= 0.12 if victim.tonight == "дежурить" else 0.0
+    if not h.rng.chance(clamp(шанс, 0.30, 0.95)):
+        # проснулся
+        social.emit(h, killer, 5, "ссора", night=True)
+        h.journal.line(f"{victim.short} {vb(victim.sex, 'проснулся')} от того, что "
+                       f"{killer.short} {'стояла' if killer.sex == 'ж' else 'стоял'} над "
+                       f"{'ней' if victim.sex == 'ж' else 'ним'}.", 2)
+        social.adjust(victim, killer.id, trust=-10.0, hate=b["ненависть_за_убийство_соседа"])
+        social.register_incident(h, "покушение", None)
+        social.judge(h, killer, "насилие", hate=25.0, trust=-4.0)
+        cut_ties(h, killer if killer.living_with else victim)
+        fight(h, [killer], [victim], place=f"кв.{victim.apt}", reason="ночью в одной квартире")
+        приговор_дома(h, killer, "покушение", "то, что он сделал ночью")
+        return False
+
+    # получилось
+    гость_был = killer.living_with == victim.id
+    for res, v in list(victim.stock.items()):
+        if v:
+            killer.stock[res] = killer.stock.get(res, 0.0) + v
+            victim.stock[res] = 0.0
+    victim.health = 0.0
+    victim.alive = False
+    victim.cause = vb(victim.sex, "убит") + " ночью, в собственной квартире"
+    victim.died_day = h.day
+    killer.bump("убийств")
+    h.bump("убийств")
+    h.bump("убийств_соседа")
+    killer.mood = clamp(killer.mood - b["убийство_настроение"])
+    killer.panic = clamp(killer.panic + 10)
+    if гость_был:
+        # он остаётся здесь: ради этих стен всё и было
+        killer.apt, killer.floor = victim.apt, victim.floor
+    h.journal.secret(f"ночью {killer.short} убил {victim.form('gen')} и забрал всё")
+    on_death(h, victim)          # без killer: дом ещё не знает, кто это
+    if гость_был:
+        killer.living_with = None
+    h.note(f"{victim.short}: {victim.cause}")
+
+    # дом видит тело с раной и понимает, кто был рядом
+    подозрение = clamp(b["убийство_подозрение"] * (1.4 - stealth(killer)), 0.05, 0.95)
+    узнали = [w for w in h.others(killer) if h.rng.chance(подозрение)]
+    for w in узнали:
+        social.adjust(w, killer.id, trust=-5.0, hate=b["ненависть_за_убийство_соседа"], aware=20)
+    if узнали:
+        killer.stats["под_подозрением"] = 1
+        h.journal.line(f"{victim.short} {vb(victim.sex, 'умер')} ночью, а рядом был "
+                       f"только {killer.short}. Дом это сложил.", 2)
+        social.register_incident(h, "убийство", None)
+        social.judge(h, killer, "насилие", hate=20.0, trust=-3.0, witnesses=узнали)
+        приговор_дома(h, killer, "убийство", "смерть соседа по квартире")
+    else:
+        h.journal.line(f"{victim.short} не {vb(victim.sex, 'проснулся')}. "
+                       f"{killer.short} {vb(killer.sex, 'сказал')}, что ночью было тихо.", 2)
+    return True
 
 
 # ---------------------------------------------------------------- рейд как осада

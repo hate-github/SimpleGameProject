@@ -267,6 +267,15 @@ class Simulation:
                 h.mods["последний_налёт"] = h.day
                 raid_done = True
 
+        # ночь в общей квартире. До краж: тот, кто на это решился, уже не пойдёт
+        # никуда лезть, а дом наутро будет считать совсем другое
+        for p in h.rng.shuffled(h.alive()):
+            if p.tonight != "убить_соседа" or not p.alive or p.exiled:
+                continue
+            c = targets.get(p.id)
+            if c and c.alive and not c.exiled and social.под_одной_крышей(h, p, c):
+                conflict.убить_соседа(h, p, c)
+
         # кражи. Список составлен до осады, а осада могла кого-то из него убить
         # или выставить на мороз — поэтому проверяем обоих ещё раз
         for p in h.rng.shuffled(h.alive()):
@@ -285,7 +294,7 @@ class Simulation:
             if p.tonight == "дежурить":
                 slept = 4.5
                 p.bump("ночей_дежурства")
-            elif p.tonight in ("кража", "налёт"):
+            elif p.tonight in ("кража", "налёт", "убить_соседа"):
                 slept = 5.5
             else:
                 slept = 11.0 if p.rest < 35 else (9.5 if p.rest < 60 else 8.0)
@@ -309,6 +318,15 @@ class Simulation:
         if p.dependents:
             watch += 1.0
         opts.append((("дежурить", None), watch * gate(p, "дежурить", b)))
+
+        # тот, с кем он делит комнату: ночью до него два метра и никакой двери
+        соседи = ([h.get(p.living_with)] if p.living_with
+                  else [h.get(g) for g in sorted(p.guests)])
+        for c in соседи:
+            if not (c and c.alive and not c.exiled):
+                continue
+            opts.append((("убить_соседа", c),
+                         conflict.оценка_убийства(h, p, c) * gate(p, "убить_соседа", b)))
 
         for t in h.others(p):
             if not t.alive:
