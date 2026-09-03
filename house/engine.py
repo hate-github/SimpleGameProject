@@ -10,7 +10,7 @@ import os
 
 from .util import Rng, clamp, norm, vb
 from .model import NPC, House, Flat
-from . import world, social, actions, conflict, report
+from . import world, social, actions, conflict, report, meeting
 
 DATA = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data")
 
@@ -31,7 +31,7 @@ def load_json(name):
 # событие никогда бы не случилось и никто бы этого не заметил.
 УСЛОВИЯ = {"жив_с_умением", "нет_происшествий", "было_происшествие", "все_в_тепле",
            "была_смерть", "есть_раненый", "пусто_снаружи", "есть_пустая_квартира",
-           "холоднее", "мало_живых", "есть_тело", "режим"}
+           "холоднее", "мало_живых", "есть_тело", "режим", "подъезд_открыт"}
 
 ЧЕРТЫ = {"жадность", "храбрость", "лояльность", "общительность", "вспыльчивость",
          "сообразительность"}
@@ -319,6 +319,9 @@ class Simulation:
                            + ", ".join(f"{k} {v:g}" for k, v in плата.items()) + ".", 2)
             h.note(f"{мастер.short} {vb(мастер.sex, 'сделал')} печь {p.form('dat')}")
 
+        # вышел ли вчерашний дежурный: перед домом, а не перед соседом
+        meeting.проверить_дежурство(h)
+
         # обнаружение ночных пропаж (GDD 4.4 — сводка утром)
         losses = h.mods.pop("пропажи", [])
         for thief_id, victim_id in losses:
@@ -395,6 +398,7 @@ class Simulation:
             if p.tonight == "дежурить":
                 slept = 4.5
                 p.bump("ночей_дежурства")
+                p.stats["дежурил_ночь"] = h.day
             elif p.tonight in ("кража", "налёт", "убить_соседа"):
                 slept = 5.5
             else:
@@ -417,6 +421,12 @@ class Simulation:
         watch += p.stats.get("обокрали", 0) * 2.0
         watch += p.вес_черт("дежурить")
         watch += p.пунктик("дежурить")
+        # своя ночь по общему расписанию: это уже не желание, а обязательство
+        # перед всеми (см. meeting.проверить_дежурство)
+        дежурный = meeting.чья_ночь(h)
+        if дежурный is not None and дежурный.id == p.id:
+            watch += b["дежурство_обязанность"]
+            h.mods["дежурил_вчера"] = p.id
         # с ребёнком всю ночь на лестнице не просидишь: он просыпается,
         # мёрзнет и его надо держать при себе (GDD 12.6)
         if not p.dependents:
