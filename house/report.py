@@ -108,6 +108,10 @@ class Journal:
                 marks.append("/".join(p.injuries))
             if p.sick:
                 marks.append(p.sick)
+            for р in p.дети:
+                marks.append(f"{р['имя']}: сыт{int(р['сытость'])} тепл{int(р['тепло'])}"
+                             f" здор{int(р['здоровье'])}"
+                             + (f" ({р['болен']})" if р["болен"] else ""))
             self.w(
                 f"  {p.short:<8} кв{p.apt:<3}"
                 f" сыт{int(p.satiety):>3} вод{int(p.hydration):>3} тепл{int(p.warmth):>3} сон{int(p.rest):>3}"

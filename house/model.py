@@ -107,6 +107,11 @@ class NPC:
     dependents: int = 0
     dependent_name: str = ""
     dependent_acc: str = ""    # «взял Ваню»
+    # Ребёнок — состояние, а не множитель (GDD 12.6). У него своя сытость,
+    # своё тепло и своё здоровье; он мёрзнет и болеет первым и может умереть.
+    # `dependents` остаётся числом рук, которые он связывает, — на него смотрят
+    # два десятка решений; `дети` — то, что с ним на самом деле происходит.
+    дети: List[Dict[str, Any]] = field(default_factory=list)
 
     # --- состояние (GDD 6.1). 100 = хорошо, 0 = критично ---
     satiety: float = 85.0
@@ -392,6 +397,12 @@ class NPC:
     def form(self, case: str) -> str:
         """Имя в нужном падеже. Формы лежат в data/npcs.json, а не в коде."""
         return getattr(self, case, "") or self.short
+
+    def слабейший_ребёнок(self):
+        """Тот из детей, кому хуже всех. Ему и достаётся лекарство."""
+        if not self.дети:
+            return None
+        return min(self.дети, key=lambda р: min(р["здоровье"], р["тепло"], р["сытость"]))
 
     def dependents_only_child(self, h=None) -> bool:
         """Заглушка-запрет: ребёнок никогда не может стать едой.

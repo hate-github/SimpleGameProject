@@ -202,6 +202,14 @@ def most_needed(npc):
 }
 
 
+def нужен_врач(p):
+    """Кому за этой дверью нужна аптечка — ему самому или ребёнку (GDD 12.6)."""
+    if p.injuries or p.sick:
+        return True
+    р = p.слабейший_ребёнок()
+    return bool(р and (р["болен"] or р["здоровье"] < 70))
+
+
 def своя_мерка(npc, key, b):
     """Насколько этот поступок противен самому человеку (GDD 12.1).
 
@@ -344,12 +352,14 @@ def gather(h, npc):
     food_days = npc.days_of("еда")
     if npc.stock.get("мясо", 0) > 0 and npc.satiety < 70 and npc.stock.get("еда", 0) <= 0:
         add("поесть_мясо", hungry * 8.0)
-    if npc.stock.get("еда", 0) > 0 and npc.satiety < 88:
+    # ребёнка кормят раньше себя — в том числе когда сам ещё не голоден
+    детский_голод = min([р["сытость"] for р in npc.дети], default=100.0)
+    if npc.stock.get("еда", 0) > 0 and (npc.satiety < 88 or детский_голод < 75):
         s = hungry * 9.0
         if food_days < 2.5 and npc.satiety > 45:
             s *= 0.45            # режим экономии: терпит, пока может
         if npc.dependents:
-            s += 1.2             # ребёнка кормят раньше себя
+            s += 1.2 + (1.0 - norm(детский_голод, 20, 80)) * 7.0
         add("поесть", s)
 
     if npc.hydration < 88:
@@ -720,13 +730,16 @@ def gather(h, npc):
         # лечение
         # GDD 6.2: «помощь NPC-медика (если есть доверие)»
         if ("медик" in npc.skills and npc.stock.get("лекарства", 0) >= 1
-                and (t.injuries or t.sick) and t.trust.get(npc.id, 3.0) >= b["лечение_доверие"]):
-            add("лечить", 3.0 + t.невмоготу() * 4.0
+                and нужен_врач(t) and t.trust.get(npc.id, 3.0) >= b["лечение_доверие"]):
+            детский = 3.0 if (t.слабейший_ребёнок() or {}).get("болен") else 0.0
+            add("лечить", 3.0 + t.невмоготу() * 4.0 + детский
                 + npc.t01("лояльность") * 3.0 + trust * 0.3, t)
 
     # --- себя ---
-    if npc.stock.get("лекарства", 0) >= 1 and (npc.injuries or npc.sick):
-        add("лечить", 3.0 + плохо * 6.0, npc)
+    if npc.stock.get("лекарства", 0) >= 1 and нужен_врач(npc):
+        свой = npc.слабейший_ребёнок()
+        детский = 0.0 if свой is None else (1.0 - norm(свой["здоровье"], 20, 90)) * 7.0
+        add("лечить", 3.0 + max(плохо * 6.0, детский), npc)
     add("отдых", tired * 6.0 + (1.0 - norm(npc.mood, 20, 70)) * 2.0 + (2.0 if npc.injuries else 0.0))
     # обычная жизнь: пока всё ещё похоже на нормальное, человек живёт, а не выживает
     # обычная жизнь заполняет то, что осталось, но не спорит с настоящими делами
@@ -845,7 +858,14 @@ def execute(h, npc, key, target):
         need = npc.eaters()
         have = npc.stock.get("еда", 0.0)
         used = spend(h, npc, "еда", need)
-        npc.satiety = clamp(npc.satiety + порция(h, npc, b) * (used / need))
+        доля = used / need
+        # мать ест после него: ребёнку идёт полная порция, пока она есть,
+        # и потому при том же запасе она сама голоднее (GDD 12.6)
+        for р in npc.дети:
+            р["сытость"] = clamp(р["сытость"] + b["ребёнок_еда_за_порцию"]
+                                 * min(1.0, доля * 1.4))
+        npc.satiety = clamp(npc.satiety + порция(h, npc, b) * доля
+                            * (1.0 - b["ребёнок_отдаёт"] * len(npc.дети)))
         h.stats["съедено"] = h.stats.get("съедено", 0) + used
         # горячая еда пахнет сильнее — и выдаёт хозяина всему подъезду
         social.smell(h, npc, hot=npc.burning or (h.powered(npc) and npc.shelter.get("обогреватель")))
@@ -1149,6 +1169,29 @@ def execute(h, npc, key, target):
         # «единственная возможность лечить серьёзные травмы и болезни»)
         медик = "медик" in npc.skills
         spend(h, npc, "лекарства", 1)
+        ребёнок = target.слабейший_ребёнок()
+        # ребёнку — первому: и мать так решает, и медик так решает
+        if ребёнок is not None and (ребёнок["болен"] or ребёнок["здоровье"] < 70):
+            ребёнок["здоровье"] = clamp(ребёнок["здоровье"] + b["ребёнок_лечение"]
+                                        * (1.4 if медик else 1.0))
+            if ребёнок["болен"] and h.rng.chance(b["лечение_медиком_болезнь"]
+                                                 if медик else b["самолечение_болезнь"]):
+                ребёнок["болен"] = None
+            if target.id != npc.id:
+                social.adjust(target, npc.id, trust=b["доверие_за_лечение"], hate=-14)
+                social.проверить_наговор(h, npc, target)
+                target.mood = clamp(target.mood + 12)
+                npc.mood = clamp(npc.mood + b["настроение_от_помощи"])
+                target.favors[npc.id] = target.favors.get(npc.id, 0) + 1
+                said = (f"{npc.short} {vb(npc.sex, 'осмотрел')} {ребёнок['вин']} "
+                        f"у {target.form('gen')}")
+            else:
+                said = f"{npc.short} {vb(npc.sex, 'выхаживал')} {ребёнок['вин']}"
+            if said:
+                h.journal.line(said, NOTABLE.get(key, 0))
+            if lvl and kind:
+                social.emit(h, npc, lvl, kind, night=False)
+            return
         if медик:
             # перевязать — не значит вылечить всё. Медсестра с аптечкой закрывает
             # одну рану за раз и сбивает жар; перелом от этого не срастается.
@@ -1621,6 +1664,10 @@ def выбрать_место(h, npc):
     b = h.B
     лучшее, оценка = МЕСТА[0], -99.0
     for м in МЕСТА:
+        # с ребёнком на руках далеко не уходят: это не вычет к оценке,
+        # а предел по часам. Магазин на Заречной для матери закрыт (GDD 12.6)
+        if npc.dependents and м.часы > b["ребёнок_предел_часов"]:
+            continue
         s = (м.богатство * npc.знаю_место(м.имя)
              * (1.0 + npc.desperation() * b["вылазка_дальше_за_нужду"]))
         s -= м.риск * (b["вылазка_осторожность"] * (1.4 - npc.t01("храбрость")))

@@ -538,31 +538,81 @@ def on_death(h, dead, killer=None, quiet=False):
     dead.stock = {}
 
 
-def _orphan(h, dead):
-    """Кого-то надо взять к себе. Или не взять."""
-    name = dead.dependent_name or "ребёнок"
-    name_acc = dead.dependent_acc or name
-    candidates = []
+def смерть_ребёнка(h, кто, р):
+    """Единственное честное завершение детской шкалы (GDD 12.6).
+
+    Правило ГДД остаётся в силе: ребёнок никогда не становится едой и его тела
+    в мире не появляется. Но смерть от холода и болезни возможна — и она ломает
+    мать сильнее любого другого события: у неё опускается даже пол нормальности,
+    то есть она перестаёт быть тем человеком, каким была.
+    """
+    b = h.B
+    if р in кто.дети:
+        кто.дети.remove(р)
+    кто.dependents = max(0, кто.dependents - 1)
+    if not кто.дети:
+        кто.dependent_name = ""
+        кто.dependent_acc = ""
+    h.bump("смертей_детей")
+    кто.bump("потерял_ребёнка")
+    причина = "от болезни" if р["болен"] else ("от голода" if р["сытость"] <= р["тепло"]
+                                               else "от холода")
+    h.journal.line(f"† {р['имя']} умер {причина}. {кто.short} "
+                   f"{'сидела' if кто.sex == 'ж' else 'сидел'} рядом до утра.", 2)
+    h.note(f"{р['имя']} умер {причина} ({кто.form('gen')})")
+    кто.mood = clamp(кто.mood - b["ребёнок_смерть_настроение"])
+    social.add_panic(кто, b["ребёнок_смерть_паника"])
+    кто.нормальность_пол = max(0.0, кто.нормальность_пол - b["ребёнок_смерть_пол"])
+    кто.normalcy = clamp(кто.normalcy - b["ребёнок_смерть_нормальность"],
+                         кто.нормальность_пол, 1.0)
+    # и то, чего ей уже не забыть: кто отказал, когда она просила
+    for o in h.others(кто):
+        отказов = (кто.asking.get(o.id) or {}).get("отказали", 0.0)
+        if отказов > 0:
+            social.adjust(кто, o.id, hate=b["ребёнок_смерть_ненависть"] * min(2.0, отказов),
+                          trust=-2.0)
+    social.house_shock(h, panic=b["ребёнок_смерть_дом_паника"],
+                       mood=b["ребёнок_смерть_дом_настроение"])
+    social.register_incident(h, "смерть_ребёнка", None)
     for p in h.alive():
-        w = p.trait("лояльность") * 1.8 + p.trust.get(dead.id, 3.0) * 0.8 - p.desperation() * 3.5
-        w += 2.0 if "медик" in p.skills else 0.0
-        if w > 0:
-            candidates.append((p, w))
-    if candidates:
-        taker = h.rng.weighted(candidates)
-        taker.dependents += 1
-        taker.dependent_name = name
-        taker.mood = clamp(taker.mood + 6)
-        taker.dependent_acc = name_acc
-        h.journal.line(f"{name} остался один. {taker.short} {vb(taker.sex, 'забрал')} его к себе.", 2)
-        h.note(f"{taker.short} {vb(taker.sex, 'взял')} {name_acc}")
+        social.видел(h, p, b["нормальность_за_смерть"])
+
+
+def _orphan(h, dead):
+    """Кого-то надо взять к себе. Или не взять.
+
+    Ребёнок переходит вместе со своей шкалой: он тот же самый, промёрзший
+    и голодный ровно настолько, насколько был при матери.
+    """
+    дети = dead.дети or [{"имя": dead.dependent_name or "ребёнок",
+                          "вин": dead.dependent_acc or dead.dependent_name or "ребёнка",
+                          "сытость": 60.0, "тепло": 55.0, "здоровье": 80.0, "болен": None}]
+    dead.дети = []
+    dead.dependents = 0
+    for р in дети:
+        candidates = []
         for p in h.alive():
-            social.adjust(p, taker.id, trust=1.0)
-    else:
-        h.journal.line(f"{name} остался один. Никто не взял.", 2)
-        h.note(f"{name} остался один — никто не взял")
-        social.house_shock(h, panic=10, mood=-14)
-        h.bump("детей_брошено")
+            w = p.trait("лояльность") * 1.8 + p.trust.get(dead.id, 3.0) * 0.8 - p.desperation() * 3.5
+            w += 2.0 if "медик" in p.skills else 0.0
+            if w > 0:
+                candidates.append((p, w))
+        if candidates:
+            taker = h.rng.weighted(candidates)
+            taker.dependents += 1
+            taker.дети.append(р)
+            taker.dependent_name = р["имя"]
+            taker.mood = clamp(taker.mood + 6)
+            taker.dependent_acc = р["вин"]
+            h.journal.line(f"{р['имя']} остался один. {taker.short} "
+                           f"{vb(taker.sex, 'забрал')} его к себе.", 2)
+            h.note(f"{taker.short} {vb(taker.sex, 'взял')} {р['вин']}")
+            for p in h.alive():
+                social.adjust(p, taker.id, trust=1.0)
+        else:
+            h.journal.line(f"{р['имя']} остался один. Никто не взял.", 2)
+            h.note(f"{р['имя']} остался один — никто не взял")
+            social.house_shock(h, panic=10, mood=-14)
+            h.bump("детей_брошено")
 
 
 # ---------------------------------------------------------------- ночью, в одной комнате
@@ -736,6 +786,9 @@ def consider_raid(h, npc):
     # а я умираю от голода» упирались именно в него
     if (npc.health < 35 or len(npc.injuries) >= 2) and npc.desperation() < b["налёт_нечего_терять"]:
         return None
+    # к чужой двери с ребёнком на руках не идут — ни вожаком, ни в толпе
+    if npc.dependents:
+        return None
     # налёт — это всегда либо нужда, либо личное
     if npc.desperation() < 0.30 / A and max(list(npc.hate.values()) or [0]) < 50 / A:
         return None
@@ -817,6 +870,8 @@ def recruit(h, leader, target):
     for p in h.others(leader):
         if p.id == target.id or p.health < 40 or len(p.injuries) >= 2:
             continue
+        if p.dependents:
+            continue                  # его руки связаны (GDD 12.6)
         # свою же дверь не ломают: под одной крышей — значит на одной стороне
         if p.living_with == target.id or target.living_with == p.id:
             continue

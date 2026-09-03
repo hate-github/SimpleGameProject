@@ -46,6 +46,14 @@ def invariants(h):
         if p.time_left < -0.01:
             say(f"{p.short}: часов в дне осталось {p.time_left:.3f}")
 
+        # ребёнок: число рук, которые он связывает, и его состояние — одно и то же
+        if живой and len(p.дети) != p.dependents:
+            say(f"{p.short}: иждивенцев {p.dependents}, а состояний детей {len(p.дети)}")
+        for р in p.дети:
+            for поле in ("сытость", "тепло", "здоровье"):
+                if not (-1e-9 <= р[поле] <= 100 + 1e-9):
+                    say(f"{р['имя']} у {p.short}: {поле} = {р[поле]:.2f}, а должно быть 0..100")
+
         if not живой and sum(p.stock.values()) > 1e-9:
             say(f"{p.short} выбыл, но запасы при нём: {p.stock}")
         if not живой and p.allies:
