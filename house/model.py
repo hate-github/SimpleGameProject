@@ -101,6 +101,7 @@ class NPC:
     stock: Dict[str, float] = field(default_factory=dict)
     weapon: str = "нет"
     одежда: int = 0            # 0 — обычная куртка, 1 — утеплённая, 2 — тулуп
+    места: Dict[str, float] = field(default_factory=dict)   # что я думаю о местах
     dependents: int = 0
     dependent_name: str = ""
     dependent_acc: str = ""    # «взял Ваню»
@@ -301,6 +302,15 @@ class NPC:
         """
         return 1.0 + 1.6 * self.shelter.get("дверь", 0) + 1.2 * self.shelter.get("листы", 0)
 
+    def знаю_место(self, имя: str) -> float:
+        """Что я думаю о месте, пока сам не сходил и никто не рассказал.
+
+        По умолчанию — «наверное, там как всегда»: до метели в магазине была
+        еда, и человек идёт туда, пока не узнает обратного. Это и есть
+        нормальный порядок вылазок: сначала очевидное, мусорки — потом.
+        """
+        return self.места.get(имя, 1.0)
+
     def believed(self, other_id: str, res: str) -> float:
         """Сколько, по мнению этого NPC, у другого есть ресурса."""
         return self.est.get(other_id, {}).get(res, 2.0)
@@ -369,6 +379,7 @@ class House:
 
     # среда
     scav_richness: float = 1.0
+    места: Dict[str, float] = field(default_factory=dict)   # что ещё осталось где
     incidents: int = 0
     first_incident_day: Optional[int] = None
     mods: Dict[str, Any] = field(default_factory=dict)   # временные модификаторы событий
@@ -377,6 +388,10 @@ class House:
     journal: Any = None
     stats: Dict[str, Any] = field(default_factory=dict)
     chronicle: List[str] = field(default_factory=list)
+
+    def богатство_места(self, имя: str) -> float:
+        """Сколько ещё осталось в этом месте. 1.0 — как было до метели."""
+        return self.места.get(имя, 1.0)
 
     def alive(self) -> List[NPC]:
         return [p for p in self.people.values() if p.alive and not p.exiled]
