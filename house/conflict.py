@@ -140,6 +140,9 @@ def steal(h, thief, target):
 
     thief.bump("попыток_кражи")
     h.bump("попыток_кражи")
+    # свою первую кражу человек себе не забывает: после неё чужая дверь
+    # перестаёт быть чужой (GDD 11)
+    social.переступил(h, thief, "кража")
     if h.rng.chance(p):
         moved = take_from(h, target, thief, greed=h.rng.uni(0.25, 0.5),
                           limit=b["кража_унос_макс"])
@@ -511,6 +514,9 @@ def on_death(h, dead, killer=None, quiet=False):
     # мёртвый выпадает из всех союзов и из чужих квартир
     cut_ties(h, dead)
     social.register_incident(h, "смерть", None)
+    # смерть в доме — самое сильное «так теперь бывает» из всех (GDD 11)
+    for p in h.alive():
+        social.видел(h, p, b["нормальность_за_смерть"])
     h.note(f"{dead.short}: {dead.cause}")
 
     # ребёнок остаётся один (GDD 12.6: семья как моральный центр)
@@ -615,6 +621,7 @@ def убить_соседа(h, killer, victim):
     b = h.B
     killer.bump("покушений")
     h.bump("покушений_на_соседа")
+    social.переступил(h, killer, "убить_соседа")
     шанс = b["убийство_база"] + (stealth(killer) - 0.5) * 0.4
     if killer.weapon in ("нож", "топор"):
         шанс += 0.10
@@ -881,6 +888,8 @@ def run_siege(h, leader, target):
         social.judge(h, p, "предательство", hate=10.0, trust=-1.0)
     h.bump("налётов")
     leader.bump("налётов")
+    for p in crew:
+        social.переступил(h, p, "налёт")
     names = ", ".join(p.short for p in crew)
     social.register_incident(h, "налёт", f"НАЛЁТ. {names} — к двери кв.{target.apt} ({target.short}).")
     social.emit(h, target, 3, "ссора", night=True)

@@ -55,6 +55,10 @@ def start_of_day(h, events_data):
     h.outside = base + h.mods.get("температура_сдвиг", 0.0)
 
     # --- расписание отключений (GDD 21, скриптовые события) ---
+    # каждое отключение — событие, а не ежедневное слагаемое: холодные батареи
+    # роняют привычное в тот день, когда они остыли, и дальше человек к этому
+    # притерпевается (см. social.видел и engine._morning)
+    было = (h.heating, h.water_on, h.power_on, h.network > 0)
     if h.day >= b["день_отключения_отопления"]:
         h.heating = False
     if h.day >= b["день_отключения_воды"]:
@@ -68,6 +72,14 @@ def start_of_day(h, events_data):
         h.network = 0.0
     else:
         h.network = clamp(1.0 - h.day / float(b["день_потери_связи"]), 0.0, 1.0)
+
+    стало = (h.heating, h.water_on, h.power_on, h.network > 0)
+    погасло = sum(1 for a, c in zip(было, стало) if a and not c)
+    if погасло:
+        from .social import видел, громкое
+        громкое(h)
+        for p in h.alive():
+            видел(h, p, погасло * b["нормальность_за_отключение"])
 
     # --- скриптовое событие дня ---
     # GDD 21: «одинаковы в каждой жизни, ЕСЛИ ИГРОК НЕ ВМЕШАЛСЯ». Значит,
