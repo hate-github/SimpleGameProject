@@ -521,6 +521,10 @@ def on_death(h, dead, killer=None, quiet=False):
     flat = release_flat(h, dead)
     for res, v in dead.stock.items():
         flat.stock[res] = flat.stock.get(res, 0.0) + v
+    # его тулуп остался висеть в прихожей: вещь, которая ему уже не нужна,
+    # а кому-то откроет улицу ещё на неделю
+    if dead.одежда >= h.B["одежда_максимум"]:
+        flat.тулуп = True
     flat.body = {"кто": dead.short, "вин": dead.form("acc"), "падеж": dead.form("gen"), "день": h.day,
                  "порций": h.B["тело_порций"], "тронуто": False}
     dead.stock = {}
