@@ -51,12 +51,21 @@ class Flat:
     body: Optional[Dict[str, Any]] = None   # тело хозяина, если он умер дома
     вложено: float = 0.0                    # сколько материалов в неё вбито
 
+    @property
+    def id(self) -> str:
+        """Чтобы квартира годилась в цели действия наравне с человеком."""
+        return f"кв{self.apt}"
+
     def door_strength(self) -> float:
         """Прочность двери для стадии осады «Дверь» (GDD 16).
 
         Стальные листы — уровень 3 убежища, они добавляются к засову.
         """
         return 1.0 + 1.6 * self.shelter.get("дверь", 0) + 1.2 * self.shelter.get("листы", 0)
+
+    def защита(self) -> float:
+        """Насколько за этой дверью можно отсидеться (GDD 15, 16)."""
+        return self.door_strength() + 1.2 * self.shelter.get("стены", 0)
 
 
 # старое имя оставлено: в паре мест «пустая квартира» читается лучше
@@ -391,6 +400,48 @@ class House:
             return True
         return self.where(npc).shelter.get("питание") == self.day
 
+    def flat_temp(self, flat: Flat, burning: bool = False, powered: bool = False) -> float:
+        """Температура в конкретной квартире. Считает стены, а не жильца —
+        поэтому этим же можно оценить чужую и пустую (GDD 15)."""
+        b = self.B
+        t = self.outside + b["дом_базовый_прогрев"]
+        if self.heating:
+            t += b["отопление_градусов"]
+        t += flat.shelter.get("утепление", 0) * b["утепление_градус_за_уровень"]
+        if burning and flat.shelter.get("буржуйка"):
+            t += b["буржуйка_градусов"]
+        if powered and flat.shelter.get("обогреватель"):
+            t += b["обогреватель_градусов"]
+        return t
+
+    def чей(self, flat: Flat) -> Optional[NPC]:
+        """Живой человек, который считает эту квартиру своей.
+
+        Он может в ней сейчас и не жить — переехал к соседу, — но она его,
+        и занять её значит оставить его без угла.
+        """
+        for p in self.people.values():
+            if p.alive and not p.exiled and p.apt == flat.apt:
+                return p
+        return None
+
+    def ценность_жилья(self, flat: Flat, для: NPC) -> float:
+        """Чего эта квартира стоит вот этому человеку.
+
+        Три слагаемых, и все три он может оценить снаружи: сколько она держит
+        тепла (видно по окнам и по дыму), крепка ли дверь (видно с площадки)
+        и что в ней лежит. Из разницы двух таких чисел растёт всё остальное —
+        и мирный переезд, и налёт за квартирой.
+        """
+        b = self.B
+        # свет в доме кончился — значит, обогреватель в расчёт больше не идёт
+        тепло = self.flat_temp(flat, burning=True, powered=self.power_on)
+        v = (тепло - b["комфортная_температура"]) * b["жильё_вес_тепла"]
+        страх = min(1.5, для.panic / 100.0 + 0.2 * (0 if self.first_incident_day is None else 1))
+        v += flat.защита() * b["жильё_вес_защиты"] * (0.4 + страх)
+        v += sum(flat.stock.values()) * b["жильё_вес_запаса"] * (0.5 + для.t01("жадность"))
+        return v
+
     def room_temp(self, npc: NPC, burning: Optional[bool] = None) -> float:
         """Температура в квартире (GDD 15: утепление, буржуйка, обогреватель)."""
         b = self.B
@@ -399,15 +450,7 @@ class House:
         flat = self.flats[хозяин.apt]
         if burning is None:
             burning = хозяин.burning
-        t = self.outside + b["дом_базовый_прогрев"]
-        if self.heating:
-            t += b["отопление_градусов"]
-        t += flat.shelter.get("утепление", 0) * b["утепление_градус_за_уровень"]
-        if burning and flat.shelter.get("буржуйка"):
-            t += b["буржуйка_градусов"]
-        if self.powered(npc) and flat.shelter.get("обогреватель"):
-            t += b["обогреватель_градусов"]
-        return t
+        return self.flat_temp(flat, burning=burning, powered=self.powered(npc))
 
     def bump(self, key: str, n: int = 1):
         self.stats[key] = self.stats.get(key, 0) + n
