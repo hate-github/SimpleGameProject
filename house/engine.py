@@ -122,7 +122,7 @@ class Simulation:
                 gen=d.get("коротко_род", ""), dat=d.get("коротко_дат", ""),
                 acc=d.get("коротко_вин", ""), ins=d.get("коротко_твор", ""),
                 traits=dict(d["черты"]), stock=dict(d["запасы"]),
-                weapon=d.get("оружие", "нет"),
+                weapon=d.get("оружие", "нет"), одежда=int(d.get("одежда", 0)),
                 dependents=d.get("иждивенцы", 0), dependent_name=d.get("иждивенец_имя", ""),
                 dependent_acc=d.get("иждивенец_вин", ""),
             )
