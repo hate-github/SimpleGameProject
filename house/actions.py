@@ -510,6 +510,17 @@ def gather(h, npc):
                 and его_еда < b["помощь_порог_дней"]
                 and мои_дни > его_еда + 1.0):
             give = npc.t01("лояльность") * 4.0 + trust * 0.5 - npc.t01("жадность") * 2.0 - des * 4.0
+            # то же, что и при просьбе: «я тебе уже трижды носил». Асимметрия
+            # была настоящей дырой — отказать в ответ на просьбу человек умел,
+            # а сам таскать банки одному и тому же соседу мог бесконечно
+            give -= npc.дал.get(t.id, 0.0) * b["долг_вес"]
+            # и тот же страх, которым он отказывает на просьбу: человек, который
+            # не знает, когда кончится метель, считает свой запас против срока,
+            # который сам себе назначил. Раньше отказ считался по горизонту,
+            # а добровольный подарок — по четырём дням, и выходило, что чужое
+            # лицо у двери убедить труднее, чем собственную совесть
+            give -= ((1.0 - min(1.0, npc.secure("еда"))) * b["жадность_от_нехватки"]
+                     * b["щедрость_вес_горизонта"])
             if t.id in npc.allies:
                 give += 2.0
             if t.dependents:
@@ -915,8 +926,16 @@ def execute(h, npc, key, target):
 
     elif key == "разговор":
         social.gossip(h, npc, target)
-        social.adjust(npc, target.id, trust=b["доверие_за_разговор"])
-        social.adjust(target, npc.id, trust=b["доверие_за_разговор"] * 0.8)
+        # разговоры поднимают доверие только до уровня знакомства. Выше —
+        # поступками: помощью, лечением, защитой у двери. Иначе семь бесед
+        # в день превращают чужих людей в друзей за неделю метели
+        def словами(кто, о_ком):
+            есть = кто.trust.get(о_ком, 3.0)
+            запас = clamp((b["доверие_от_слов_потолок"] - есть)
+                          / b["доверие_от_слов_потолок"], 0.0, 1.0)
+            return b["доверие_за_разговор"] * запас
+        social.adjust(npc, target.id, trust=словами(npc, target.id))
+        social.adjust(target, npc.id, trust=словами(target, npc.id) * 0.8)
         npc.mood = clamp(npc.mood + b["настроение_от_общения"])
         target.mood = clamp(target.mood + b["настроение_от_общения"] * 0.7)
         npc.panic = clamp(npc.panic - 2)
@@ -953,12 +972,13 @@ def execute(h, npc, key, target):
         target.stock["еда"] = target.stock.get("еда", 0.0) + сколько
         rec["должен"] = max(0.0, rec.get("должен", 0.0) - 1.0)
         target.дал[npc.id] = max(0.0, target.дал.get(npc.id, 0.0) - 1.0)
-        social.adjust(target, npc.id, trust=b["доверие_за_помощь"] * 1.2, hate=-8)
-        social.adjust(npc, target.id, trust=0.4)
-        npc.mood = clamp(npc.mood + 5)
-        target.mood = clamp(target.mood + 6)
+        # возврат восстанавливает равновесие, а не создаёт новое доверие:
+        # иначе пара «дал — вернул» кончается тем, что оба доверяют друг другу
+        # больше прежнего, хотя ничего не произошло и никто ничего не потерял
+        social.adjust(target, npc.id, trust=b["доверие_за_возврат"], hate=-3)
+        npc.mood = clamp(npc.mood + 3)
+        target.mood = clamp(target.mood + 4)
         h.bump("долгов_возвращено")
-        social.judge(h, npc, "щедрость", trust=0.3)
         said = (f"{npc.short} {vb(npc.sex, 'занёс')} банку {target.form('dat')} — "
                 f"{'отдала' if npc.sex == 'ж' else 'отдал'} долг")
 
@@ -971,8 +991,15 @@ def execute(h, npc, key, target):
         медик = "медик" in npc.skills
         spend(h, npc, "лекарства", 1)
         if медик:
-            target.injuries.clear()
-            target.sick = None
+            # перевязать — не значит вылечить всё. Медсестра с аптечкой закрывает
+            # одну рану за раз и сбивает жар; перелом от этого не срастается.
+            # Раньше здесь стояло injuries.clear(): один час работы полностью
+            # обнулял человека, и медик в одиночку держал дом на ногах
+            for _ in range(int(b["лечение_медиком_ран"])):
+                if target.injuries:
+                    target.injuries.pop()
+            if target.sick and h.rng.chance(b["лечение_медиком_болезнь"]):
+                target.sick = None
             target.health = clamp(target.health + b["лечение_медиком"])
         else:
             if target.injuries:
@@ -1350,8 +1377,8 @@ def _trade(h, a, b_npc):
     b_npc.stock[give] = b_npc.stock.get(give, 0) + gn
     b_npc.stock[get_] -= tn
     a.stock[get_] = a.stock.get(get_, 0) + tn
-    social.adjust(a, b_npc.id, trust=0.7, aware=10)
-    social.adjust(b_npc, a.id, trust=0.7, aware=10)
+    social.adjust(a, b_npc.id, trust=h.B["доверие_за_сделку"], aware=10)
+    social.adjust(b_npc, a.id, trust=h.B["доверие_за_сделку"], aware=10)
     h.bump("обменов")
     return (f"{a.short} {vb(a.sex, 'обменял')} {RES_ACC.get(give, give)} "
             f"на {RES_ACC.get(get_, get_)} с {b_npc.form('ins')}")
