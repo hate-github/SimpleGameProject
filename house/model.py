@@ -128,6 +128,7 @@ class NPC:
     guests: set = field(default_factory=set)
     allies: set = field(default_factory=set)
     favors: Dict[str, int] = field(default_factory=dict)
+    ключи: set = field(default_factory=set)   # от каких квартир у него ключи
     asking: Dict[str, Dict[str, float]] = field(default_factory=dict)  # память о просьбах
 
     # --- служебное ---

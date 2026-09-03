@@ -480,9 +480,15 @@ def gather(h, npc):
         ratio = npc.power() / max(0.2, t.power())
         # ловят того, кого видели с пакетами; случайная встреча на лестнице — редкость
         met = (t.stats.get("день_вылазки") == h.day) or h.rng.chance(0.08)
-        trigger = des > 0.40 or npc.hate.get(t.id, 0) > 35
+        # ключи имеет смысл отнимать только у того, кто живёт один: в квартиру
+        # с сожителем с ними всё равно не войти
+        один = not t.guests and not t.living_with
+        жильё = conflict.хочу_его_квартиру(h, npc, t) if один else 0.0
+        trigger = (des > 0.40 or npc.hate.get(t.id, 0) > 35
+                   or жильё > b["отъём_жильё_порог"])
         if met and trigger and ratio > b["отъём_порог_силы"] / A and npc.loot_value(t.id) > 1.5:
             take = (des * 3.5 + npc.hate.get(t.id, 0) / 18.0) * (0.4 + npc.t01("жадность"))
+            take += жильё * b["отъём_вес_жилья"]
             take *= min(2.2, ratio)
             take -= b["отъём_решимость"]
             take -= npc.t01("лояльность") * 5.0 / A
@@ -714,6 +720,9 @@ def execute(h, npc, key, target):
     elif key == "дверь":
         spend(h, npc, "материалы", b["дверь_материалы"])
         вложить(h, npc, b["дверь_материалы"])
+        # новый засов — старые ключи больше не подходят
+        for кто in h.people.values():
+            кто.ключи.discard(npc.apt)
         npc.shelter["дверь"] = npc.shelter.get("дверь", 0) + 1
         said = f"{npc.short} {vb(npc.sex, 'укрепил')} дверь (уровень {npc.shelter['дверь']})"
 
@@ -898,6 +907,13 @@ def execute(h, npc, key, target):
             won = conflict.scuffle(h, npc, victim, place="на лестнице")
             if won:
                 conflict.take_carried(h, victim, npc, limit=b["отъём_максимум"] * 0.5)
+        # заодно вытряхивают карманы: ключи стоят дороже банки тушёнки
+        if (not victim.guests and not victim.living_with
+                and conflict.хочу_его_квартиру(h, npc, victim) > 0
+                and h.rng.chance(b["ключи_шанс"])):
+            npc.ключи.add(victim.apt)
+            h.journal.line(f"   Ключи от кв.{victim.apt} {vb(npc.sex, 'забрал')} тоже.", 2)
+            h.bump("ключей_отнято")
         social.adjust(victim, npc.id, trust=-5.0, hate=b["ненависть_за_налёт"] * 0.8, aware=15)
         social.register_incident(h, "отъём", None)
         # это видят и слышат: разбой в подъезде не спрячешь
