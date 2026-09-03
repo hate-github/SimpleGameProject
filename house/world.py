@@ -181,7 +181,10 @@ def _scripted_theft(h):
     if len(люди) < 2:
         return
     вор = max(люди, key=lambda p: p.trait("жадность") - p.trait("лояльность") + p.desperation() * 3)
-    цели = [p for p in люди if p.id != вор.id]
+    # в свою же квартиру не влезают: у соседа по комнате не крадут, к нему
+    # просто протягивают руку — а это уже другой поступок, и его в игре нет
+    from .social import под_одной_крышей
+    цели = [p for p in люди if p.id != вор.id and not под_одной_крышей(h, вор, p)]
     if not цели:
         return
     жертва = max(цели, key=lambda p: вор.loot_value(p.id))

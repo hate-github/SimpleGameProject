@@ -31,14 +31,46 @@ FIREARMS = {"пистолет", "дробовик", "винтовка"}
 
 
 @dataclass
-class EmptyFlat:
-    """Пустая квартира: ресурс для разборки и укрытие (GDD 12)."""
+class Flat:
+    """Квартира — вещь, а не приложение к жильцу (GDD 12, 15).
+
+    Утепление, дверь, буржуйка и арматура принадлежат стенам. Пока они висели
+    на человеке, «занять квартиру получше» было нечем выразить: переехавший
+    уносил буржуйку на спине, а после смерти хозяина всё, что он построил
+    за месяц, исчезало вместе с ним.
+
+    Отсюда же берётся жильё как имущество: его можно занять, за него можно
+    прийти с ломом, и его можно испортить, ломая дверь.
+    """
     apt: int
     floor: int
+    shelter: Dict[str, Any] = field(default_factory=dict)
     stock: Dict[str, float] = field(default_factory=dict)
     stripped: int = 0
     owner_died: Optional[str] = None
     body: Optional[Dict[str, Any]] = None   # тело хозяина, если он умер дома
+    вложено: float = 0.0                    # сколько материалов в неё вбито
+    костёр: int = -99                       # день, когда в ней жгли костёр
+
+    @property
+    def id(self) -> str:
+        """Чтобы квартира годилась в цели действия наравне с человеком."""
+        return f"кв{self.apt}"
+
+    def door_strength(self) -> float:
+        """Прочность двери для стадии осады «Дверь» (GDD 16).
+
+        Стальные листы — уровень 3 убежища, они добавляются к засову.
+        """
+        return 1.0 + 1.6 * self.shelter.get("дверь", 0) + 1.2 * self.shelter.get("листы", 0)
+
+    def защита(self) -> float:
+        """Насколько за этой дверью можно отсидеться (GDD 15, 16)."""
+        return self.door_strength() + 1.2 * self.shelter.get("стены", 0)
+
+
+# старое имя оставлено: в паре мест «пустая квартира» читается лучше
+EmptyFlat = Flat
 
 
 @dataclass
@@ -67,7 +99,6 @@ class NPC:
     # --- имущество ---
     stock: Dict[str, float] = field(default_factory=dict)
     weapon: str = "нет"
-    shelter: Dict[str, Any] = field(default_factory=dict)
     dependents: int = 0
     dependent_name: str = ""
     dependent_acc: str = ""    # «взял Ваню»
@@ -98,7 +129,8 @@ class NPC:
     guests: set = field(default_factory=set)
     allies: set = field(default_factory=set)
     favors: Dict[str, int] = field(default_factory=dict)
-    refused_by: Dict[str, int] = field(default_factory=dict)
+    дал: Dict[str, float] = field(default_factory=dict)   # кому и сколько я отдал
+    ключи: set = field(default_factory=set)   # от каких квартир у него ключи
     asking: Dict[str, Dict[str, float]] = field(default_factory=dict)  # память о просьбах
 
     # --- служебное ---
@@ -113,6 +145,20 @@ class NPC:
     burning: bool = False
     memory: List[str] = field(default_factory=list)
     stats: Dict[str, int] = field(default_factory=dict)
+    # ссылка на дом: нужна, чтобы npc.shelter означал «стены, в которых он сейчас».
+    # repr=False обязателен — иначе печать жильца утащит за собой весь дом
+    _h: Any = field(default=None, repr=False, compare=False)
+
+    # ---------- в каких он стенах ----------
+    @property
+    def shelter(self) -> Dict[str, Any]:
+        """Убежище той квартиры, в которой человек сейчас живёт.
+
+        Своей — или хозяйской, если он переехал. Свойство, а не поле: так все
+        сорок мест в коде, которые спрашивают «а есть ли у него буржуйка»,
+        сами собой стали спрашивать про правильные стены.
+        """
+        return self._h.where(self).shelter if self._h is not None else {}
 
     # ---------- производные величины ----------
     def trait(self, name: str) -> float:
@@ -139,6 +185,31 @@ class NPC:
         """
         return clamp(self.days_of(res) / max(3.0, self.horizon), 0.0, 2.5)
 
+    def топит_сам(self) -> bool:
+        """Отвечает ли этот человек за своё отопление.
+
+        Переехавший к соседу — нет: его дрова ушли в общую печку, и топит
+        её хозяин. Пока это не спрашивалось, у гостя топлива всегда было ноль,
+        и он вечно числился в отчаянии, сидя в тепле и сытости.
+        """
+        return not self.living_with
+
+    def могу_топить(self) -> float:
+        """Насколько топливо для него вообще ресурс.
+
+        Без буржуйки дрова не сжечь: обогреватель ест электричество, генератор
+        надо сперва собрать. Считать их такой же нуждой, как еду, — значит
+        заставить человека без печки паниковать из-за мёртвого груза
+        и ходить просить дрова у соседей.
+        """
+        if not self.топит_сам():
+            return 0.0
+        if self.shelter.get("буржуйка"):
+            return 1.0
+        if self.stock.get("материалы", 0.0) >= 4.0:
+            return 0.5      # есть из чего собрать — запасается не зря
+        return 0.15
+
     def insecurity(self) -> float:
         """0..1 — «мне не хватит».
 
@@ -146,15 +217,16 @@ class NPC:
         себе назначил, и не знает, когда кончится метель. Отсюда жадность
         и паника — но не преступление.
         """
-        return clamp(max(1.0 - min(1.0, self.secure("еда")),
-                         1.0 - min(1.0, self.secure("вода")),
-                         (1.0 - min(1.0, self.secure("топливо"))) * 0.9), 0.0, 1.0)
+        части = [1.0 - min(1.0, self.secure("еда")),
+                 1.0 - min(1.0, self.secure("вода")),
+                 (1.0 - min(1.0, self.secure("топливо"))) * 0.9 * self.могу_топить()]
+        return clamp(max(части), 0.0, 1.0)
 
     def desperation(self) -> float:
         """0..1 — «я умираю». Физическая нужда: вот это толкает на кражу и налёт."""
         food = 1.0 - norm(min(self.days_of("еда"), 10), 0, 6)
         water = 1.0 - norm(min(self.days_of("вода"), 10), 0, 4)
-        fuel = 1.0 - norm(min(self.days_of("топливо"), 10), 0, 6)
+        fuel = (1.0 - norm(min(self.days_of("топливо"), 10), 0, 6)) * self.могу_топить()
         # телесная часть включается только когда правда плохо, иначе
         # человек «в отчаянии» каждый день перед ужином
         body = 1.0 - norm(min(self.satiety, self.warmth, self.hydration), 5, 40)
@@ -275,7 +347,7 @@ class House:
     B: Dict[str, Any] = field(default_factory=dict)
     day: int = 0
     people: Dict[str, NPC] = field(default_factory=dict)
-    empty: List[EmptyFlat] = field(default_factory=list)
+    flats: Dict[int, Flat] = field(default_factory=dict)
 
     # погода и инфраструктура
     outside: float = -8.0
@@ -304,6 +376,35 @@ class House:
     def get(self, npc_id: str) -> Optional[NPC]:
         return self.people.get(npc_id)
 
+    # ---------- жильё ----------
+    def хозяин_жилья(self, npc: NPC) -> NPC:
+        """Чья это квартира: своя или того, к кому он переехал."""
+        if npc.living_with:
+            host = self.people.get(npc.living_with)
+            if host and host.alive and not host.exiled:
+                return host
+        return npc
+
+    def where(self, npc: NPC) -> Flat:
+        """В какой квартире человек физически находится."""
+        return self.flats[self.хозяин_жилья(npc).apt]
+
+    def занятые(self) -> set:
+        """Номера квартир, в которых кто-то живёт прямо сейчас."""
+        return {p.apt for p in self.people.values()
+                if p.alive and not p.exiled and not p.living_with}
+
+    def пустые(self) -> List[Flat]:
+        """Квартиры, в которых никто не живёт.
+
+        Считается, а не хранится: пока список вёлся руками, одна и та же
+        квартира успевала попасть в него дважды, а жилая — остаться в нём
+        и уйти на доски из-под живого человека.
+        """
+        занято = self.занятые()
+        return [f for f in sorted(self.flats.values(), key=lambda x: x.apt)
+                if f.apt not in занято]
+
     def floor_gap(self, a: NPC, b: NPC) -> int:
         return abs(a.floor - b.floor)
 
@@ -315,27 +416,62 @@ class House:
         """
         if self.power_on:
             return True
-        return npc.shelter.get("питание") == self.day
+        return self.where(npc).shelter.get("питание") == self.day
+
+    def flat_temp(self, flat: Flat, burning: bool = False, powered: bool = False) -> float:
+        """Температура в конкретной квартире. Считает стены, а не жильца —
+        поэтому этим же можно оценить чужую и пустую (GDD 15)."""
+        b = self.B
+        t = self.outside + b["дом_базовый_прогрев"]
+        if self.heating:
+            t += b["отопление_градусов"]
+        t += flat.shelter.get("утепление", 0) * b["утепление_градус_за_уровень"]
+        if burning and flat.shelter.get("буржуйка"):
+            t += b["буржуйка_градусов"]
+        if powered and flat.shelter.get("обогреватель"):
+            t += b["обогреватель_градусов"]
+        # костёр посреди комнаты: греет хуже печки, дымит и может спалить дом
+        if flat.костёр == self.day:
+            t += b["костёр_градусов"]
+        return t
+
+    def чей(self, flat: Flat) -> Optional[NPC]:
+        """Живой человек, который считает эту квартиру своей.
+
+        Он может в ней сейчас и не жить — переехал к соседу, — но она его,
+        и занять её значит оставить его без угла.
+        """
+        for p in self.people.values():
+            if p.alive and not p.exiled and p.apt == flat.apt:
+                return p
+        return None
+
+    def ценность_жилья(self, flat: Flat, для: NPC) -> float:
+        """Чего эта квартира стоит вот этому человеку.
+
+        Три слагаемых, и все три он может оценить снаружи: сколько она держит
+        тепла (видно по окнам и по дыму), крепка ли дверь (видно с площадки)
+        и что в ней лежит. Из разницы двух таких чисел растёт всё остальное —
+        и мирный переезд, и налёт за квартирой.
+        """
+        b = self.B
+        # свет в доме кончился — значит, обогреватель в расчёт больше не идёт
+        тепло = self.flat_temp(flat, burning=True, powered=self.power_on)
+        v = (тепло - b["комфортная_температура"]) * b["жильё_вес_тепла"]
+        страх = min(1.5, для.panic / 100.0 + 0.2 * (0 if self.first_incident_day is None else 1))
+        v += flat.защита() * b["жильё_вес_защиты"] * (0.4 + страх)
+        v += sum(flat.stock.values()) * b["жильё_вес_запаса"] * (0.5 + для.t01("жадность"))
+        return v
 
     def room_temp(self, npc: NPC, burning: Optional[bool] = None) -> float:
         """Температура в квартире (GDD 15: утепление, буржуйка, обогреватель)."""
         b = self.B
         # гость греется хозяйской печкой — в этом весь смысл съезжаться
-        if npc.living_with:
-            host = self.people.get(npc.living_with)
-            if host and host.alive and not host.exiled:
-                return self.room_temp(host, burning)
+        хозяин = self.хозяин_жилья(npc)
+        flat = self.flats[хозяин.apt]
         if burning is None:
-            burning = npc.burning
-        t = self.outside + b["дом_базовый_прогрев"]
-        if self.heating:
-            t += b["отопление_градусов"]
-        t += npc.shelter.get("утепление", 0) * b["утепление_градус_за_уровень"]
-        if burning and npc.shelter.get("буржуйка"):
-            t += b["буржуйка_градусов"]
-        if self.powered(npc) and npc.shelter.get("обогреватель"):
-            t += b["обогреватель_градусов"]
-        return t
+            burning = хозяин.burning
+        return self.flat_temp(flat, burning=burning, powered=self.powered(npc))
 
     def bump(self, key: str, n: int = 1):
         self.stats[key] = self.stats.get(key, 0) + n

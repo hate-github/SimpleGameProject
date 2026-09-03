@@ -30,6 +30,73 @@ NOISE_MEANING = {
 }
 
 
+# ---------------------------------------------------------------- где человек
+
+def место(h, npc):
+    """В какой квартире человек физически находится.
+
+    Переехавший к соседу спит, ест и шумит не у себя: его собственная квартира
+    стоит пустая. Пока этого не спрашивали, запах шёл «из кв.20», где никого нет,
+    а к его двери приходили с ломом.
+    """
+    if npc.living_with:
+        host = h.people.get(npc.living_with)
+        if host and host.alive and not host.exiled:
+            return host
+    return npc
+
+
+def своя_топится(h, npc):
+    """Может ли человек прямо сейчас протопить собственную квартиру.
+
+    Не «есть ли там буржуйка», а «есть ли там буржуйка и чем её топить».
+    Без этой разницы гость, у которого дрова ушли в хозяйскую печь, считает
+    свой угол тёплым и уходит замерзать.
+    """
+    своя = h.flats[npc.apt]
+    return bool(своя.shelter.get("буржуйка")) and npc.stock.get("топливо", 0.0) >= 1.0
+
+
+def выгода_соседства(h, a, партнёр):
+    """Насколько выгодно жить с этим человеком в одной квартире.
+
+    Больше нуля — вместе лучше. Одно число на три решения: съезжаться,
+    съезжать и выгонять. Так «рациональная часть» получается настоящей:
+    поссорились, ненавидят друг друга — но порознь их возьмут поодиночке,
+    и оба это считают.
+    """
+    B = h.B
+    своя = h.flats[a.apt]
+    общая = h.where(партнёр) if партнёр.apt != a.apt else h.flats[a.apt]
+    польза = 0.0
+    if общая.apt != своя.apt:
+        # гость: разница между хозяйскими стенами и своими, которые он ещё
+        # и протопить не сможет, если дрова остались у хозяина
+        польза += (h.flat_temp(общая, burning=True, powered=h.power_on)
+                   - h.flat_temp(своя, burning=своя_топится(h, a), powered=h.power_on)
+                   ) * B["соседство_вес_тепла"]
+    else:
+        польза += B["соседство_экономия_топлива"]   # одна печь вместо двух
+    страх = min(1.5, a.panic / 100.0 + 0.25 * recent_incidents(h))
+    польза += партнёр.power() * B["соседство_вес_защиты"] * страх
+    if партнёр.id in a.allies:
+        польза += 1.0
+
+    цена = B["соседство_теснота"]
+    цена += a.hate.get(партнёр.id, 0.0) / B["соседство_ненависть_делитель"]
+    цена += max(0.0, 5.0 - a.trust.get(партнёр.id, 3.0)) * 0.4
+    if партнёр.sick and not a.sick:
+        цена += B["соседство_болезнь"]
+    if партнёр.dependents and not a.dependents:
+        цена += B["соседство_лишний_рот"] * (1.0 - min(1.0, a.secure("еда")))
+    return польза - цена
+
+
+def под_одной_крышей(h, a, b_npc):
+    """Стоят ли эти двое в одной комнате прямо сейчас."""
+    return место(h, a).id == место(h, b_npc).id
+
+
 # ---------------------------------------------------------------- шум
 
 def emit(h, src, level, kind, night=False, text_for=None):
@@ -46,35 +113,43 @@ def emit(h, src, level, kind, night=False, text_for=None):
     # и «громко» из GDD 13 на практике означало меньше половины дома
     дальность = b["шум_дальность"].get(str(int(level)), 1.0)
     видно = NOISE_MEANING.get(kind, (None, 0.0, "", 0.0))[3]
+    # шумит не человек, а квартира, в которой он сейчас сидит
+    дом = место(h, src)
     heard = []
     for other in h.others(src):
         if other.away:
             continue
+        # сосед по комнате слышит всё и без броска: он в двух метрах
+        if место(h, other).id == дом.id:
+            heard.append(other)
+            _hear(h, other, src, kind, level, дом)
+            continue
         p = base
-        p *= b["шум_затухание_на_этаж"] ** (h.floor_gap(src, other) / max(0.35, дальность))
+        p *= b["шум_затухание_на_этаж"] ** (h.floor_gap(дом, место(h, other)) / max(0.35, дальность))
         if night:
             # ночью фон тише: звук идёт дальше, но спящий может его пропустить,
             # а громкое (4-5) будит всех
             p *= b["шум_ночью_множитель"]
             if other.tonight == "спать" and level < 4:
                 p *= b["шум_спящий"]
-        if src.shelter.get("звукоизоляция"):
+        if дом.shelter.get("звукоизоляция"):
             p *= b["шум_звукоизоляция"]
         # закрытые окна из GDD 13: утеплённые окна и тепло держат, и скрывают
-        окна = max(0.35, 1.0 - b["шум_за_утепление"] * src.shelter.get("утепление", 0))
+        окна = max(0.35, 1.0 - b["шум_за_утепление"] * дом.shelter.get("утепление", 0))
         p *= окна
         # пустая квартира МЕЖДУ источником и слушателем глушит (GDD 13).
         # Раньше проверялось только соседство с источником, поэтому множитель
         # был одинаков для всех и к третьей неделе включён всегда
-        лестница = range(min(src.floor, other.floor), max(src.floor, other.floor) + 1)
-        между = sum(1 for f in h.empty if f.floor in лестница)
+        сл = место(h, other)
+        лестница = range(min(дом.floor, сл.floor), max(дом.floor, сл.floor) + 1)
+        между = sum(1 for f in h.пустые() if f.floor in лестница)
         if между:
             p *= b["шум_пустая_квартира"] ** между
         # заметность идёт своим каналом: по этажам не глохнет, прячут занавески
         замечено = видно > 0 and h.rng.chance(clamp(видно * окна, 0.0, 0.9))
         if h.rng.chance(clamp(p, 0.0, 0.97)) or замечено:
             heard.append(other)
-            _hear(h, other, src, kind, level)
+            _hear(h, other, src, kind, level, дом)
     if heard and level >= 4:
         for p in heard:
             p.panic = clamp(p.panic + b["паника_от_громкого_шума"])
@@ -90,14 +165,17 @@ def smell(h, src, hot=False):
       · спящий учует утром — запах не исчезает вместе со звуком.
     """
     b = h.B
+    дом = место(h, src)
     caught = []
     for other in h.others(src):
         if other.away:
             continue
-        gap = other.floor - src.floor
+        своя_комната = место(h, other).id == дом.id
+        gap = место(h, other).floor - дом.floor
         p = b["запах_база"] * (1.15 if hot else 1.0)
         p *= (b["запах_вверх"] ** gap) if gap >= 0 else (b["запах_вниз"] ** abs(gap))
-        if not h.rng.chance(clamp(p, 0.0, 0.95)):
+        # тот, кто сидит у той же печки, чует наверняка
+        if not своя_комната and not h.rng.chance(clamp(p, 0.0, 0.95)):
             continue
         caught.append(other)
         adjust(other, src.id, aware=b["запах_осведомлённость"])
@@ -120,11 +198,11 @@ def smell(h, src, hot=False):
         seen["строк"] = seen.get("строк", 0) + 1
         who = ", ".join(p.short for p in caught)
         tail = " — и это слышно по их лицам" if len(hungry) >= 2 else ""
-        h.journal.line(f"По подъезду тянет едой из кв.{src.apt}. Учуяли: {who}.{tail}", 1)
+        h.journal.line(f"По подъезду тянет едой из кв.{дом.apt}. Учуяли: {who}.{tail}", 1)
     return caught
 
 
-def _hear(h, listener, src, kind, level):
+def _hear(h, listener, src, kind, level, дом=None):
     """Услышал — значит узнал. Осведомлённость растёт (GDD 12.3).
 
     Заодно это и есть сводка дня из GDD 4.4: сосед запоминает не «Виктор
@@ -132,16 +210,26 @@ def _hear(h, listener, src, kind, level):
     поле NOISE_MEANING — они были написаны, но никогда не показывались.
     """
     b = h.B
+    дом = дом or src
     res, hint, как_видно, _видно = NOISE_MEANING.get(kind, (None, 0.0, "", 0.0))
     if как_видно:
         from .util import vb
-        строка = как_видно.format(apt=src.apt, кто=src.short,
+        строка = как_видно.format(apt=дом.apt, кто=src.short,
                                   вернулся=vb(src.sex, "вернулся"))
         сводка = h.mods.setdefault("сводка", {}).setdefault(listener.id, [])
         if строка not in сводка:
             сводка.append(строка)
     gain = b["осведомлённость_за_шум"] * (0.6 + 0.15 * level)
     adjust(listener, src.id, aware=gain)
+    # про воду прямых сигналов не бывает — её можно только вывести: у кого
+    # горит печь, тот наверняка топит на ней и снег, потому что это выгодно.
+    # Догадаться дано не каждому, и это единственное место, где решает
+    # сообразительность
+    if kind in ("буржуйка", "генератор") and not h.water_on:
+        if h.rng.chance(listener.t01("сообразительность") * b["догадка_про_воду"]):
+            note_signal(listener, src.id, "вода",
+                        min(listener.believed(src.id, "вода") + 1.4, 5.0), 0.35)
+            listener.memory.append(f"д{h.day}:догадался:вода:{src.id}")
     if res:
         cur = listener.believed(src.id, res)
         # звук говорит «у него это есть», но не «у него этого гора»:
@@ -167,7 +255,7 @@ def observe(h, watcher, target):
         from . import conflict
         conflict.reveal_taboo(h, target, witness=watcher)
     adjust(watcher, target.id, aware=b["осведомлённость_за_наблюдение"])
-    for res in ("еда", "топливо", "лекарства"):
+    for res in ("еда", "топливо", "лекарства", "вода"):
         true_v = target.stock.get(res, 0.0)
         noise = h.rng.uni(0.75, 1.25)
         note_signal(watcher, target.id, res, true_v * noise, 0.75)
@@ -413,6 +501,11 @@ def value_of(npc, res, amount, days=None):
     """
     if days is None:
         days = npc.days_of(res) if res in ("еда", "вода", "топливо") else 5.0
+        # у гостя своего топлива нет по устройству: оно ушло в печку хозяина.
+        # Считать его отчаянно нуждающимся в дровах — значит заставить его
+        # выменивать на них последнюю еду
+        if res == "топливо" and not npc.топит_сам():
+            days = 5.0
     scarcity = 3.2 if days < 1.5 else (2.0 if days < 3 else (1.3 if days < 6 else 0.8))
     base = {"еда": 1.0, "вода": 0.85, "топливо": 0.9, "лекарства": 1.1, "материалы": 0.55, "патроны": 1.2}
     extra = 0.0

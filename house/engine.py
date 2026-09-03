@@ -9,7 +9,7 @@ import json
 import os
 
 from .util import Rng, clamp, norm, vb
-from .model import NPC, House, EmptyFlat
+from .model import NPC, House, Flat
 from . import world, social, actions, conflict, report
 
 DATA = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data")
@@ -25,7 +25,8 @@ def load_json(name):
 ЭФФЕКТЫ = {"паника", "настроение", "богатство", "связь", "температура", "опасность_вылазки",
            "укрепление_порыв", "болезнь_шанс", "кража_в_доме", "смерть_от_холода"}
 
-ЧЕРТЫ = {"жадность", "храбрость", "лояльность", "общительность", "вспыльчивость"}
+ЧЕРТЫ = {"жадность", "храбрость", "лояльность", "общительность", "вспыльчивость",
+         "сообразительность"}
 
 
 def validate_data(balance, npcs, events):
@@ -103,7 +104,16 @@ class Simulation:
     def _build(self):
         h = self.h
         for f in self.npcs_data.get("пустые_квартиры", []):
-            h.empty.append(EmptyFlat(apt=f["кв"], floor=f["этаж"], stock=dict(f.get("запасы", {}))))
+            h.flats[f["кв"]] = Flat(apt=f["кв"], floor=f["этаж"],
+                                    shelter=dict(f.get("убежище", {})),
+                                    stock=dict(f.get("запасы", {})))
+        for d in self.npcs_data["жильцы"]:
+            # квартира заводится вместе с жильцом, но принадлежит дому, а не ему:
+            # он может её бросить, её могут занять, и всё, что он в неё вложил,
+            # останется в стенах
+            h.flats[d["кв"]] = Flat(apt=d["кв"], floor=d["этаж"],
+                                    shelter=dict(d.get("убежище", {})),
+                                    вложено=float(d.get("вложено", 3.0)))
         for d in self.npcs_data["жильцы"]:
             p = NPC(
                 id=d["id"], name=d["имя"], short=d["коротко"], apt=d["кв"], floor=d["этаж"],
@@ -112,10 +122,11 @@ class Simulation:
                 gen=d.get("коротко_род", ""), dat=d.get("коротко_дат", ""),
                 acc=d.get("коротко_вин", ""), ins=d.get("коротко_твор", ""),
                 traits=dict(d["черты"]), stock=dict(d["запасы"]),
-                weapon=d.get("оружие", "нет"), shelter=dict(d.get("убежище", {})),
+                weapon=d.get("оружие", "нет"),
                 dependents=d.get("иждивенцы", 0), dependent_name=d.get("иждивенец_имя", ""),
                 dependent_acc=d.get("иждивенец_вин", ""),
             )
+            p._h = h
             h.people[p.id] = p
         # стартовые отношения
         for d in self.npcs_data["жильцы"]:
@@ -194,6 +205,53 @@ class Simulation:
             # шанс кражи по позавчерашнему дежурству жертвы
             p.tonight = "спать"
             p.stats["часы_работы"] = 0
+        # всё, что гость принёс за вчера, идёт к общей печке: квартира одна,
+        # дрова у неё общие. Пока этого не было, гость копил топливо, которое
+        # по правилу «печку топит хозяин» не мог сжечь никогда, и просил ещё
+        for p in h.alive():
+            if not p.living_with:
+                continue
+            host = h.get(p.living_with)
+            дрова = p.stock.get("топливо", 0.0)
+            if host and host.alive and not host.exiled and дрова > 0:
+                host.stock["топливо"] = host.stock.get("топливо", 0.0) + дрова
+                p.stock["топливо"] = 0.0
+                h.journal.line(f"{p.short} {vb(p.sex, 'снёс')} дрова к печке "
+                               f"{host.form('gen')} ({дрова:g}).", 0)
+
+        # готовые заказы: мастер отдаёт печь и берёт своё (GDD 18)
+        for p in h.alive():
+            заказ = h.mods.get("заказ_" + p.id)
+            if not заказ or h.day < заказ["готово"]:
+                continue
+            мастер = h.get(заказ["мастер"])
+            if not (мастер and мастер.alive and not мастер.exiled):
+                h.mods.pop("заказ_" + p.id, None)
+                continue
+            if мастер.stock.get("материалы", 0) < h.B["буржуйка_материалы"]:
+                continue                       # нет материала — заказ ждёт
+            цена = h.B["печь_цена"]
+            плата = {}
+            for res in ("еда", "топливо"):
+                берём = min(цена - sum(плата.values()), p.stock.get(res, 0.0))
+                if берём > 0:
+                    p.stock[res] -= берём
+                    мастер.stock[res] = мастер.stock.get(res, 0.0) + берём
+                    плата[res] = берём
+            if sum(плата.values()) < цена * 0.5:
+                continue                       # заказчику нечем платить — ждёт
+            actions.spend(h, мастер, "материалы", h.B["буржуйка_материалы"])
+            h.where(p).shelter["буржуйка"] = True
+            h.where(p).вложено += h.B["буржуйка_материалы"]
+            h.mods.pop("заказ_" + p.id, None)
+            social.adjust(p, мастер.id, trust=2.0, hate=-10)
+            social.adjust(мастер, p.id, trust=1.0)
+            h.bump("печей_на_заказ")
+            h.journal.line(f"{мастер.short} {vb(мастер.sex, 'принёс')} {p.form('dat')} "
+                           f"буржуйку. Расплатились: "
+                           + ", ".join(f"{k} {v:g}" for k, v in плата.items()) + ".", 2)
+            h.note(f"{мастер.short} {vb(мастер.sex, 'сделал')} печь {p.form('dat')}")
+
         # обнаружение ночных пропаж (GDD 4.4 — сводка утром)
         losses = h.mods.pop("пропажи", [])
         for thief_id, victim_id in losses:
@@ -243,6 +301,15 @@ class Simulation:
                 h.mods["последний_налёт"] = h.day
                 raid_done = True
 
+        # ночь в общей квартире. До краж: тот, кто на это решился, уже не пойдёт
+        # никуда лезть, а дом наутро будет считать совсем другое
+        for p in h.rng.shuffled(h.alive()):
+            if p.tonight != "убить_соседа" or not p.alive or p.exiled:
+                continue
+            c = targets.get(p.id)
+            if c and c.alive and not c.exiled and social.под_одной_крышей(h, p, c):
+                conflict.убить_соседа(h, p, c)
+
         # кражи. Список составлен до осады, а осада могла кого-то из него убить
         # или выставить на мороз — поэтому проверяем обоих ещё раз
         for p in h.rng.shuffled(h.alive()):
@@ -261,7 +328,7 @@ class Simulation:
             if p.tonight == "дежурить":
                 slept = 4.5
                 p.bump("ночей_дежурства")
-            elif p.tonight in ("кража", "налёт"):
+            elif p.tonight in ("кража", "налёт", "убить_соседа"):
                 slept = 5.5
             else:
                 slept = 11.0 if p.rest < 35 else (9.5 if p.rest < 60 else 8.0)
@@ -286,11 +353,22 @@ class Simulation:
             watch += 1.0
         opts.append((("дежурить", None), watch * gate(p, "дежурить", b)))
 
+        # тот, с кем он делит комнату: ночью до него два метра и никакой двери
+        соседи = ([h.get(p.living_with)] if p.living_with
+                  else [h.get(g) for g in sorted(p.guests)])
+        for c in соседи:
+            if not (c and c.alive and not c.exiled):
+                continue
+            opts.append((("убить_соседа", c),
+                         conflict.оценка_убийства(h, p, c) * gate(p, "убить_соседа", b)))
+
         for t in h.others(p):
             if not t.alive:
                 continue
             if t.living_with:
                 continue           # его нет дома, он у соседа
+            if social.под_одной_крышей(h, p, t):
+                continue           # это тот, у чьей печки я сплю
             # сытый и незлой человек ночью не лезет к соседу
             A = conflict.aggr(h)
             if p.desperation() < 0.30 / A and p.hate.get(t.id, 0) < 25 / A:
@@ -304,7 +382,7 @@ class Simulation:
             score -= 2.0 if t.id in p.allies else 0.0
             score -= t.power() * 0.6
             # человек прикидывает шансы: в укреплённую дверь при дежурстве не лезут
-            chance = conflict.theft_chance(h, p, t)
+            chance = conflict.theft_chance(h, p, t, известно=False)
             if chance < b["кража_порог_шанса"] / A:
                 continue
             score *= 0.45 + chance
@@ -392,8 +470,14 @@ class Simulation:
 
             # паника растёт и от настоящей нужды, и от веры, что не хватит
             # (GDD 12.3: паника — это «вера, что скоро всё кончится»)
-            social.add_panic(p, b["паника_от_отчаяния"] * max(p.desperation(), p.insecurity() * 0.85)
-                             - b["паника_спад_в_день"] * (0.4 + 0.6 * p.mood / 100.0))
+            # спад глушится отчаянием: человек, который неделю не ел, не
+            # успокаивается сам собой. Пока этого не было, голодный висел
+            # на панике 45-50 и умирал спокойным — а рейд по разд. 16 требует
+            # «паника выше половины», и потому не случался никогда
+            спад = (b["паника_спад_в_день"] * (0.4 + 0.6 * p.mood / 100.0)
+                    * (1.0 - b["паника_не_спадает_в_нужде"] * p.desperation()))
+            social.add_panic(p, b["паника_от_отчаяния"]
+                             * max(p.desperation(), p.insecurity() * 0.85) - спад)
             # у тревоги есть дно, и оно поднимается само: двадцатый день метели
             # без света, воды и новостей пугает независимо от того, что в шкафу.
             # Это и есть «вера, что скоро всё кончится» из GDD 12.3
