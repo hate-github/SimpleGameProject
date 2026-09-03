@@ -50,6 +50,30 @@ def take_from(h, victim, taker, greed, limit=None):
     return moved
 
 
+def household(h, person):
+    """Кто физически живёт в этой квартире: хозяин и его гости.
+
+    К одной двери приходят за всем, что за ней лежит. Пока налёт брал только
+    у хозяина, переезд к соседу делал человека неприкосновенным.
+    """
+    люди = [person]
+    for gid in sorted(person.guests):
+        g = h.get(gid)
+        if g and g.alive and not g.exiled:
+            люди.append(g)
+    return люди
+
+
+def take_household(h, victim, taker, greed, limit=None):
+    """Вынести квартиру целиком — со всем, что принесли в неё жильцы."""
+    moved = {}
+    for кто in household(h, victim):
+        m = take_from(h, кто, taker, greed, limit)
+        for k, v in m.items():
+            moved[k] = moved.get(k, 0.0) + v
+    return moved
+
+
 def take_carried(h, victim, taker, limit):
     """Отнять то, что человек несёт в руках, а не весь его шкаф.
 
@@ -82,17 +106,26 @@ def _fmt(moved):
 
 # ---------------------------------------------------------------- кража
 
-def theft_chance(h, thief, target):
-    """Шанс унести чужое незамеченным. Считается одинаково и вором, и игрой:
-    человек прикидывает дверь, дежурство и собственную ловкость до того,
-    как полезет."""
+def theft_chance(h, thief, target, известно=True):
+    """Шанс унести чужое незамеченным: дверь, дежурство, собственная ловкость.
+
+    `известно=False` — это прикидка заранее, днём. Тогда про сегодняшнюю ночь
+    вор ещё ничего не знает и судит по привычке: сколько ночей за метель у соседа
+    горел свет. Пока эта разница не была проведена, вор читал `tonight` — то есть
+    решение, которое сосед примет только вечером, — да ещё и через раз, потому
+    что значение зависело от порядка обхода.
+    """
     b = h.B
     p = b["кража_база_успеха"]
     p += b["кража_за_уровень_двери"] * target.shelter.get("дверь", 0)
-    if target.away:
-        p += b["кража_хозяин_ушёл"]
-    if target.tonight == "дежурить":
-        p += b["кража_дежурство"]
+    if target.away and not [g for g in household(h, target)[1:] if not g.away]:
+        p += b["кража_хозяин_ушёл"]      # ушёл, и дома никого не оставил
+    if известно:
+        if target.tonight == "дежурить":
+            p += b["кража_дежурство"]
+    else:
+        привычка = target.stats.get("ночей_дежурства", 0) / max(1.0, float(h.day))
+        p += b["кража_дежурство"] * clamp(привычка, 0.0, 1.0)
     p += (stealth(thief) - 0.5) * 0.7
     return clamp(p, 0.05, 0.93)
 
@@ -312,7 +345,10 @@ def suspect(h, victim, exclude=None, real=None):
         w = 1.0
         w += victim.hate.get(other.id, 0.0) / 20.0
         w += (5.0 - victim.trust.get(other.id, 3.0)) * 0.4
-        w += other.stats.get("краж", 0) * 2.5          # репутация вора
+        w += other.stats.get("поймали", 0) * 2.5       # репутация вора: того,
+        # кого уже ловили. Раньше здесь стояло число удавшихся краж — то есть
+        # ровно то, чего дом про человека не знает: чем чище он работал,
+        # тем охотнее его подозревали
         # кого называли в чате, того и подозревают: слово в общем чате
         # работает как наговор (GDD 14, тема «подозрения»)
         назван = h.mods.get("названы_в_чате", {}).get(other.id, -99)
@@ -551,7 +587,11 @@ def consider_raid(h, npc):
     best = None
     for t in h.others(npc):
         # к тому, с кем живёшь под одной крышей, не идут с ломом
-        if npc.living_with == t.id or t.living_with == npc.id:
+        if social.под_одной_крышей(h, npc, t):
+            continue
+        # и к двери переехавшего тоже: за ней пусто, а сам он у хозяина —
+        # если нужны его запасы, идти надо к хозяину, он в этом же списке
+        if t.living_with:
             continue
         hate = npc.hate.get(t.id, 0.0)
         aware = npc.aware.get(t.id, 0.0)
@@ -562,7 +602,7 @@ def consider_raid(h, npc):
         want += hate / 25.0
         # если тихо взять не выйдет, дверь начинает притягивать людей с ломом:
         # укреплённая квартира защищает от вора и приманивает налёт (GDD 16)
-        want += (1.0 - theft_chance(h, npc, t)) * 2.6
+        want += (1.0 - theft_chance(h, npc, t, известно=False)) * 2.6
         # страх перед хозяином: чем сильнее сосед, тем меньше желания.
         # человек считает не себя одного, а тех, кого реально может привести.
         # Считаем тем же кодом, что и собирает группу, — иначе вожак идёт туда,
@@ -708,7 +748,7 @@ def run_siege(h, leader, target):
     if pay_ok and (fear > 0.5 or target.t01("храбрость") < 0.45) and h.rng.chance(0.45 / aggr(h)):
         moved = {}
         for p in crew:
-            m = take_from(h, target, p, greed=b["откуп_доля"] / len(crew))
+            m = take_household(h, target, p, greed=b["откуп_доля"] / len(crew))
             for k, v in m.items():
                 moved[k] = moved.get(k, 0) + v
         h.journal.line(f"{target.short} {'откупилась: отдала' if target.sex == 'ж' else 'откупился: отдал'} {_fmt(moved)}. Ушли.", 2)
@@ -772,7 +812,7 @@ def run_siege(h, leader, target):
         if h.rng.chance(clamp(уйти, 0.0, 0.9)):
             moved = {}
             for p in crew:
-                m = take_from(h, target, p, greed=b["налёт_доля_пустой_квартиры"] / len(crew))
+                m = take_household(h, target, p, greed=b["налёт_доля_пустой_квартиры"] / len(crew))
                 for k, v in m.items():
                     moved[k] = moved.get(k, 0) + v
             target.warmth = clamp(target.warmth - 25)
@@ -824,7 +864,7 @@ def run_siege(h, leader, target):
     if surrender:
         moved = {}
         for p in crew:
-            m = take_from(h, target, p, greed=0.75 / len(crew))
+            m = take_household(h, target, p, greed=0.75 / len(crew))
             for k, v in m.items():
                 moved[k] = moved.get(k, 0) + v
         h.journal.line(f"{target.short} не {vb(target.sex, 'стал')} драться. Забрали: {_fmt(moved)}.", 2)
@@ -876,7 +916,7 @@ def run_siege(h, leader, target):
     if res == "a":
         moved = {}
         for p in [c for c in crew if c.alive]:
-            m = take_from(h, target, p, greed=0.85 / max(1, len([c for c in crew if c.alive])))
+            m = take_household(h, target, p, greed=0.85 / max(1, len([c for c in crew if c.alive])))
             for k, v in m.items():
                 moved[k] = moved.get(k, 0) + v
         if moved:
@@ -895,13 +935,19 @@ def _house_learns(h, target, crew):
     """После налёта весь дом узнаёт и о жертве, и о нападавших."""
     b = h.B
     social.house_shock(h, panic=b["паника_от_налёта_в_доме"], mood=-6)
+    свои = {c.id for c in crew}
+    # судит дом, а не соучастники: тот, кто сам стоял у этой двери, не злится
+    # на того, с кем он туда пришёл. Пока состав не был исключён из перебора,
+    # налёт добавлял +17 ненависти между подельниками, и агрессивное ядро
+    # из GDD 12.4 съедало само себя за две ночи
+    судьи = [p for p in h.alive() if p.id not in свои]
     for p in h.alive():
         social.adjust(p, target.id, aware=18)
+        if p.id in свои:
+            continue
         for c in crew:
-            if p.id == c.id:
-                continue
             social.adjust(p, c.id, trust=-1.2 * p.t01("лояльность") * 2,
                           hate=10 + 12 * p.t01("лояльность"), aware=8)
     # и отдельно — по личной мерке каждого (GDD 12.1)
     for c in crew:
-        social.judge(h, c, "насилие", hate=8.0, trust=-0.6)
+        social.judge(h, c, "насилие", hate=8.0, trust=-0.6, witnesses=судьи)

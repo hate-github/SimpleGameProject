@@ -194,6 +194,20 @@ class Simulation:
             # шанс кражи по позавчерашнему дежурству жертвы
             p.tonight = "спать"
             p.stats["часы_работы"] = 0
+        # всё, что гость принёс за вчера, идёт к общей печке: квартира одна,
+        # дрова у неё общие. Пока этого не было, гость копил топливо, которое
+        # по правилу «печку топит хозяин» не мог сжечь никогда, и просил ещё
+        for p in h.alive():
+            if not p.living_with:
+                continue
+            host = h.get(p.living_with)
+            дрова = p.stock.get("топливо", 0.0)
+            if host and host.alive and not host.exiled and дрова > 0:
+                host.stock["топливо"] = host.stock.get("топливо", 0.0) + дрова
+                p.stock["топливо"] = 0.0
+                h.journal.line(f"{p.short} {vb(p.sex, 'снёс')} дрова к печке "
+                               f"{host.form('gen')} ({дрова:g}).", 0)
+
         # обнаружение ночных пропаж (GDD 4.4 — сводка утром)
         losses = h.mods.pop("пропажи", [])
         for thief_id, victim_id in losses:
@@ -291,6 +305,8 @@ class Simulation:
                 continue
             if t.living_with:
                 continue           # его нет дома, он у соседа
+            if social.под_одной_крышей(h, p, t):
+                continue           # это тот, у чьей печки я сплю
             # сытый и незлой человек ночью не лезет к соседу
             A = conflict.aggr(h)
             if p.desperation() < 0.30 / A and p.hate.get(t.id, 0) < 25 / A:
@@ -304,7 +320,7 @@ class Simulation:
             score -= 2.0 if t.id in p.allies else 0.0
             score -= t.power() * 0.6
             # человек прикидывает шансы: в укреплённую дверь при дежурстве не лезут
-            chance = conflict.theft_chance(h, p, t)
+            chance = conflict.theft_chance(h, p, t, известно=False)
             if chance < b["кража_порог_шанса"] / A:
                 continue
             score *= 0.45 + chance

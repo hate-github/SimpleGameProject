@@ -76,8 +76,14 @@ RES_GEN = {"еда": "еды", "вода": "воды", "топливо": "топ
 
 
 def most_needed(npc):
-    """Чего у человека меньше всего в днях — то и пойдёт просить."""
-    return min(("еда", "вода", "топливо"), key=lambda r: npc.days_of(r))
+    """Чего у человека меньше всего в днях — то и пойдёт просить.
+
+    Переехавший к соседу дрова не просит: печку топит хозяин, а всё, что гость
+    приносит, к этой же печке и уходит. Пока топливо считалось и ему, треть
+    всех просьб о дровах в доме шла от людей, которые сидят у чужой горячей печи.
+    """
+    ресурсы = ("еда", "вода", "топливо") if npc.топит_сам() else ("еда", "вода")
+    return min(ресурсы, key=lambda r: npc.days_of(r))
 
 
 # Насколько поступок «не принят», пока жизнь ещё похожа на обычную.
@@ -332,7 +338,8 @@ def gather(h, npc):
             # хозяина нет дома: поговорить не с кем, но квартира стоит пустая.
             # Раньше эта ветка была ниже по циклу, за `continue`, и не достигалась
             # никогда — дневная кража из GDD 12.5 была мёртвым кодом
-            if npc.confidence(t.id) > 0.2:
+            if (npc.confidence(t.id) > 0.2 and not t.living_with
+                    and not social.под_одной_крышей(h, npc, t)):
                 greed = npc.loot_value(t.id) * (0.4 + npc.t01("жадность") * 0.8)
                 score = (greed * (0.4 + des) - npc.t01("лояльность") * 4.0
                          - (1.0 - conflict.stealth(npc)) * 3.0)
@@ -401,6 +408,10 @@ def gather(h, npc):
             add("переехать", move, t)
         # отнять на лестнице: без двери, без замка, лицом к лицу
         A = conflict.aggr(h)
+        # человека, с которым делишь одну комнату, на лестнице не зажимают:
+        # вечером возвращаться в неё же
+        if social.под_одной_крышей(h, npc, t):
+            continue
         ratio = npc.power() / max(0.2, t.power())
         # ловят того, кого видели с пакетами; случайная встреча на лестнице — редкость
         met = (t.stats.get("день_вылазки") == h.day) or h.rng.chance(0.08)
@@ -509,8 +520,14 @@ def choose_and_do(h, npc):
 def execute(h, npc, key, target):
     b = h.B
     spent = hours(key, npc, b)
+    место = None
     if key == "вылазка":
-        spent = min(h.rng.uni(b["вылазка_часы_мин"], b["вылазка_часы_макс"]), npc.time_left)
+        # куда идти, решают до выхода, и дорога стоит времени: без этого
+        # «магазин на Заречной» отнимал ровно столько же дня, сколько мусорка
+        # во дворе, и выбор «ближе и беднее или дальше и опаснее» был бесплатным
+        место = выбрать_место(h, npc)
+        spent = min(h.rng.uni(b["вылазка_часы_мин"], b["вылазка_часы_макс"]) * место[1],
+                    npc.time_left)
     npc.time_left -= spent
     mark(h, npc, key, target)
     npc.stats["часы_работы"] = npc.stats.get("часы_работы", 0) + (spent if key in ("утепление", "дверь", "буржуйка", "разбор", "вылазка") else 0)
@@ -662,12 +679,13 @@ def execute(h, npc, key, target):
         said = f"{npc.short} {vb(npc.sex, 'разобрал')} часть кв.{flat.apt}" + (f": {vb(npc.sex, 'взял')} {took}" if took else "")
 
     elif key == "вылазка":
-        _outing(h, npc, spent)
+        _outing(h, npc, spent, место)
         said = None  # текст пишет сам _outing
 
     elif key == "наблюдение":
         social.observe(h, npc, target)
-        said = f"{npc.short} {vb(npc.sex, 'присматривался')} к кв.{target.apt}"
+        said = (f"{npc.short} {vb(npc.sex, 'присматривался')} "
+                f"к кв.{social.место(h, target).apt}")
 
     elif key == "разговор":
         social.gossip(h, npc, target)
@@ -894,7 +912,12 @@ def _ask(h, npc, target):
     # И третье следствие оттуда же, которого не было: у чужого человека просить
     # стыдно, и доверие к просящему падает тем сильнее, чем меньше его было
     target.panic = clamp(target.panic + 4)
-    social.adjust(target, npc.id, aware=-5)
+    # человек, пришедший просить, сам о себе всё и рассказал: теперь сосед знает,
+    # что у него пусто. Раньше здесь стояло aware=-5 — просьба почему-то делала
+    # просящего менее понятным, хотя та же просьба в чате (report.daily_chat)
+    # правильно поднимала осведомлённость и роняла оценку запасов
+    social.adjust(target, npc.id, aware=b["просьба_осведомлённость"])
+    social.note_signal(target, npc.id, res, 0.5, 0.35)
     social.adjust(npc, target.id, aware=12)
     цена = b["просьба_цена_доверия"] * (1.0 - min(1.0, trust / 8.0))
     social.adjust(target, npc.id, trust=-цена)
@@ -917,7 +940,6 @@ def _ask(h, npc, target):
                 f"у {target.form('gen')} — дали")
     else:
         social.adjust(npc, target.id, trust=b["доверие_за_отказ"], hate=b["ненависть_за_отказ"] * (0.7 + npc.desperation()))
-        npc.refused_by[target.id] = npc.refused_by.get(target.id, 0) + 1
         rec["отказали"] += 1
         rec["подряд"] += 1
         # «жмётся — значит есть». Отказ выдаёт запасы не хуже наблюдения
@@ -985,13 +1007,16 @@ def выбрать_место(h, npc):
     return лучшее
 
 
-def _outing(h, npc, dur):
-    """Вылазка (GDD 20): единственный источник новых ресурсов."""
+def _outing(h, npc, dur, выбор=None):
+    """Вылазка (GDD 20): единственный источник новых ресурсов.
+
+    Время дороги уже учтено в `dur` — его посчитали до выхода, вместе с выбором
+    места (см. execute).
+    """
     from .world import outing_danger
     b = h.B
     npc.away = True
-    место, часы_к, богатство_к, риск_к = выбрать_место(h, npc)
-    dur = min(dur * часы_к, npc.time_left + dur)
+    место, часы_к, богатство_к, риск_к = выбор or выбрать_место(h, npc)
     danger = outing_danger(h) * риск_к
 
     take = b["вылазка_добыча_база"] * богатство_к * h.scav_richness * h.rng.uni(0.5, 1.4)

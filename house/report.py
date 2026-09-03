@@ -157,6 +157,18 @@ def daily_chat(h, lines):
         text = rng.pick(variants)
         others = [o for o in people if o.id != p.id]
         who = rng.pick(others) if others else p
+        if key == "подозрение" and others:
+            # вслух называют не случайного соседа, а того, на кого сам думаешь:
+            # по злости, по недоверию и по тому, что успел о нём узнать.
+            # Раньше здесь стоял ровный жребий, и Лида с лояльностью 9 могла
+            # при всём доме назвать вором человека, о котором ничего не знает,
+            # — а дом это запоминал и потом на него же и думал (conflict.suspect)
+            who = rng.weighted([
+                (o, max(0.05, 1.0 + p.hate.get(o.id, 0.0) / 15.0
+                        + (5.0 - p.trust.get(o.id, 3.0)) * 0.5
+                        + p.confidence(o.id) * 1.5
+                        + o.stats.get("поймали", 0) * 2.0))
+                for o in others])
         text = text.replace("{кто}", who.short).replace("{кв}", str(who.apt))
         if not rng.chance(0.55 + 0.04 * p.trait("общительность")):
             continue

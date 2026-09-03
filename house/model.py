@@ -98,7 +98,6 @@ class NPC:
     guests: set = field(default_factory=set)
     allies: set = field(default_factory=set)
     favors: Dict[str, int] = field(default_factory=dict)
-    refused_by: Dict[str, int] = field(default_factory=dict)
     asking: Dict[str, Dict[str, float]] = field(default_factory=dict)  # память о просьбах
 
     # --- служебное ---
@@ -139,6 +138,15 @@ class NPC:
         """
         return clamp(self.days_of(res) / max(3.0, self.horizon), 0.0, 2.5)
 
+    def топит_сам(self) -> bool:
+        """Отвечает ли этот человек за своё отопление.
+
+        Переехавший к соседу — нет: его дрова ушли в общую печку, и топит
+        её хозяин. Пока это не спрашивалось, у гостя топлива всегда было ноль,
+        и он вечно числился в отчаянии, сидя в тепле и сытости.
+        """
+        return not self.living_with
+
     def insecurity(self) -> float:
         """0..1 — «мне не хватит».
 
@@ -146,15 +154,17 @@ class NPC:
         себе назначил, и не знает, когда кончится метель. Отсюда жадность
         и паника — но не преступление.
         """
-        return clamp(max(1.0 - min(1.0, self.secure("еда")),
-                         1.0 - min(1.0, self.secure("вода")),
-                         (1.0 - min(1.0, self.secure("топливо"))) * 0.9), 0.0, 1.0)
+        части = [1.0 - min(1.0, self.secure("еда")),
+                 1.0 - min(1.0, self.secure("вода"))]
+        if self.топит_сам():
+            части.append((1.0 - min(1.0, self.secure("топливо"))) * 0.9)
+        return clamp(max(части), 0.0, 1.0)
 
     def desperation(self) -> float:
         """0..1 — «я умираю». Физическая нужда: вот это толкает на кражу и налёт."""
         food = 1.0 - norm(min(self.days_of("еда"), 10), 0, 6)
         water = 1.0 - norm(min(self.days_of("вода"), 10), 0, 4)
-        fuel = 1.0 - norm(min(self.days_of("топливо"), 10), 0, 6)
+        fuel = (1.0 - norm(min(self.days_of("топливо"), 10), 0, 6)) if self.топит_сам() else 0.0
         # телесная часть включается только когда правда плохо, иначе
         # человек «в отчаянии» каждый день перед ужином
         body = 1.0 - norm(min(self.satiety, self.warmth, self.hydration), 5, 40)
