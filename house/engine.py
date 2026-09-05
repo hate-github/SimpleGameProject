@@ -11,7 +11,7 @@ import os
 from .util import Rng, clamp, norm, vb
 from .checks import _разделы as checks_разделы
 from .model import NPC, House, Flat, Кладовая
-from . import world, social, actions, conflict, report, meeting
+from . import world, social, actions, conflict, report, meeting, замысел
 
 DATA = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data")
 
@@ -259,6 +259,15 @@ class Simulation:
         # стартовые отношения
         for d in self.npcs_data["жильцы"]:
             p = h.people[d["id"]]
+            # оружие, с которым человек вошёл в метель, ему привычно: оно
+            # у него годами. Охотнику привычно любое огнестрельное — это его
+            # ремесло, а не эта конкретная винтовка
+            if p.weapon and p.weapon != "нет":
+                p.рука[p.weapon] = 1.0
+            if "охотник" in p.skills:
+                from .model import FIREARMS
+                for w in sorted(FIREARMS):
+                    p.рука[w] = max(p.рука.get(w, 0.0), h.B["рука_охотника"])
             for other in h.people.values():
                 if other.id == p.id:
                     continue
@@ -269,6 +278,11 @@ class Simulation:
                 p.est[other.id] = {"еда": 3.0, "топливо": 3.0, "лекарства": 0.5, "материалы": 1.0}
             for k, v in d.get("доверие_старт", {}).items():
                 p.trust[k] = float(v)
+                # до метели эти двое уже были знакомы, и близость начинается
+                # не с нуля. Оксана с Лидой (8 и 7) входят в метель парой,
+                # Игорь с Петром (1 и 2) — никем друг другу; дальше это или
+                # выдержит, или нет, но начальная несимметрия у дома есть
+                p.близость[k] = float(v) * h.B["близость_старт_от_доверия"]
             for k, v in d.get("ненависть_старт", {}).items():
                 p.hate[k] = float(v)
             for k, v in d.get("осведомлённость_старт", {}).items():
@@ -339,6 +353,9 @@ class Simulation:
                 # ложная надежда, из которой распад потом бьёт сильнее
                 n += b_n["нормальность_отрастает"]
             p.normalcy = clamp(n, p.нормальность_пол, 1.0)
+            # замысел решает своё до всего остального: спит он сегодня или нет,
+            # не пора ли его бросить и не пора ли взяться за новый
+            замысел.утро(h, p)
             p.time_left = h.B["часов_бодрствования"]
             p.burning = False
             p.away = False
@@ -454,6 +471,39 @@ class Simulation:
                 for p in h.alive():
                     if p.id != хозяин.id:
                         social.adjust(хозяин, p.id, hate=3.0, aware=5)
+
+        # то, что за ночь оказалось под чужой дверью (house/замысел.py).
+        # Дом видит вещь и хозяина двери, а того, кто её положил, не видит
+        # никто: в этом весь смысл подброса
+        for apt, что in list(h.mods.pop("подброшено", {}).items()):
+            хозяин = h.чей(h.flats[apt])
+            if хозяин is None or not (хозяин.alive and not хозяин.exiled):
+                continue
+            нашли = [w for w in h.alive()
+                     if w.id != хозяин.id and w.id != что["кто"]
+                     and h.rng.chance(b_n["подброс_заметность"]
+                                      * (1.6 if h.floor_gap(w, хозяин) == 0 else 1.0))]
+            if not нашли:
+                continue
+            for w in нашли:
+                social.adjust(w, хозяин.id, hate=b_n["подброс_ненависть"],
+                              trust=-b_n["подброс_доверие"], aware=12)
+                social.испугался(h, w, хозяин, b_n["подброс_страх"])
+                social.отдалились(w, хозяин.id, b_n["близость_за_обиду"])
+            social.register_incident(h, "подброс", None, witnesses=нашли)
+            вещь = "кусок мяса" if что["что"] == "мясо" else "чужая аптечка"
+            h.journal.line(f"У двери кв.{apt} с утра лежал{'' if что['что'] == 'мясо' else 'а'} "
+                           f"{вещь}. {', '.join(w.short for w in нашли)} "
+                           f"{'видел' if len(нашли) == 1 else 'видели'} "
+                           f"и {'сделал' if len(нашли) == 1 else 'сделали'} свои выводы.", 2)
+            h.journal.secret(f"положил{'а' if h.get(что['кто']).sex == 'ж' else ''} это "
+                             f"{h.get(что['кто']).short}.")
+            h.note(f"под дверью кв.{apt} нашли {вещь}")
+            h.bump("подбросов_сработало")
+
+        # не пора ли дому сложить одно к одному про того, кто ведёт свою игру
+        for p in h.alive():
+            замысел.напор_виден(h, p)
 
         # обнаружение ночных пропаж (GDD 4.4 — сводка утром)
         losses = h.mods.pop("пропажи", [])
@@ -645,6 +695,12 @@ class Simulation:
             p.satiety = clamp(p.satiety - drain)
             p.hydration = clamp(p.hydration - b["расход_жажды"])
 
+            # к оружию привыкают тем, что носят его: каждый день понемногу
+            if p.weapon and p.weapon != "нет":
+                from .model import СВОЙСКОЕ
+                было = p.рука.get(p.weapon, СВОЙСКОЕ.get(p.weapon, 0.0))
+                p.рука[p.weapon] = clamp(было + b["рука_за_день"], 0.0, 1.0)
+
             room = h.room_temp(p)
             p.warmth = clamp(p.warmth + (room - b["комфортная_температура"]) * b["тепло_за_градус"])
 
@@ -682,6 +738,14 @@ class Simulation:
                 for other_id in sorted(p.guests) + ([p.living_with] if p.living_with else []):
                     o = h.get(other_id)
                     if o and o.alive:
+                        # спать в одной комнате — это и есть история пары,
+                        # даже если за день не сказано ни слова. Тем и тяжелее
+                        # потом выставить его на мороз
+                        social.сблизились(h, p, o, b["близость_под_крышей"])
+                        # и видят друг друга каждый день, вплотную: от того,
+                        # как выглядит человек напротив, в одной комнате
+                        # не спрячешься
+                        social.встретились(h, p, o)
                         # у соседства своя злость, и она копится: ГДД 15 обещает
                         # «накопленную злость», из которой растут разъезд,
                         # изгнание гостя и нож ночью

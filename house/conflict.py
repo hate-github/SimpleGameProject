@@ -1126,6 +1126,12 @@ def consider_raid(h, npc):
         from .model import FIREARMS
         if t.weapon in FIREARMS and npc.aware.get(t.id, 0) > 30:
             fear += 2.2
+        # и то, каким его КАЖУТ: слабость видна и она приглашает. Не правда
+        # мира — по правде мира у осаждающего нет способа узнать, сколько
+        # у соседа здоровья, — а лицо, которое он видел на площадке
+        # (social.разглядел). Тот, кто держится прямо, этим и защищается
+        слабость = max((npc.плох(p.id) for p in household(h, t)), default=0.0)
+        fear -= слабость * b["добить_за_слабость"]
         # и свет на площадке. Кто-то в доме не спит — значит, их услышат
         # на лестнице и поднимут весь подъезд. До сих пор дежурство не значило
         # для налётчика ровно ничего: 96 осад из 115 приходились на ночи,
@@ -1621,6 +1627,13 @@ def run_siege(h, leader, target):
                              предупреждён=предупредил is not None, поднял=поднял)
     attack_power = sum(p.power() for p in crew)
     def_power = sum(p.power() for p in defenders) * (1.0 + 0.2 * target.shelter.get("дверь", 0))
+    # у двери с оружием в руках привыкают к нему быстрее, чем за месяц ухода
+    # за ним: страшно, но руки запоминают
+    from .model import СВОЙСКОЕ
+    for p in crew + defenders:
+        if p.weapon and p.weapon != "нет":
+            было = p.рука.get(p.weapon, СВОЙСКОЕ.get(p.weapon, 0.0))
+            p.рука[p.weapon] = clamp(было + h.B["рука_за_бой"], 0.0, 1.0)
     outnumbered = attack_power > def_power * 1.25
 
     if len(defenders) > 1:
