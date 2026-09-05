@@ -59,6 +59,21 @@ def outing(h, npc, dur, м, спутник=None):
 
 actions._outing = outing
 
+ВЫХОД = []                            # (близость к жертве, вышел ли) по каждому соседу
+_defenders = conflict.defenders_of
+
+
+def defenders_of(h, target, crew_ids, предупреждён=False, поднял=None, крик=False):
+    d = _defenders(h, target, crew_ids, предупреждён, поднял, крик)
+    вышли = {p.id for p in d}
+    for p in h.others(target):
+        if p.id not in crew_ids:
+            ВЫХОД.append((p.свой(target.id), p.id in вышли, крик))
+    return d
+
+
+conflict.defenders_of = defenders_of
+
 
 def execute(h, npc, key, target):
     ХОДЫ[key] += 1
@@ -236,6 +251,22 @@ if вместе:
           f"у остальных {st.mean(бл_порознь):.2f}")
 else:
     print("   ни одной совместной ходки")
+print()
+print("4в. КРИК О ПОМОЩИ")
+осад = СТАТ["налётов"]
+print(f"   осад за жизнь {осад / max(1, N):.2f}; кричали в {доля(СТАТ['криков'], осад)}")
+print(f"   на лестницу вышел хоть кто-то: {доля(СТАТ['осад_с_защитой'], осад)}; "
+      f"защитников на осаду {СТАТ['защитников'] / max(1, осад):.2f}")
+print(f"   налётчики ушли на крик: {доля(СТАТ['исход_ушли_на_крик'], осад)}")
+if ВЫХОД:
+    в = [б for б, вышел, _к in ВЫХОД if вышел]
+    н = [б for б, вышел, _к in ВЫХОД if not вышел]
+    print(f"   близость к жертве: у вышедших {st.mean(в) if в else 0:.2f} "
+          f"({len(в)} чел.), у оставшихся за дверью {st.mean(н) if н else 0:.2f} ({len(н)})")
+    с_криком = [вышел for _б, вышел, к in ВЫХОД if к]
+    без = [вышел for _б, вышел, к in ВЫХОД if not к]
+    print(f"   выходит один сосед из: на крик {доля(sum(с_криком), len(с_криком))}, "
+          f"без крика {доля(sum(без), len(без))}")
 print()
 print("5. К КОМУ ХОДЯТ")
 for вид, v in sorted(КОНТАКТЫ.items()):
