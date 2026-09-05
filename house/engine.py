@@ -599,6 +599,15 @@ class Simulation:
             if c and c.alive and not c.exiled and social.под_одной_крышей(h, p, c):
                 conflict.убить_соседа(h, p, c)
 
+        # обобрать и уйти. После ножа и до краж: тот, кто на это решился,
+        # этой ночью больше никуда не пойдёт, а дом наутро считает другое
+        for p in h.rng.shuffled(h.alive()):
+            if p.tonight != "обобрать" or not p.alive or p.exiled:
+                continue
+            c = targets.get(p.id)
+            if c and c.alive and not c.exiled and p.living_with == c.id:
+                conflict.обобрать_и_уйти(h, p, c)
+
         # кражи. Список составлен до осады, а осада могла кого-то из него убить
         # или выставить на мороз — поэтому проверяем обоих ещё раз
         for p in h.rng.shuffled(h.alive()):
@@ -618,7 +627,7 @@ class Simulation:
                 slept = 4.5
                 p.bump("ночей_дежурства")
                 p.stats["дежурил_ночь"] = h.day
-            elif p.tonight in ("кража", "налёт", "убить_соседа"):
+            elif p.tonight in ("кража", "налёт", "убить_соседа", "обобрать"):
                 slept = 5.5
             else:
                 slept = 11.0 if p.rest < 35 else (9.5 if p.rest < 60 else 8.0)
@@ -665,6 +674,14 @@ class Simulation:
                      + p.пунктик("убить_соседа")
                      + actions.своя_мерка(p, "убить_соседа", b))
             opts.append((("убить_соседа", c), ночью * gate(p, "убить_соседа", b)))
+            # и то, что лежит между «съехать по-хорошему» и ножом: собрать
+            # хозяйское и уйти к себе в ту же ночь. Только гостю — хозяину
+            # уходить некуда, у него эта квартира и есть
+            if p.living_with == c.id:
+                обобрать = (conflict.оценка_обобрать(h, p, c)
+                            + p.пунктик("обобрать")
+                            + actions.своя_мерка(p, "обобрать", b))
+                opts.append((("обобрать", c), обобрать * gate(p, "обобрать", b)))
 
         for t in h.others(p):
             if not t.alive:
