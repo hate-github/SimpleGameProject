@@ -925,6 +925,8 @@ def _orphan(h, dead):
     """
     дети = dead.дети or [{"имя": dead.dependent_name or "ребёнок",
                           "вин": dead.dependent_acc or dead.dependent_name or "ребёнка",
+                          "род": dead.dependent_gen or dead.dependent_name or "ребёнка",
+                          "твор": dead.dependent_ins or dead.dependent_name or "ребёнком",
                           "сытость": 60.0, "тепло": 55.0, "здоровье": 80.0, "болен": None}]
     dead.дети = []
     dead.dependents = 0
@@ -941,7 +943,11 @@ def _orphan(h, dead):
             taker.дети.append(р)
             taker.dependent_name = р["имя"]
             taker.mood = clamp(taker.mood + 6)
+            # все четыре формы, а не две: без родительного и творительного
+            # у нового родителя выходило «просидела рядом с Ваня»
             taker.dependent_acc = р["вин"]
+            taker.dependent_gen = р.get("род") or р["имя"]
+            taker.dependent_ins = р.get("твор") or р["имя"]
             h.journal.line(f"{р['имя']} остался один. {taker.short} "
                            f"{vb(taker.sex, 'забрал')} его к себе.", 2)
             h.note(f"{taker.short} {vb(taker.sex, 'взял')} {р['вин']}")
@@ -1711,6 +1717,11 @@ def run_siege(h, leader, target):
         h.journal.line(f"На лестницу вышли: {', '.join(p.short for p in defenders[1:])} — за {target.form('acc')}.", 2)
         for d in defenders[1:]:
             social.adjust(target, d.id, trust=b["доверие_за_защиту"])
+            # и близость: выйти ночью на лестницу за человека — самое сильное
+            # событие пары в этой игре, и до сих пор оно в историю пары
+            # не попадало вовсе. Симметрично, как разговор и общая печка:
+            # запоминают это оба
+            social.сблизились(h, target, d, b["близость_за_защиту"])
             # выйти за человека к его двери, когда за ней стоят с ломом, —
             # самое дорогое, чем в этом доме гасят обиду
             social.загладил(h, d, target, b["обида_за_защиту"])

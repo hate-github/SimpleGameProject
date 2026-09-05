@@ -95,15 +95,22 @@ class Journal:
                 self.w(f"  {p.short:<8} кв{p.apt:<3} — {как} (день {p.died_day})")
                 continue
             st = p.stock
-            top_hate = max(((k, v) for k, v in p.hate.items() if v > 25), key=lambda kv: kv[1], default=None)
-            top_aware = max(((k, v) for k, v in p.aware.items() if v > 45), key=lambda kv: kv[1], default=None)
+            # злость и осведомлённость показываются про тех, кто ещё в подъезде:
+            # «злость→Игорь 98» на третий день после похорон Игоря — правда
+            # модели (злость оседает медленно), но панель — это срез дома
+            # сегодня, а не список того, что человек в себе носит
+            здесь = {o.id for o in h.others(p)}
+            top_hate = max(((k, v) for k, v in p.hate.items() if v > 25 and k in здесь),
+                           key=lambda kv: kv[1], default=None)
+            top_aware = max(((k, v) for k, v in p.aware.items() if v > 45 and k in здесь),
+                            key=lambda kv: kv[1], default=None)
             marks = []
             if top_hate:
                 marks.append(f"злость→{h.people[top_hate[0]].short} {int(top_hate[1])}")
             if top_aware:
                 marks.append(f"знает о {h.people[top_aware[0]].short} {int(top_aware[1])}")
-            страшный = p.самый_страшный()
-            if страшный and страшный[1] > 20:
+            страшный = p.самый_страшный(среди=здесь, порог=20.0)
+            if страшный:
                 marks.append(f"боится {h.people[страшный[0]].short} {int(страшный[1])}")
             дыры = h.where(p).дыры
             if дыры:

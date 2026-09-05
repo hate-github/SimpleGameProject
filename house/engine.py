@@ -252,8 +252,13 @@ class Simulation:
             # с имуществом: через смерть, отъём, осаду и занятую квартиру
             p.ключи_кладовых = {k.id for k in h.кладовые.values() if k.apt == p.apt}
             for _ in range(p.dependents):
+                # падежи ребёнок носит с собой все четыре: он переходит из рук
+                # в руки (conflict._orphan), и на новом месте «ушла с Ваней»
+                # должно читаться так же, как читалось у матери
                 p.дети.append({"имя": p.dependent_name or "ребёнок",
                                "вин": p.dependent_acc or p.dependent_name or "ребёнка",
+                               "род": p.dependent_gen or p.dependent_name or "ребёнка",
+                               "твор": p.dependent_ins or p.dependent_name or "ребёнком",
                                "сытость": 85.0, "тепло": 80.0, "здоровье": 100.0,
                                "болен": None})
             h.people[p.id] = p
@@ -319,15 +324,24 @@ class Simulation:
             if p.stats.get("отдых_день") != h.day:
                 continue
             раз = p.stats.get("отдых_раз", 0)
+            # и то, отчего этот день прошёл впустую. У матери, которой нечем
+            # помочь ребёнку, «лежала и ничего не делала» — неправда журнала,
+            # а не поведения: делать ей и правда нечего, но она не лежит
+            с_ребёнком = (p.дети
+                          and p.ребёнку_плохо() >= h.B["быт_ребёнку_плохо"])
+            если_ребёнок = f" рядом с {p.dependent_ins or p.dependent_name or 'ребёнком'}"
             if раз >= h.B["отдых_весь_день"]:
-                h.journal.line(f"{p.short} почти весь день {vb(p.sex, 'пролежал')} "
-                               f"и ничего не {vb(p.sex, 'делал')}.", 1)
+                h.journal.line(f"{p.short} почти весь день "
+                               + (f"{vb(p.sex, 'просидел')}{если_ребёнок}." if с_ребёнком
+                                  else f"{vb(p.sex, 'пролежал')} и ничего не {vb(p.sex, 'делал')}."), 1)
             elif раз >= 2:
-                h.journal.line(f"{p.short} подолгу {vb(p.sex, 'лежал')} "
-                               f"и ничего не {vb(p.sex, 'делал')}.", 0)
+                h.journal.line(f"{p.short} подолгу "
+                               + (f"{vb(p.sex, 'сидел')}{если_ребёнок}." if с_ребёнком
+                                  else f"{vb(p.sex, 'лежал')} и ничего не {vb(p.sex, 'делал')}."), 0)
             else:
-                h.journal.line(f"{p.short} {vb(p.sex, 'лежал')} "
-                               f"и ничего не {vb(p.sex, 'делал')}.", 0)
+                h.journal.line(f"{p.short} "
+                               + (f"{vb(p.sex, 'сидел')}{если_ребёнок}." if с_ребёнком
+                                  else f"{vb(p.sex, 'лежал')} и ничего не {vb(p.sex, 'делал')}."), 0)
         self._firsts(h)
         h.journal.сводка_дня(h)
         h.journal.flush_day(h)
@@ -392,6 +406,10 @@ class Simulation:
             if host and host.alive and not host.exiled and дрова > 0:
                 host.stock["топливо"] = host.stock.get("топливо", 0.0) + дрова
                 p.stock["топливо"] = 0.0
+                # и помнит, сколько снёс. Пока этого не было, съезд был
+                # единственной сделкой в доме без цены для второй стороны:
+                # выставленный на мороз уходил без всего, что принёс сам
+                p.stats["снёс_дров"] = p.stats.get("снёс_дров", 0.0) + дрова
                 h.journal.line(f"{p.short} {vb(p.sex, 'снёс')} дрова к печке "
                                f"{host.form('gen')} ({дрова:g}).", 0)
 
