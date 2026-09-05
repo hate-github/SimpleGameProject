@@ -21,6 +21,8 @@ from house.engine import Simulation
 
 ЗЕРНО = [0]
 
+ВИД = []                              # (действие, как человек выглядит) — этап 5
+ЖЕРТВЫ = []                           # как выглядела жертва отъёма
 ХОДЫ = collections.Counter()          # действие -> сколько раз за все жизни
 ОТДЫХ = []                            # по записи на каждый отдых
 СОН_ПО_ДНЯМ = collections.defaultdict(list)   # день -> все rest вечером
@@ -77,6 +79,8 @@ conflict.defenders_of = defenders_of
 
 def execute(h, npc, key, target):
     ХОДЫ[key] += 1
+    if key == "отнять" and target is not None and getattr(target, "id", None):
+        ЖЕРТВЫ.append(target.каким_кажусь())
     if key == "отдых":
         ОТДЫХ.append({
             "сон": npc.rest,
@@ -87,6 +91,8 @@ def execute(h, npc, key, target):
             "кто": (ЗЕРНО[0], npc.id, h.day),
             "поправимо": поправимо(h, npc),
         })
+    if key in ("лестница", "попросить", "отнять"):
+        ВИД.append((key, npc.каким_кажусь()))
     if key in ДОБРАЯ_ВОЛЯ or key in РАСЧЁТ:
         if target is not None and getattr(target, "id", None) and target.id != npc.id:
             вид = "добрая воля" if key in ДОБРАЯ_ВОЛЯ else "расчёт"
@@ -152,8 +158,7 @@ for seed in range(1, N + 1):
     for p in h.people.values():
         if (not p.alive or p.exiled) and not p.ушёл:
             ПРИЧИНЫ[(p.cause or "?").split(" (")[0]] += 1
-        for д in p.дети:
-            ДЕТИ.append(not д.get("жив", True))
+
     ПАРЫ.append(h.stats.get("вылазок_вдвоём", 0))
     КРИКИ.append(h.stats.get("криков", 0))
     ОСАДЫ.append(h.stats.get("осад", 0) or h.stats.get("налётов", 0))
@@ -268,6 +273,16 @@ if ВЫХОД:
     print(f"   выходит один сосед из: на крик {доля(sum(с_криком), len(с_криком))}, "
           f"без крика {доля(sum(без), len(без))}")
 print()
+print("4г. СВОЁ ЛИЦО")
+if ВИД:
+    по_ключу = collections.defaultdict(list)
+    for k, v in ВИД:
+        по_ключу[k].append(v)
+    for k, v in sorted(по_ключу.items()):
+        print(f"   {k:<12} {len(v):>5} раз, выглядел на {st.mean(v):.2f}")
+if ЖЕРТВЫ:
+    print(f"   жертва отъёма выглядела на {st.mean(ЖЕРТВЫ):.2f} ({len(ЖЕРТВЫ)} случаев)")
+print()
 print("5. К КОМУ ХОДЯТ")
 for вид, v in sorted(КОНТАКТЫ.items()):
     if v:
@@ -277,5 +292,5 @@ for вид, v in sorted(КОНТАКТЫ.items()):
               f"место цели по достатку {богат:.2f}")
 print()
 print(f"6. ВЫЖИВАЕМОСТЬ {st.mean(ВЫЖИЛО):.2f}")
-print(f"   детская смертность {st.mean(ДЕТИ) if ДЕТИ else 0.0:.2f} "
-      f"({sum(ДЕТИ)} из {len(ДЕТИ)})")
+print(f"   смертей детей за жизнь {СТАТ['смертей_детей'] / max(1, N):.2f}; "
+      f"брошено {СТАТ['детей_брошено'] / max(1, N):.2f}")
