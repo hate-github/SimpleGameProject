@@ -16,6 +16,16 @@ from house.engine import Simulation
 ДЕНЬ = collections.defaultdict(list)     # (зерно, id, день) -> список действий
 ПО_ЛЮДЯМ = collections.defaultdict(collections.Counter)
 ЦЕЛИ = collections.defaultdict(collections.Counter)   # id -> к кому ходил
+# и то же самое врозь: заботу и интерес мешать нельзя. Больше трети контактов —
+# наблюдение, обмен и возврат долга, и они по устройству идут не к своему,
+# а к тому, у кого что-то есть. Пока они считались вместе, мерка «есть ли
+# у людей свои люди» третий заход подряд стояла на 13–14%
+ДОБРАЯ_ВОЛЯ = {"разговор", "поделиться", "вернуть", "лечить", "позвать",
+               "отдать_на_ночь"}
+РАСЧЁТ = {"наблюдение", "обмен", "кража_днём", "отнять", "подкараулить",
+          "подбросить", "шепнуть"}
+ЦЕЛИ_ВИД = {"доброй воли": collections.defaultdict(collections.Counter),
+            "расчёта": collections.defaultdict(collections.Counter)}
 ВЫБРАН_ЛУЧШИЙ = [0, 0]
 ЗЕРНО = [0]
 ОШИБКА = []          # |вид − правда|, усреднённая по трём полям
@@ -54,6 +64,10 @@ def execute(h, npc, key, target):
     ПО_ЛЮДЯМ[npc.short][key] += 1
     if target is not None and getattr(target, "short", None):
         ЦЕЛИ[npc.short][target.short] += 1
+        if key in ДОБРАЯ_ВОЛЯ:
+            ЦЕЛИ_ВИД["доброй воли"][npc.short][target.short] += 1
+        elif key in РАСЧЁТ:
+            ЦЕЛИ_ВИД["расчёта"][npc.short][target.short] += 1
     return _execute(h, npc, key, target)
 
 
@@ -275,3 +289,26 @@ for i, a in enumerate(люди):
                        for n in общие) / 2)
 print(f"   строки расходятся между собой на {100 * st.mean(раз):.0f}%  "
       f"(это и есть «есть ли у людей свои люди»)")
+
+
+def расхождение(таблица):
+    """Насколько непохожи строки «кто к кому ходит» в этой таблице."""
+    имена = sorted(таблица)
+    доли = {}
+    for имя in имена:
+        s_ = sum(таблица[имя].values())
+        доли[имя] = {n: таблица[имя][n] / max(1, s_) for n in имена}
+    из = []
+    for i, a in enumerate(имена):
+        for b_ in имена[i + 1:]:
+            общие = [n for n in имена if n not in (a, b_)]
+            sa = sum(доли[a][n] for n in общие) or 1.0
+            sb = sum(доли[b_][n] for n in общие) or 1.0
+            из.append(sum(abs(доли[a][n] / sa - доли[b_][n] / sb) for n in общие) / 2)
+    return st.mean(из) if из else 0.0
+
+
+for вид, таблица in ЦЕЛИ_ВИД.items():
+    n_ = sum(sum(c.values()) for c in таблица.values())
+    print(f"   из них контакты {вид:<12} ({n_:>5}): строки расходятся "
+          f"на {100 * расхождение(таблица):.0f}%")
