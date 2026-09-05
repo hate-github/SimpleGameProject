@@ -311,8 +311,12 @@ class Simulation:
         world.start_of_day(h, self.events)
         self._morning(h)
         self._day(h)
+        # то, чего человек не простил за сегодняшний день, — одной строкой
+        # на всех, а не по строке на каждого (social.огласить_непрощённых)
+        social.огласить_непрощённых(h)
         report.daily_chat(h, self.lines)
         self._night(h)
+        social.огласить_непрощённых(h)
         self._upkeep(h)
         social.проверить_обещания(h)
         social.alliance_check(h)
