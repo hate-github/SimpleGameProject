@@ -60,6 +60,14 @@ def invariants(h):
         for who, v in p.близость.items():
             if not (-1e-9 <= v <= 10 + 1e-9):
                 say(f"{p.short}: близость с {who} = {v:.2f}, а должно быть 0..10")
+        for who, v in p.счёты.items():
+            if not (-1e-9 <= v <= 100 + 1e-9):
+                say(f"{p.short}: обида на {who} = {v:.2f}, а должно быть 0..100")
+        for who in sorted(p.не_прощу):
+            if who not in h.people:
+                say(f"{p.short} не прощает несуществующего «{who}»")
+            if p.счёты.get(who, 0.0) <= 0:
+                say(f"{p.short} не прощает {who}, но обиды на него нет")
         if p.time_left < -0.01:
             say(f"{p.short}: часов в дне осталось {p.time_left:.3f}")
 
