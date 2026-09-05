@@ -242,6 +242,7 @@ class Simulation:
                 счёт=float(d.get("счёт", 0.0)),
                 dependents=d.get("иждивенцы", 0), dependent_name=d.get("иждивенец_имя", ""),
                 dependent_acc=d.get("иждивенец_вин", ""),
+                dependent_gen=d.get("иждивенец_род", ""),
                 dependent_ins=d.get("иждивенец_твор", ""),
                 нормальность_пол=float(d.get("нормальность_пол", 0.1)),
                 нормальность_скорость=float(d.get("нормальность_скорость", 1.0)),
@@ -313,6 +314,20 @@ class Simulation:
         social.update_groups(h)
         social.daily_decay(h)
         social.spread_panic(h)
+        # чем кончился день у тех, кто его пролежал: одна строка вместо восьми
+        for p in h.alive():
+            if p.stats.get("отдых_день") != h.day:
+                continue
+            раз = p.stats.get("отдых_раз", 0)
+            if раз >= h.B["отдых_весь_день"]:
+                h.journal.line(f"{p.short} почти весь день {vb(p.sex, 'пролежал')} "
+                               f"и ничего не {vb(p.sex, 'делал')}.", 1)
+            elif раз >= 2:
+                h.journal.line(f"{p.short} подолгу {vb(p.sex, 'лежал')} "
+                               f"и ничего не {vb(p.sex, 'делал')}.", 0)
+            else:
+                h.journal.line(f"{p.short} {vb(p.sex, 'лежал')} "
+                               f"и ничего не {vb(p.sex, 'делал')}.", 0)
         self._firsts(h)
         h.journal.сводка_дня(h)
         h.journal.flush_day(h)

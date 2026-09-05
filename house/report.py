@@ -90,7 +90,8 @@ class Journal:
                 self.w(f"  {p.short:<8} кв{p.apt:<3} † {p.cause} (день {p.died_day})")
                 continue
             if p.exiled:
-                как = "ушёл к пункту обогрева" if p.ушёл else "изгнан"
+                как = (vb(p.sex, "ушёл") + " к пункту обогрева" if p.ушёл
+                       else vb(p.sex, "изгнан"))
                 self.w(f"  {p.short:<8} кв{p.apt:<3} — {как} (день {p.died_day})")
                 continue
             st = p.stock
