@@ -26,13 +26,18 @@ def run_one(arg):
     start = checks.snapshot(sim.h)
     h = sim.run()
     alive = [p for p in h.people.values() if p.alive and not p.exiled]
+    # ушедший не выжил и не погиб — он ушёл. Считать его в любую из двух
+    # колонок значило бы утверждать то, чего дом не знает
+    ушли = [p for p in h.people.values() if p.ушёл]
     return {
         "зерно": seed,
         "выжило": len(alive),
+        "ушло": len(ушли),
         "паника": (sum(p.panic for p in alive) / len(alive)) if alive else 0.0,
         "имена": sorted(p.short for p in alive),
         "причины": [без_рода((p.cause or "?").split(" (")[0])
-                    for p in h.people.values() if not p.alive or p.exiled],
+                    for p in h.people.values()
+                    if (not p.alive or p.exiled) and not p.ушёл],
         "судьбы": {p.short: (p.died_day, без_рода((p.cause or "").split(" (")[0]))
                    for p in h.people.values()},
         "stats": {k: v for k, v in h.stats.items() if isinstance(v, (int, float))},
@@ -43,7 +48,8 @@ def run_one(arg):
 
 def без_рода(cause):
     """«убита выстрелом» и «убит выстрелом» — одна и та же причина смерти."""
-    for f, m in (("убита", "убит"), ("умерла", "умер"), ("изгнана", "изгнан")):
+    for f, m in (("убита", "убит"), ("умерла", "умер"), ("изгнана", "изгнан"),
+                 ("угорела", "угорел")):
         if cause.startswith(f):
             return m + cause[len(f):]
     return cause

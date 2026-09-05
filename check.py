@@ -56,7 +56,8 @@ def digest(seed, days=30):
 def проверить_данные(w):
     from house.engine import load_json, validate_data
     try:
-        validate_data(load_json("balance.json"), load_json("npcs.json"), load_json("events.json"))
+        validate_data(load_json("balance.json"), load_json("npcs.json"),
+                      load_json("events.json"), load_json("lines.json"))
     except (ValueError, KeyError) as e:
         w(str(e))
         return ["данные не прошли проверку"]
@@ -121,6 +122,16 @@ def проверить_прогоны(w, прогонов, дней):
     невыбранные = sorted(k for k in cov.offered if not cov.done.get(k))
     if невыбранные:
         w("  предлагаются, но никогда не выбираются: " + ", ".join(невыбранные))
+    # текст тоже бывает мёртвым: у реплики есть условие, и оно может
+    # не выполниться ни разу за всю жизнь дома
+    from house.engine import load_json
+    немые = cov.немые_реплики(load_json("lines.json"))
+    if немые:
+        w(f"  реплик, которые ни разу не прозвучали: {len(немые)}")
+        for т in немые[:8]:
+            w("    " + т)
+        if прогонов >= НАДЁЖНАЯ_ВЫБОРКА:
+            bad.append(f"мёртвых реплик: {len(немые)}")
     осады = cov.siege.get("осад", 0)
     исходы = {k[7:] for k in cov.siege if k.startswith("исход: ")}
     ожидаем = {"откупился", "отбился", "ограблен", "изгнан", "убит", "сбежал"}
