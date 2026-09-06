@@ -66,7 +66,7 @@ def validate_data(balance, npcs, events, lines=None):
     жильца, а несуществующий эффект события не делает ничего и никто не замечает.
     """
     from .model import WEAPONS
-    from .actions import ПУНКТИК_КЛЮЧИ, ВЕСА_КЛЮЧИ, ЦЕННОСТИ
+    from .catalog import ПУНКТИК_КЛЮЧИ, ВЕСА_КЛЮЧИ, ЦЕННОСТИ
     bad = []
 
     # характер в данных: пунктики и веса черт. Опечатка здесь — это молча

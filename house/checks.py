@@ -329,11 +329,11 @@ class Coverage:
         return немые
 
     def dead_branches(self):
-        from .actions import COST
+        from .catalog import COST
         return sorted(k for k in COST if not self.offered.get(k))
 
     def report(self, w=print):
-        from .actions import COST
+        from .catalog import COST
         w("Действия — предложено / выполнено:")
         for key in sorted(COST, key=lambda k: -self.done.get(k, 0)):
             o, d = self.offered.get(key, 0), self.done.get(key, 0)
