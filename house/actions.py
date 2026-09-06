@@ -2141,6 +2141,41 @@ def _исполнить_отдых(h, npc, target, spent):
     return None
 
 
+@исполняет("быт")
+def _исполнить_быт(h, npc, target, spent):
+    b = h.B
+    npc.mood = clamp(npc.mood + 3.0 * npc.normalcy)
+    npc.panic = clamp(npc.panic - 1.5)
+    # быт — это всё-таки движение по квартире, и на градус-полтора человек
+    # от него согревается. Но только если есть на что: голодному,
+    # промёрзшему и не спавшему тот же час даёт передышку, а не тепло
+    если_есть_силы = min(npc.satiety, npc.rest) > b["быт_силы_порог"] and npc.health > 40
+    if если_есть_силы:
+        npc.warmth = clamp(npc.warmth + b["быт_согревает"])
+    else:
+        npc.rest = clamp(npc.rest + b["быт_передышка"])
+    variants = world.подходящие_кому(h, npc, h.mods.get("реплики_быт") or [])
+    # то, что он сегодня уже делал, второй раз не показываем: быт можно
+    # брать до четырёх раз в день, и одна и та же строка подряд читается
+    # как заевшая пластинка. Если все варианты кончились — берём любой
+    сказано = h.mods.setdefault("быт_сказано", {}).setdefault(npc.id, set())
+    свежие = [v for v in variants if v[0] not in сказано] or variants
+    текст, делает = (h.rng.pick(свежие) if свежие
+                     else ("занимал{ся|ась} своими делами", None))
+    сказано.add(текст)
+    if делает == "уход_за_оружием" and npc.weapon != "нет":
+        from .model import СВОЙСКОЕ
+        было = npc.рука.get(npc.weapon, СВОЙСКОЕ.get(npc.weapon, 0.0))
+        npc.рука[npc.weapon] = clamp(было + b["рука_за_уход"], 0.0, 1.0)
+        h.bump("ухода_за_оружием")
+    # имена в репликах склоняются по тем же формам, что и у взрослых:
+    # «для Вани», а не «для Ваня»
+    текст = (текст.replace("{ребёнок}", npc.dependent_name or "ребёнок")
+             .replace("{ребёнок_род}", npc.dependent_gen or npc.dependent_name or "ребёнка")
+             .replace("{ребёнок_вин}", npc.dependent_acc or npc.dependent_name or "ребёнка"))
+    return f"{npc.short} {gform(текст, npc.sex)}"
+
+
 def execute(h, npc, key, target):
     b = h.B
     spent = hours(key, npc, b)
@@ -3143,38 +3178,6 @@ def execute(h, npc, key, target):
             social.register_incident(h, "захват", None)
             social.judge(h, npc, "воровство", hate=10.0, trust=-1.0)
         said = None
-
-    elif key == "быт":
-        npc.mood = clamp(npc.mood + 3.0 * npc.normalcy)
-        npc.panic = clamp(npc.panic - 1.5)
-        # быт — это всё-таки движение по квартире, и на градус-полтора человек
-        # от него согревается. Но только если есть на что: голодному,
-        # промёрзшему и не спавшему тот же час даёт передышку, а не тепло
-        если_есть_силы = min(npc.satiety, npc.rest) > b["быт_силы_порог"] and npc.health > 40
-        if если_есть_силы:
-            npc.warmth = clamp(npc.warmth + b["быт_согревает"])
-        else:
-            npc.rest = clamp(npc.rest + b["быт_передышка"])
-        variants = world.подходящие_кому(h, npc, h.mods.get("реплики_быт") or [])
-        # то, что он сегодня уже делал, второй раз не показываем: быт можно
-        # брать до четырёх раз в день, и одна и та же строка подряд читается
-        # как заевшая пластинка. Если все варианты кончились — берём любой
-        сказано = h.mods.setdefault("быт_сказано", {}).setdefault(npc.id, set())
-        свежие = [v for v in variants if v[0] not in сказано] or variants
-        текст, делает = (h.rng.pick(свежие) if свежие
-                         else ("занимал{ся|ась} своими делами", None))
-        сказано.add(текст)
-        if делает == "уход_за_оружием" and npc.weapon != "нет":
-            from .model import СВОЙСКОЕ
-            было = npc.рука.get(npc.weapon, СВОЙСКОЕ.get(npc.weapon, 0.0))
-            npc.рука[npc.weapon] = clamp(было + b["рука_за_уход"], 0.0, 1.0)
-            h.bump("ухода_за_оружием")
-        # имена в репликах склоняются по тем же формам, что и у взрослых:
-        # «для Вани», а не «для Ваня»
-        текст = (текст.replace("{ребёнок}", npc.dependent_name or "ребёнок")
-                 .replace("{ребёнок_род}", npc.dependent_gen or npc.dependent_name or "ребёнка")
-                 .replace("{ребёнок_вин}", npc.dependent_acc or npc.dependent_name or "ребёнка"))
-        said = f"{npc.short} {gform(текст, npc.sex)}"
 
     elif key == "собрание":
         meeting.провести(h, npc)
