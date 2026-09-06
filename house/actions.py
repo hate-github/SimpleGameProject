@@ -2033,6 +2033,22 @@ def _исполнить_топить_снег(h, npc, target, spent):
     return said
 
 
+@исполняет("топить")
+def _исполнить_топить(h, npc, target, spent):
+    b = h.B
+    said = None
+    # в буран тепло вылетает в щели, и та же печка съедает больше
+    расход = b["буран_топливо"] if h.mods.get("режим") == "буран" else 1.0
+    if npc.stock.get("топливо", 0) >= 1:
+        spend(h, npc, "топливо", расход)
+        said = f"{npc.short} {vb(npc.sex, 'затопил')} буржуйку"
+    else:
+        spend(h, npc, "материалы", b["мебель_за_топку"])
+        said = f"{npc.short} {vb(npc.sex, 'разломал')} мебель и {vb(npc.sex, 'затопил')} ею"
+    npc.burning = True
+    return said
+
+
 def execute(h, npc, key, target):
     b = h.B
     spent = hours(key, npc, b)
@@ -2113,17 +2129,6 @@ def execute(h, npc, key, target):
         said = исполнить(h, npc, target, spent)
         if said is НЕ_СОСТОЯЛОСЬ:
             return
-
-    elif key == "топить":
-        # в буран тепло вылетает в щели, и та же печка съедает больше
-        расход = b["буран_топливо"] if h.mods.get("режим") == "буран" else 1.0
-        if npc.stock.get("топливо", 0) >= 1:
-            spend(h, npc, "топливо", расход)
-            said = f"{npc.short} {vb(npc.sex, 'затопил')} буржуйку"
-        else:
-            spend(h, npc, "материалы", b["мебель_за_топку"])
-            said = f"{npc.short} {vb(npc.sex, 'разломал')} мебель и {vb(npc.sex, 'затопил')} ею"
-        npc.burning = True
 
     elif key == "банкомат":
         касса = h.mods.get("банкомат", 0.0)
