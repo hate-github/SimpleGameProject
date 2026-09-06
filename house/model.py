@@ -827,6 +827,19 @@ class NPC:
     def bump(self, key: str, n: int = 1):
         self.stats[key] = self.stats.get(key, 0) + n
 
+    def здесь(self) -> bool:
+        """Жив и в доме: не умер и не изгнан. Одна проверка вместо шестидесяти
+        `alive and not exiled` по всему дому."""
+        return self.alive and not self.exiled
+
+    def ценит(self, tag: str) -> bool:
+        """«Ценю работу»: метка из данных (GDD 12.1, «Ценности»)."""
+        return tag in ((self.values or {}).get("ценит") or ())
+
+    def не_терпит(self, tag: str) -> bool:
+        """«Не терплю воровство»: тормоз для своей руки и мерка для чужой."""
+        return tag in ((self.values or {}).get("не_терпит") or ())
+
     def новый_день(self, b: Dict[str, Any]):
         """Утро: часы, печка, отлучка и ночное решение сбрасываются."""
         self.time_left = b["часов_бодрствования"]
@@ -898,13 +911,18 @@ class House:
         return self.места.get(имя, 1.0)
 
     def alive(self) -> List[NPC]:
-        return [p for p in self.people.values() if p.alive and not p.exiled]
+        return [p for p in self.people.values() if p.здесь()]
 
     def others(self, npc: NPC) -> List[NPC]:
         return [p for p in self.alive() if p.id != npc.id]
 
     def get(self, npc_id: str) -> Optional[NPC]:
         return self.people.get(npc_id)
+
+    def живой(self, npc_id) -> Optional[NPC]:
+        """Жилец по id, если он жив и в доме; иначе None."""
+        p = self.people.get(npc_id)
+        return p if p is not None and p.здесь() else None
 
     def новый_день(self):
         """Утро дома: дневные счётчики обнуляются, злость дома снимается один раз."""
@@ -933,8 +951,8 @@ class House:
         запах шёл «из кв.20», где никого нет, а к его двери приходили с ломом.
         """
         if npc.living_with:
-            host = self.people.get(npc.living_with)
-            if host and host.alive and not host.exiled:
+            host = self.живой(npc.living_with)
+            if host:
                 return host
         return npc
 
@@ -954,15 +972,15 @@ class House:
         """
         люди = [person]
         for gid in sorted(person.guests):
-            g = self.get(gid)
-            if g and g.alive and not g.exiled:
+            g = self.живой(gid)
+            if g:
                 люди.append(g)
         return люди
 
     def занятые(self) -> set:
         """Номера квартир, в которых кто-то живёт прямо сейчас."""
         return {p.apt for p in self.people.values()
-                if p.alive and not p.exiled and not p.living_with}
+                if p.здесь() and not p.living_with}
 
     def пустые(self) -> List[Flat]:
         """Квартиры, в которых никто не живёт.
@@ -1097,7 +1115,7 @@ class House:
         и занять её значит оставить его без угла.
         """
         for p in self.people.values():
-            if p.alive and not p.exiled and p.apt == flat.apt:
+            if p.здесь() and p.apt == flat.apt:
                 return p
         return None
 
