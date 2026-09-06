@@ -1894,18 +1894,17 @@ def run_siege(h, leader, target):
                      - leader.t01("лояльность") * 1.5)
         if (решимость > b["добить_решимость"] and not target.dependents
                 and h.rng.chance(b["добить_шанс"])):
-            target.health = 0.0
-            target.alive = False
-            target.cause = vb(target.sex, "убит") + " безоружным при налёте"
-            target.died_day = h.day
             leader.bump("убийств")
             h.bump("убийств")
             h.bump("убийств_безоружных")
             h.journal.line(f"{target.short} не {vb(target.sex, 'сопротивлялся')}. "
                            f"{leader.short} {vb(leader.sex, 'убил')} {target.form('acc')} всё равно.", 2)
             h.note(f"{leader.short} {vb(leader.sex, 'убил')} безоружного {target.form('acc')}")
-            social.judge(h, leader, "насилие", hate=b["ненависть_за_налёт"], trust=-4.0)
-            on_death(h, target, killer=leader, свидетели=весь_дом(h))
+            # судят те, кто остаётся: убитого среди свидетелей уже нет
+            social.judge(h, leader, "насилие", hate=b["ненависть_за_налёт"], trust=-4.0,
+                         witnesses=[w for w in h.others(leader) if w is not target])
+            умер(h, target, vb(target.sex, "убит") + " безоружным при налёте",
+                 killer=leader, свидетели=весь_дом(h))
             _house_learns(h, target, crew)
             h.bump("исход_убит")
             return "убит"
