@@ -3108,6 +3108,38 @@ def _исполнить_лестница(h, npc, target, spent):
     return said
 
 
+@исполняет("шепнуть")
+def _исполнить_шепнуть(h, npc, target, spent):
+    b = h.B
+    said = None
+    # то же вранье о человеке, что и в разговоре, но не от злости,
+    # а по замыслу: и мишень, и слушатель выбраны заранее
+    з = npc.замысел
+    враг = h.get(з["враг"]) if з else None
+    if враг is None or not (враг.alive and not враг.exiled):
+        return НЕ_СОСТОЯЛОСЬ
+    social.встретились(h, npc, target)
+    вес = social.вес_слов(target, npc)
+    if target.trust.get(враг.id, 3.0) >= b["наговор_защита_доверием"]:
+        # слушатель этому человеку верит — и теперь косо смотрит на шепчущего
+        social.adjust(target, npc.id, trust=-0.8, hate=5)
+        social.отдалились(target, npc.id, b["близость_за_отказ"])
+        said = (f"{npc.short} {vb(npc.sex, 'сказал')} {target.form('dat')} "
+                f"кое-что про {враг.form('acc')}. {target.short} не {vb(target.sex, 'поверил')}")
+    else:
+        social.adjust(target, враг.id, hate=b["наговор_злость"] * вес,
+                      trust=-0.5 * вес, aware=4)
+        social.отдалились(target, враг.id, b["близость_за_отказ"] * вес)
+        h.bump("наговоров")
+        said = (f"{npc.short} {vb(npc.sex, 'сказал')} {target.form('dat')} "
+                f"кое-что про {враг.form('acc')} — вполголоса, на площадке")
+    social.соврал(h, npc, target, "человек", враг.id)
+    з["напор"] += b["напор_за_шёпот"]
+    з["ходов"] += 1
+    h.bump("шёпотов")
+    return said
+
+
 def execute(h, npc, key, target):
     b = h.B
     spent = hours(key, npc, b)
@@ -3188,33 +3220,6 @@ def execute(h, npc, key, target):
         said = исполнить(h, npc, target, spent)
         if said is НЕ_СОСТОЯЛОСЬ:
             return
-
-    elif key == "шепнуть":
-        # то же вранье о человеке, что и в разговоре, но не от злости,
-        # а по замыслу: и мишень, и слушатель выбраны заранее
-        з = npc.замысел
-        враг = h.get(з["враг"]) if з else None
-        if враг is None or not (враг.alive and not враг.exiled):
-            return
-        social.встретились(h, npc, target)
-        вес = social.вес_слов(target, npc)
-        if target.trust.get(враг.id, 3.0) >= b["наговор_защита_доверием"]:
-            # слушатель этому человеку верит — и теперь косо смотрит на шепчущего
-            social.adjust(target, npc.id, trust=-0.8, hate=5)
-            social.отдалились(target, npc.id, b["близость_за_отказ"])
-            said = (f"{npc.short} {vb(npc.sex, 'сказал')} {target.form('dat')} "
-                    f"кое-что про {враг.form('acc')}. {target.short} не {vb(target.sex, 'поверил')}")
-        else:
-            social.adjust(target, враг.id, hate=b["наговор_злость"] * вес,
-                          trust=-0.5 * вес, aware=4)
-            social.отдалились(target, враг.id, b["близость_за_отказ"] * вес)
-            h.bump("наговоров")
-            said = (f"{npc.short} {vb(npc.sex, 'сказал')} {target.form('dat')} "
-                    f"кое-что про {враг.form('acc')} — вполголоса, на площадке")
-        social.соврал(h, npc, target, "человек", враг.id)
-        з["напор"] += b["напор_за_шёпот"]
-        з["ходов"] += 1
-        h.bump("шёпотов")
 
     elif key == "подбросить":
         з = npc.замысел
