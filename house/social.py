@@ -320,7 +320,7 @@ def разглядел(h, watcher, target, точность=1.0):
     b = h.B
     if watcher is None or target is None or watcher.id == target.id:
         return
-    if not (watcher.alive and not watcher.exiled):
+    if not watcher.здесь():
         return
     к = точность * (1.0 if h.powered(watcher) else b["взгляд_в_темноте"])
     к = clamp(к * (b["взгляд_база"] + watcher.свой(target.id) * b["взгляд_за_близость"]),
@@ -752,8 +752,8 @@ def проверить_обещания(h):
         for о in list(p.обещал):
             if h.day < о["срок"]:
                 continue
-            кому = h.get(о["кому"])
-            if not (кому and кому.alive and not кому.exiled):
+            кому = h.живой(о["кому"])
+            if not кому:
                 p.обещал.remove(о)
                 continue
             if о["вид"] == "не_делать":
@@ -825,7 +825,7 @@ def сблизились(h, a, b_npc, сила):
     if a is None or b_npc is None or a.id == b_npc.id or сила <= 0:
         return
     for кто, кого in ((a, b_npc), (b_npc, a)):
-        if not (кто.alive and not кто.exiled):
+        if not кто.здесь():
             continue
         # своим человек тому, кто выносил его квартиру, уже не станет.
         # Разговаривать они могут снова, а вот это — нет
@@ -927,7 +927,7 @@ def испугался(h, witness, кого, сила):
     """
     if witness is None or кого is None or witness.id == кого.id or сила <= 0:
         return 0.0
-    if not (witness.alive and not witness.exiled):
+    if not witness.здесь():
         return 0.0
     сила *= 1.4 - witness.t01("храбрость")
     adjust(witness, кого.id, страх=сила)
@@ -1180,13 +1180,10 @@ def judge(h, actor, tag, hate=0.0, trust=0.0, witnesses=None, участники
         if w.id == actor.id:
             continue
         сила = 1.0
-        v = w.values or {}
-        не_терпит = v.get("не_терпит") or ()
-        ценит = v.get("ценит") or ()
         for t in теги:
-            if t in не_терпит:
+            if w.не_терпит(t):
                 сила += k
-            if t in ценит:
+            if w.ценит(t):
                 сила -= k * 0.5 if hate > 0 else -k
         сила = max(0.0, сила) * (1.0 if w.id in свои else зритель)
         adjust(w, actor.id, hate=hate * сила, trust=trust * сила)
