@@ -17,7 +17,7 @@
 котёл (масштабный переезд), приговор, пустая квартира, подъездная дверь.
 """
 from .util import clamp, vb
-from . import social, conflict
+from . import social, conflict, household
 
 ТЕМЫ = ("дежурство", "котёл", "приговор", "квартира", "дверь_подъезда")
 
@@ -377,7 +377,7 @@ def _решение(h, зовущий, пришли, тема, цель):
                     гость = h.get(g)
                     if гость:
                         гость.living_with = None
-                        conflict.occupy_flat(h, гость)
+                        household.occupy_flat(h, гость)
                 p.guests.clear()
             if p.living_with:
                 прежний = h.get(p.living_with)
@@ -421,7 +421,7 @@ def _решение(h, зовущий, пришли, тема, цель):
         if flat.apt != занимает.apt and h.чей(flat) is None:
             старая = h.flats[занимает.apt]
             занимает.apt, занимает.floor = flat.apt, flat.floor
-            conflict.occupy_flat(h, занимает)
+            household.occupy_flat(h, занимает)
             h.bump("занято_квартир")
             h.journal.line(f"   Кв.{flat.apt} отдали {занимает.form('dat')}; "
                            f"{занимает.short} {vb(занимает.sex, 'перебрался')} туда "

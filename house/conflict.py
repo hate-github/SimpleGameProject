@@ -6,7 +6,7 @@ GDD 17: бой намеренно простой и смертельный; чи
         угроза оружием часто ценнее выстрела.
 """
 from .util import clamp, vb
-from . import social
+from . import social, household
 from .character import своя_мерка
 
 
@@ -163,11 +163,6 @@ def take_from(h, victim, taker, greed, limit=None):
     return moved
 
 
-def household(h, person):
-    """Хозяин и его гости — см. `House.household`."""
-    return h.household(person)
-
-
 def take_household(h, victim, taker, greed, limit=None):
     """Вынести квартиру целиком — со всем, что принесли в неё жильцы."""
     moved = {}
@@ -314,33 +309,6 @@ def steal(h, thief, target):
         return ("сорвалось", {})
 
 
-def cut_ties(h, person):
-    """Разорвать все связи выбывшего: союзы, сожительство в обе стороны.
-
-    Одно место на смерть и на изгнание. Пока это было только в on_death,
-    гость изгнанного навсегда оставался с living_with — а значит, по правилу
-    «печку топит хозяин», не мог затопить собственную и замерзал.
-    """
-    for other in h.people.values():
-        other.allies.discard(person.id)
-    person.allies.clear()
-    for gid in sorted(person.guests):
-        g = h.get(gid)
-        if g and g.alive and not g.exiled:
-            g.living_with = None
-            g.warmth = clamp(g.warmth - 15)
-            occupy_flat(h, g)
-            h.journal.line(f"{g.short} {vb(g.sex, 'вернулся')} в свою выстывшую квартиру.", 1)
-        elif g:
-            g.living_with = None
-    person.guests.clear()
-    if person.living_with:
-        host = h.get(person.living_with)
-        if host:
-            host.guests.discard(person.id)
-        person.living_with = None
-
-
 def exile(h, person, by=None, reason="воровство"):
     """Дом выставляет человека за дверь. Почти всегда — смертный приговор,
     но руки формально чистые (GDD 12.5: изгнание в списке действий NPC)."""
@@ -352,7 +320,7 @@ def exile(h, person, by=None, reason="воровство"):
     h.journal.line(f"{who} вывели {person.form('acc')} на улицу и закрыли дверь подъезда.", 2)
     h.note(f"{person.short} {vb(person.sex, 'изгнан')} ({reason})")
     social.house_shock(h, panic=10, mood=-12)
-    cut_ties(h, person)
+    household.cut_ties(h, person)
     flat = release_flat(h, person)
     for res, v in person.stock.items():
         flat.stock[res] = flat.stock.get(res, 0.0) + v
@@ -391,7 +359,7 @@ def уйти_из_дома(h, person):
     h.note(f"{person.short} ушёл к пункту обогрева" + с_кем)
     # дом видел, как он уходил с мешком: это все шесть окон разом
     social.house_shock(h, panic=b["уйти_паника_дома"], mood=b["уйти_настроение_дома"])
-    cut_ties(h, person)
+    household.cut_ties(h, person)
     # то, что унёс, уходит из мира — иначе учёт не сойдётся с первого же ухода
     несёт = b["уйти_унесёт"] * (1.0 + 0.5 * person.dependents)
     осталось = dict(person.stock)
@@ -443,28 +411,6 @@ def release_flat(h, person, чья_смерть=True):
     # ломать её больше не нужно никому
     flat.открыта = True
     return flat
-
-
-def occupy_flat(h, person):
-    """Человек вернулся в свою квартиру: забирает то, что в ней осталось."""
-    flat = h.flats.get(person.apt)
-    if flat and not (flat.body and flat.body.get("порций", 0) > 0):
-        for res, v in list(flat.stock.items()):
-            if v:
-                person.stock[res] = person.stock.get(res, 0.0) + v
-                flat.stock[res] = 0.0
-        подобрать_оружие(h, person, flat)
-        # и связку с гвоздя: погреб приписан к квартире, а не к человеку,
-        # и достаётся тому, кто в этих стенах теперь живёт
-        if flat.ключи:
-            person.ключи_кладовых |= flat.ключи
-            for kid in sorted(flat.ключи):
-                к = h.кладовые.get(kid)
-                if к is not None:
-                    h.journal.line(f"   Вместе со стенами {person.form('dat')} "
-                                   f"{vb(person.sex, 'достался')} и ключ от {к.имя_род}.", 1)
-            flat.ключи = set()
-            h.bump("ключей_от_кладовых_по_наследству")
 
 
 def reveal_taboo(h, eater, witness=None):
@@ -843,7 +789,7 @@ def on_death(h, dead, killer=None, quiet=False, оружие=None, свидет�
             social.видел_убийство(h, p, killer,
                                   оружие if оружие is not None else killer.weapon)
     # мёртвый выпадает из всех союзов и из чужих квартир
-    cut_ties(h, dead)
+    household.cut_ties(h, dead)
     for p in видевшие:
         social.узнал_о_смерти(h, p, dead)
     h.note(f"{dead.short}: {dead.cause}")
@@ -1154,8 +1100,8 @@ def обобрать_и_уйти(h, гость, хозяин):
         social.register_incident(h, "кража", None)
         social.judge(h, гость, ТЕГИ_ОБОБРАТЬ, hate=15.0, trust=-3.0)
         scuffle(h, хозяин, гость, place=f"кв.{хозяин.apt}")
-        cut_ties(h, гость)
-        occupy_flat(h, гость)
+        household.cut_ties(h, гость)
+        household.occupy_flat(h, гость)
         h.bump("обобрать_сорвалось")
         return False
 
@@ -1170,7 +1116,7 @@ def обобрать_и_уйти(h, гость, хозяин):
     гость.stats["снёс_дров"] = 0.0
     гость.living_with = None
     хозяин.guests.discard(гость.id)
-    occupy_flat(h, гость)
+    household.occupy_flat(h, гость)
     гость.mood = clamp(гость.mood - b["обобрать_настроение"])
     хозяин.mood = clamp(хозяин.mood - 20)
     хозяин.panic = clamp(хозяин.panic + 18)
@@ -1216,7 +1162,7 @@ def убить_соседа(h, killer, victim):
         social.испугался(h, victim, killer, b["страх_за_покушение"])
         social.register_incident(h, "покушение", None)
         social.judge(h, killer, "насилие", hate=25.0, trust=-4.0)
-        cut_ties(h, killer if killer.living_with else victim)
+        household.cut_ties(h, killer if killer.living_with else victim)
         fight(h, [killer], [victim], place=f"кв.{victim.apt}", reason="ночью в одной квартире")
         приговор_дома(h, killer, "покушение", "то, что он сделал ночью")
         return False

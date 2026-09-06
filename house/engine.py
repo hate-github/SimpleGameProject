@@ -8,7 +8,8 @@
 from .util import Rng, clamp, norm, vb
 from .model import House, spend
 from .schema import load_json, validate_data
-from . import world, social, actions, conflict, report, meeting, замысел, character, chat, assembly, psyche
+from . import (world, social, actions, conflict, report, meeting, замысел, character, chat,
+               assembly, psyche, household)
 
 
 class Simulation:
@@ -117,23 +118,7 @@ class Simulation:
             # не пора ли его бросить и не пора ли взяться за новый
             замысел.утро(h, p)
             p.новый_день(h.B)
-        # всё, что гость принёс за вчера, идёт к общей печке: квартира одна,
-        # дрова у неё общие. Пока этого не было, гость копил топливо, которое
-        # по правилу «печку топит хозяин» не мог сжечь никогда, и просил ещё
-        for p in h.alive():
-            if not p.living_with:
-                continue
-            host = h.get(p.living_with)
-            дрова = p.stock.get("топливо", 0.0)
-            if host and host.alive and not host.exiled and дрова > 0:
-                host.stock["топливо"] = host.stock.get("топливо", 0.0) + дрова
-                p.stock["топливо"] = 0.0
-                # и помнит, сколько снёс. Пока этого не было, съезд был
-                # единственной сделкой в доме без цены для второй стороны:
-                # выставленный на мороз уходил без всего, что принёс сам
-                p.stats["снёс_дров"] = p.stats.get("снёс_дров", 0.0) + дрова
-                h.journal.line(f"{p.short} {vb(p.sex, 'снёс')} дрова к печке "
-                               f"{host.form('gen')} ({round(дрова, 1):g}).", 0)
+        household.дрова_к_печке(h)
 
         # готовые заказы: мастер отдаёт печь и берёт своё (GDD 18)
         for p in h.alive():
@@ -507,37 +492,7 @@ class Simulation:
             if p.mood > потолок:
                 p.mood = clamp(p.mood - (p.mood - потолок) * b["настроение_потолок_притяжение"])
 
-            # теснота: нервы, чужой кашель и общий котёл
-            room_mates = len(p.guests) + (1 if p.living_with else 0)
-            if room_mates:
-                p.mood = clamp(p.mood - b["теснота_настроение"] * room_mates)
-                # sorted, а не list: порядок множества строк зависит от PYTHONHASHSEED,
-                # а внутри цикла бросается кубик — иначе зерно перестаёт быть зерном
-                for other_id in sorted(p.guests) + ([p.living_with] if p.living_with else []):
-                    o = h.get(other_id)
-                    if o and o.alive:
-                        # спать в одной комнате — это и есть история пары,
-                        # даже если за день не сказано ни слова. Тем и тяжелее
-                        # потом выставить его на мороз
-                        social.сблизились(h, p, o, b["близость_под_крышей"])
-                        # и видят друг друга каждый день, вплотную: от того,
-                        # как выглядит человек напротив, в одной комнате
-                        # не спрячешься
-                        social.встретились(h, p, o)
-                        # у соседства своя злость, и она копится: ГДД 15 обещает
-                        # «накопленную злость», из которой растут разъезд,
-                        # изгнание гостя и нож ночью
-                        зло = social.теснота(h, p, o, b)
-                        social.adjust(p, o.id, trust=-b["теснота_доверие"], hate=зло)
-                        h.stats["ненависть_от_тесноты"] = (
-                            h.stats.get("ненависть_от_тесноты", 0.0) + зло)
-                        # в одной комнате болезнь переходит почти наверняка
-                        if o.sick and not p.sick and h.rng.chance(b["теснота_зараза"]):
-                            p.sick = "простуда"
-                            h.journal.line(f"{p.label()} {vb(p.sex, 'слёг')} вслед за соседом по комнате.", 1)
-                # соседи видят, что в одной квартире собрались несколько запасов
-                for w in h.others(p):
-                    social.adjust(w, p.id, aware=2.5 * room_mates)
+            household.теснота_ночи(h, p)
 
             # --- ребёнок: своя шкала, и она короче (GDD 12.6) ---
             for р in list(p.дети):
