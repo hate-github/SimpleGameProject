@@ -2980,6 +2980,12 @@ def _исполнить_проведать(h, npc, target, spent):
     return None
 
 
+@исполняет("кладовая")
+def _исполнить_кладовая(h, npc, target, spent):
+    _из_кладовой(h, npc, target, spent)
+    return None
+
+
 def execute(h, npc, key, target):
     b = h.B
     spent = hours(key, npc, b)
@@ -3060,10 +3066,6 @@ def execute(h, npc, key, target):
         said = исполнить(h, npc, target, spent)
         if said is НЕ_СОСТОЯЛОСЬ:
             return
-
-    elif key == "кладовая":
-        _из_кладовой(h, npc, target, spent)
-        said = None
 
     elif key == "вскрыть_кладовую":
         к = target
