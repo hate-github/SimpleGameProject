@@ -96,20 +96,14 @@ class Simulation:
             замысел.утро(h, p)
             p.новый_день(h.B)
         household.дрова_к_печке(h)
-
         services.готовые_заказы(h)
-
         # вышел ли вчерашний дежурный: перед домом, а не перед соседом
         meeting.проверить_дежурство(h)
-
         discoveries.вскрытые_кладовые(h)
-
         discoveries.подброшенное(h)
-
         # не пора ли дому сложить одно к одному про того, кто ведёт свою игру
         for p in h.alive():
             замысел.напор_виден(h, p)
-
         discoveries.пропажи(h)
 
     # ------------------------------------------------------------ день
@@ -137,11 +131,8 @@ class Simulation:
         infra = ((not h.heating) + (not h.water_on) + (not h.power_on) + (h.network <= 0))
         for p in list(h.alive()):
             room = physiology.расход_и_тепло(h, p, infra)
-
             household.теснота_ночи(h, p)
-
             child.сутки(h, p, room)
-
             physiology.износ(h, p, infra)
 
         # вытяжка обмерзает от сегодняшнего пара: то, что натопили за день,
