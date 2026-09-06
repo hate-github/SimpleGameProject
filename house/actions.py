@@ -2080,6 +2080,20 @@ def _исполнить_одежда(h, npc, target, spent):
     return said
 
 
+@исполняет("вытяжка")
+def _исполнить_вытяжка(h, npc, target, spent):
+    b = h.B
+    flat = h.where(npc)
+    было = flat.вентиляция
+    flat.вентиляция = 1.0
+    h.bump("вытяжек_прочищено")
+    said = (f"{npc.short} {vb(npc.sex, 'полез')} на кухне в вентиляцию: "
+            f"решётка изнутри в ледяной шубе, оттуда не тянет вовсе"
+            if было < b["вентиляция_признак"]
+            else f"{npc.short} {vb(npc.sex, 'прочистил')} вытяжку — тяга была никакая")
+    return said
+
+
 def execute(h, npc, key, target):
     b = h.B
     spent = hours(key, npc, b)
@@ -2212,16 +2226,6 @@ def execute(h, npc, key, target):
         npc.mood = clamp(npc.mood - b["проведать_настроение"])
         npc.bump("нашёл_тело")
         h.bump("тел_найдено")
-
-    elif key == "вытяжка":
-        flat = h.where(npc)
-        было = flat.вентиляция
-        flat.вентиляция = 1.0
-        h.bump("вытяжек_прочищено")
-        said = (f"{npc.short} {vb(npc.sex, 'полез')} на кухне в вентиляцию: "
-                f"решётка изнутри в ледяной шубе, оттуда не тянет вовсе"
-                if было < b["вентиляция_признак"]
-                else f"{npc.short} {vb(npc.sex, 'прочистил')} вытяжку — тяга была никакая")
 
     elif key == "костёр":
         flat = h.where(npc)
