@@ -19,7 +19,7 @@ def вскрытые_кладовые(h):
         к = h.кладовые.get(kid)
         вор = h.get(вор_id)
         хозяин = h.хозяин_кладовой(к) if к is not None else None
-        if not (к and вор and хозяин) or not (хозяин.alive and not хозяин.exiled):
+        if not (к and вор and хозяин) or not хозяин.здесь():
             continue
         if not h.rng.chance(h.B["кладовая_шанс_заметить"]):
             continue
@@ -51,7 +51,7 @@ def подброшенное(h):
     # никто: в этом весь смысл подброса
     for apt, что in list(h.mods.pop("подброшено", {}).items()):
         хозяин = h.чей(h.flats[apt])
-        if хозяин is None or not (хозяин.alive and not хозяин.exiled):
+        if хозяин is None or not хозяин.здесь():
             continue
         нашли = [w for w in h.alive()
                  if w.id != хозяин.id and w.id != что["кто"]
