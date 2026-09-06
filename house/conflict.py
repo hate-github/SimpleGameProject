@@ -607,15 +607,14 @@ def fight(h, side_a, side_b, place="", reason=""):
             dmg = h.rng.uni(b["бой_урон_мин"], b["бой_урон_макс"]) * (1.6 if gun else 1.0)
             victim.health = clamp(victim.health - dmg)
             if victim.health <= 0:
-                victim.alive = False
-                victim.cause = (f"{vb(victim.sex, 'убит')} в драке ({reason})" if reason
-                                else vb(victim.sex, "убит") + " в драке")
-                victim.died_day = h.day
                 shooter.bump("убийств")
                 h.bump("убийств")
-                h.journal.line(f"{shooter.short} {vb(shooter.sex, 'убил')} {victim.form('acc')}. {place}", 2)
                 h.note(f"{shooter.short} {vb(shooter.sex, 'убил')} {victim.form('acc')}")
-                on_death(h, victim, killer=shooter, оружие=чем, свидетели=весь_дом(h))
+                умер(h, victim,
+                     (f"{vb(victim.sex, 'убит')} в драке ({reason})" if reason
+                      else vb(victim.sex, "убит") + " в драке"),
+                     killer=shooter, оружие=чем, свидетели=весь_дом(h),
+                     строка=f"{shooter.short} {vb(shooter.sex, 'убил')} {victim.form('acc')}. {place}")
             else:
                 injury = "огнестрел" if gun else h.rng.pick(["ушиб руки", "порез руки", "перелом ноги"])
                 victim.injuries.append(injury)
@@ -760,6 +759,25 @@ def свидетели_смерти(h, dead, killer=None):
 def весь_дом(h):
     """Слышали все: выстрел на лестнице, выломанная дверь, драка в подъезде."""
     return {p.id for p in h.alive()}
+
+
+def умер(h, кто, причина, killer=None, оружие=None, свидетели=None, строка=None):
+    """Единственный путь смерти: поля, строка в журнал и то, что смерть делает с домом.
+
+    Семь мест ставили alive/health/cause/died_day руками и звали on_death
+    каждое по-своему; новый вид смерти почти наверняка пропустил бы одно
+    из четырёх полей или сам on_death. `свидетели` — кто видел это сам:
+    считает вызывающий, а не эта функция, иначе изменится, кто что узнал.
+    `строка` — то, что журнал говорит о смерти до того, как дом на неё
+    отзовётся; что было сказано и записано до неё, остаётся у вызывающего.
+    """
+    кто.health = 0.0
+    кто.alive = False
+    кто.cause = причина
+    кто.died_day = h.day
+    if строка:
+        h.journal.line(строка, 2)
+    on_death(h, кто, killer=killer, оружие=оружие, свидетели=свидетели)
 
 
 def on_death(h, dead, killer=None, quiet=False, оружие=None, свидетели=None):
