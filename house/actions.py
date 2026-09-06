@@ -3068,6 +3068,19 @@ def _исполнить_наблюдение(h, npc, target, spent):
     return said
 
 
+@исполняет("подкараулить")
+def _исполнить_подкараулить(h, npc, target, spent):
+    h.mods.setdefault("караулят", {})[target.id] = npc.id
+    h.mods.setdefault("засада_было", {})[tuple(sorted((npc.id, target.id)))] = h.day
+    npc.stats["караулил"] = h.day
+    h.bump("засад_поставлено")
+    # дом этого не видит: человек сидит на своей же площадке, у него есть
+    # на это полное право. Видит только тот, кто пойдёт и посмотрит
+    h.journal.secret(f"{npc.short} {vb(npc.sex, 'сел')} на площадке и "
+                     f"{vb(npc.sex, 'ждал')} {target.form('acc')}.")
+    return None
+
+
 def execute(h, npc, key, target):
     b = h.B
     spent = hours(key, npc, b)
@@ -3148,17 +3161,6 @@ def execute(h, npc, key, target):
         said = исполнить(h, npc, target, spent)
         if said is НЕ_СОСТОЯЛОСЬ:
             return
-
-    elif key == "подкараулить":
-        h.mods.setdefault("караулят", {})[target.id] = npc.id
-        h.mods.setdefault("засада_было", {})[tuple(sorted((npc.id, target.id)))] = h.day
-        npc.stats["караулил"] = h.day
-        h.bump("засад_поставлено")
-        # дом этого не видит: человек сидит на своей же площадке, у него есть
-        # на это полное право. Видит только тот, кто пойдёт и посмотрит
-        h.journal.secret(f"{npc.short} {vb(npc.sex, 'сел')} на площадке и "
-                         f"{vb(npc.sex, 'ждал')} {target.form('acc')}.")
-        said = None
 
     elif key == "лестница":
         h.mods.setdefault("смотрел_лестницу", {})[npc.id] = h.day
