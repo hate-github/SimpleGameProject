@@ -2839,6 +2839,42 @@ def _исполнить_занять(h, npc, target, spent):
     return None
 
 
+@исполняет("позвать")
+def _исполнить_позвать(h, npc, target, spent):
+    b = h.B
+    # час на сговор уже потрачен (`часы_действий`), и потрачен он в любом
+    # случае: и когда пошли, и когда отказали
+    t = target
+    имя = npc.stats.get("зов_куда")
+    м = next((x for x in МЕСТА if x.имя == имя), None)
+    if м is None or not место_доступно(h, npc, м, часов=npc.time_left):
+        м = выбрать_место(h, npc, часов=npc.time_left, без_магазина=True)
+    said = None
+    if м is None or t is None or not (t.alive and not t.exiled):
+        pass                       # пока сговаривались, идти стало некуда
+    elif пойдёт_вдвоём(h, npc, t, м, b) > 0:
+        dur = min(h.rng.uni(b["вылазка_часы_мин"], b["вылазка_часы_макс"])
+                  * м.часы * погода_часы(h), npc.time_left, t.time_left)
+        npc.time_left -= dur
+        t.time_left -= dur
+        # у второго это тоже вылазка: и по дневному пределу, и по тому,
+        # что дом видит его вернувшимся с пакетами
+        mark(h, t, "вылазка", м)
+        for x in (npc, t):
+            x.stats["часы_работы"] = x.stats.get("часы_работы", 0) + dur
+        _outing(h, npc, dur, м, спутник=t)
+    else:
+        # отказ — такой же настоящий исход, как согласие. Второй ничего
+        # не теряет, а звавший запоминает, что с ним не пошли
+        social.отдалились(npc, t.id, b["близость_за_отказ"])
+        npc.ask_record(t.id)["отказ_зов"] = h.day
+        npc.mood = clamp(npc.mood - 4)
+        h.bump("отказов_идти")
+        h.journal.line(f"{npc.short} {vb(npc.sex, 'звал')} {t.form('acc')} "
+                       f"{м.куда}. {t.short} не {vb(t.sex, 'пошёл')}.", 1)
+    return said
+
+
 def execute(h, npc, key, target):
     b = h.B
     spent = hours(key, npc, b)
@@ -3008,38 +3044,6 @@ def execute(h, npc, key, target):
             h.journal.line(f"{npc.short} {vb(npc.sex, 'просил')} {t.form('acc')} "
                            f"взять {р['вин']} на ночь. {t.short} не "
                            f"{vb(t.sex, 'взял')}.", 2)
-
-    elif key == "позвать":
-        # час на сговор уже потрачен (`часы_действий`), и потрачен он в любом
-        # случае: и когда пошли, и когда отказали
-        t = target
-        имя = npc.stats.get("зов_куда")
-        м = next((x for x in МЕСТА if x.имя == имя), None)
-        if м is None or not место_доступно(h, npc, м, часов=npc.time_left):
-            м = выбрать_место(h, npc, часов=npc.time_left, без_магазина=True)
-        said = None
-        if м is None or t is None or not (t.alive and not t.exiled):
-            pass                       # пока сговаривались, идти стало некуда
-        elif пойдёт_вдвоём(h, npc, t, м, b) > 0:
-            dur = min(h.rng.uni(b["вылазка_часы_мин"], b["вылазка_часы_макс"])
-                      * м.часы * погода_часы(h), npc.time_left, t.time_left)
-            npc.time_left -= dur
-            t.time_left -= dur
-            # у второго это тоже вылазка: и по дневному пределу, и по тому,
-            # что дом видит его вернувшимся с пакетами
-            mark(h, t, "вылазка", м)
-            for x in (npc, t):
-                x.stats["часы_работы"] = x.stats.get("часы_работы", 0) + dur
-            _outing(h, npc, dur, м, спутник=t)
-        else:
-            # отказ — такой же настоящий исход, как согласие. Второй ничего
-            # не теряет, а звавший запоминает, что с ним не пошли
-            social.отдалились(npc, t.id, b["близость_за_отказ"])
-            npc.ask_record(t.id)["отказ_зов"] = h.day
-            npc.mood = clamp(npc.mood - 4)
-            h.bump("отказов_идти")
-            h.journal.line(f"{npc.short} {vb(npc.sex, 'звал')} {t.form('acc')} "
-                           f"{м.куда}. {t.short} не {vb(t.sex, 'пошёл')}.", 1)
 
     elif key == "кладовая":
         _из_кладовой(h, npc, target, spent)
