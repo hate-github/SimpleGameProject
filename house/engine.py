@@ -11,7 +11,7 @@ import os
 from .util import Rng, clamp, norm, vb
 from .checks import _разделы as checks_разделы
 from .model import NPC, House, Flat, Кладовая, spend
-from . import world, social, actions, conflict, report, meeting, замысел, character
+from . import world, social, actions, conflict, report, meeting, замысел, character, chat
 
 DATA = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data")
 
@@ -322,7 +322,7 @@ class Simulation:
         # то, чего человек не простил за сегодняшний день, — одной строкой
         # на всех, а не по строке на каждого (social.огласить_непрощённых)
         social.огласить_непрощённых(h)
-        report.daily_chat(h, self.lines)
+        chat.daily_chat(h, self.lines)
         self._night(h)
         social.огласить_непрощённых(h)
         self._upkeep(h)
