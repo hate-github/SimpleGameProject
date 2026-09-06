@@ -350,7 +350,7 @@ def возьмёт_ребёнка(h, мать, хозяин, р, b):
     своим запасом. И тем, чего в помощи нет, — тем, что ребёнок в этом доме
     для кого-то отдельная ценность (`ТЕГИ`), а для кого-то лишний рот.
     """
-    if not (хозяин.alive and not хозяин.exiled) or хозяин.id == мать.id:
+    if not хозяин.здесь() or хозяин.id == мать.id:
         return 0.0
     if хозяин.дети and len(хозяин.дети) >= b["ночёвка_детей_предел"]:
         return 0.0
@@ -404,8 +404,8 @@ def порция(h, npc, b):
     cooks = "повар" in npc.skills
     if not cooks:
         for other_id in ([npc.living_with] if npc.living_with else []) + sorted(npc.guests):
-            o = h.get(other_id)
-            if o and o.alive and not o.exiled and "повар" in o.skills:
+            o = h.живой(other_id)
+            if o and "повар" in o.skills:
                 cooks = True
                 break
     return b["еда_за_порцию"] * ((1.0 + b["повар_прибавка"]) if cooks else 1.0)
@@ -550,7 +550,7 @@ def _быт(корзина, h, npc, b, hungry, thirsty, край, cold, cold_pre
         свои = [npc] + [h.get(g) for g in sorted(npc.guests)]
         мёрзнет, худо = cold, плохо
         for o in свои:
-            if not (o and o.alive and not o.exiled):
+            if not (o and o.здесь()):
                 continue
             мёрзнет = max(мёрзнет, 1.0 - norm(o.warmth, 20, 70))
             худо = max(худо, o.невмоготу())
@@ -801,16 +801,16 @@ def _жильё(корзина, h, npc, b, des):
     # Пока выхода из сожительства не было, пары доживали до конца с взаимной
     # ненавистью 86 из 100 и продолжали делить одну комнату
     if npc.living_with:
-        host = h.get(npc.living_with)
-        if host and host.alive and not host.exiled:
+        host = h.живой(npc.living_with)
+        if host:
             невыгодно = -social.выгода_соседства(h, npc, host) - b["съехать_порог"]
             # и то, чего нет ни в тепле, ни в тесноте: с человеком, которого
             # боишься, в одной комнате не остаются, даже если вдвоём теплее
             невыгодно += npc.боится(host.id) * b["страх_вес_соседства"]
             корзина.add("съехать", невыгодно * b["разъезд_вес"], host)
     for g_id in sorted(npc.guests):
-        g = h.get(g_id)
-        if not (g and g.alive and not g.exiled):
+        g = h.живой(g_id)
+        if not g:
             continue
         # выставить может только тот, кто сильнее: слабый хозяин терпит
         if npc.power() < g.power() * b["выгнать_превосходство"]:
@@ -1003,7 +1003,7 @@ def _улица(корзина, h, npc, b, food_days, соседи, средни
             and з["враг"] and з["напор"] < замысел.осторожность(h, npc)):
         враг = h.get(з["враг"])
         чем = что_подбросить(h, npc)
-        if враг is not None and враг.alive and not враг.exiled and чем is not None:
+        if враг is not None and враг.здесь() and чем is not None:
             # умный предпочитает подброс шёпоту: шёпот можно проверить
             # разговором с оболганным, а вещь у двери говорит сама
             подброс = (npc.hate.get(враг.id, 0.0) / 10.0
@@ -1209,7 +1209,6 @@ def _люди(корзина, h, npc, b, des, зову, плохо, средни
         # условия помощь была рядовым пунктом расписания: 88% передач шли
         # тому, кто ничего не просил, и половина — в первые три дня
         просил = h.day - t.ask_record(npc.id).get("последняя", -99.0)
-        ценит = (npc.values or {}).get("ценит") or ()
         # беда — та, которую он ВИДЕЛ. Пока здесь стояли `t.injuries or t.sick`,
         # человек знал о переломе соседа за двумя стенами, ни разу его
         # не встретив, и шёл с аптечкой к тому, кто ему в глаза не попадался
@@ -1221,7 +1220,7 @@ def _люди(корзина, h, npc, b, des, зову, плохо, средни
                  or плох_ >= b["не_жилец_отмена"]
                  or npc.видит_хворь(t.id)
                  or trust >= b["помощь_доверие_без_повода"]
-                 or (t.dependents and "ребёнок" in ценит))
+                 or (t.dependents and npc.ценит("ребёнок")))
         # и повод, и беду надо ВИДЕТЬ: домысел к двери не ведёт
         # своя доля обиды не должна мешать её заглаживать: раздражение
         # на человека, чью дверь ты ломал, — не причина не нести ему банку.
@@ -1440,8 +1439,8 @@ def gather(h, npc):
     _з = npc.замысел
     if (_з is not None and _з["вид"] == "рассорить" and not _з.get("сегодня_спит")
             and _з["враг"] and _з["напор"] < замысел.осторожность(h, npc)):
-        _враг = h.get(_з["враг"])
-        if _враг is not None and _враг.alive and not _враг.exiled:
+        _враг = h.живой(_з["враг"])
+        if _враг is not None:
             шептать_кому = замысел.кому_шептать(h, npc, _враг)
 
     # сколько раз за день человек вообще выходит к соседям. Общий предел
@@ -1584,8 +1583,8 @@ def засада_ждёт(h, npc, key, target):
     вышел = key in ВЫХОД_НА_ПЛОЩАДКУ or getattr(target, "apt", None) is not None
     if not вышел:
         return None
-    ждущий = h.get(кто_id)
-    if ждущий is None or not (ждущий.alive and not ждущий.exiled) or ждущий.away:
+    ждущий = h.живой(кто_id)
+    if ждущий is None or ждущий.away:
         return None
     шанс = (h.B["засада_ловит_вылазку"] if key in ВЫХОД_НА_ПЛОЩАДКУ
             else h.B["засада_ловит_соседа"])
@@ -2070,7 +2069,7 @@ def _исполнить_разбор(h, npc, target, spent):
     # До сих пор он этого попросту не замечал
     хозяин = h.чей(flat)
     if (хозяин is not None and хозяин.id != npc.id
-            and хозяин.alive and not хозяин.exiled):
+            and хозяин.здесь()):
         social.adjust(хозяин, npc.id, trust=-2.0, hate=b["ненависть_за_разбор"])
         хозяин.mood = clamp(хозяин.mood - 8)
         h.journal.line(f"   {хозяин.short} {vb(хозяин.sex, 'видел')}, как из "
@@ -2390,7 +2389,7 @@ def _исполнить_позвать(h, npc, target, spent):
     if м is None or not место_доступно(h, npc, м, часов=npc.time_left):
         м = выбрать_место(h, npc, часов=npc.time_left, без_магазина=True)
     said = None
-    if м is None or t is None or not (t.alive and not t.exiled):
+    if м is None or t is None or not t.здесь():
         pass                       # пока сговаривались, идти стало некуда
     elif пойдёт_вдвоём(h, npc, t, м, b) > 0:
         dur = min(h.rng.uni(b["вылазка_часы_мин"], b["вылазка_часы_макс"])
@@ -2421,7 +2420,7 @@ def _исполнить_отдать_на_ночь(h, npc, target, spent):
     t = target
     р = npc.слабейший_ребёнок()
     said = None
-    if р is None or р.get("у") or t is None or not (t.alive and not t.exiled):
+    if р is None or р.get("у") or t is None or not t.здесь():
         pass
     elif возьмёт_ребёнка(h, npc, t, р, b) > 0:
         р["у"] = t.id
@@ -2631,7 +2630,7 @@ def _исполнить_лестница(h, npc, target, spent):
         if жертва_id == npc.id:
             караулит = h.get(кто_id)
             break
-    if караулит is not None and караулит.alive and not караулит.exiled:
+    if караулит is not None and караулит.здесь():
         # увидел. Сегодня он никуда не пойдёт — и это уже победа того,
         # кто сидит: чтобы отнять у человека день, необязательно его бить
         h.mods.setdefault("не_выходить", {})[npc.id] = h.day
@@ -2655,8 +2654,8 @@ def _исполнить_шепнуть(h, npc, target, spent):
     # то же вранье о человеке, что и в разговоре, но не от злости,
     # а по замыслу: и мишень, и слушатель выбраны заранее
     з = npc.замысел
-    враг = h.get(з["враг"]) if з else None
-    if враг is None or not (враг.alive and not враг.exiled):
+    враг = h.живой(з["враг"]) if з else None
+    if враг is None:
         return НЕ_СОСТОЯЛОСЬ
     social.встретились(h, npc, target)
     вес = social.вес_слов(target, npc)
@@ -3136,7 +3135,7 @@ def пойдёт_вдвоём(h, зовущий, второй, м, b):
     такой же настоящий исход, как согласие. Считается всё тем же, чем второй
     решал бы выйти один, плюс то, чего в одиночном выходе нет: с кем идти.
     """
-    if not (второй.alive and not второй.exiled) or второй.away:
+    if not второй.здесь() or второй.away:
         return 0.0
     if не_ходит_сегодня(h, второй):
         return 0.0
