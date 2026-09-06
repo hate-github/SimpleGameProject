@@ -25,7 +25,7 @@ def run_one(arg):
                      stream=io.StringIO(), overrides=overrides)
     start = checks.snapshot(sim.h)
     h = sim.run()
-    alive = [p for p in h.people.values() if p.alive and not p.exiled]
+    alive = [p for p in h.people.values() if p.здесь()]
     # ушедший не выжил и не погиб — он ушёл. Считать его в любую из двух
     # колонок значило бы утверждать то, чего дом не знает
     ушли = [p for p in h.people.values() if p.ушёл]
@@ -37,7 +37,7 @@ def run_one(arg):
         "имена": sorted(p.short for p in alive),
         "причины": [без_рода((p.cause or "?").split(" (")[0])
                     for p in h.people.values()
-                    if (not p.alive or p.exiled) and not p.ушёл],
+                    if not p.здесь() and not p.ушёл],
         "судьбы": {p.short: (p.died_day, без_рода((p.cause or "").split(" (")[0]))
                    for p in h.people.values()},
         "stats": {k: v for k, v in h.stats.items() if isinstance(v, (int, float))},
