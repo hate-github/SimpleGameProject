@@ -1990,6 +1990,21 @@ def _исполнить_поесть_мясо(h, npc, target, spent):
     return None
 
 
+@исполняет("попить")
+def _исполнить_попить(h, npc, target, spent):
+    b = h.B
+    said = None
+    if h.water_on:
+        npc.hydration = clamp(npc.hydration + b["вода_за_порцию"])
+        # из-под крана вода в запас не идёт, но и из мира не уходит
+        said = f"{npc.short} {vb(npc.sex, 'набрал')} воды из-под крана"
+    else:
+        spend(h, npc, "вода", npc.eaters())
+        npc.hydration = clamp(npc.hydration + b["вода_за_порцию"])
+        said = f"{npc.short} {vb(npc.sex, 'достал')} воду из запаса"
+    return said
+
+
 def execute(h, npc, key, target):
     b = h.B
     spent = hours(key, npc, b)
@@ -2070,16 +2085,6 @@ def execute(h, npc, key, target):
         said = исполнить(h, npc, target, spent)
         if said is НЕ_СОСТОЯЛОСЬ:
             return
-
-    elif key == "попить":
-        if h.water_on:
-            npc.hydration = clamp(npc.hydration + b["вода_за_порцию"])
-            # из-под крана вода в запас не идёт, но и из мира не уходит
-            said = f"{npc.short} {vb(npc.sex, 'набрал')} воды из-под крана"
-        else:
-            spend(h, npc, "вода", npc.eaters())
-            npc.hydration = clamp(npc.hydration + b["вода_за_порцию"])
-            said = f"{npc.short} {vb(npc.sex, 'достал')} воду из запаса"
 
     elif key == "топить_снег":
         # на электроплитке, пока есть свет, вода достаётся даром
