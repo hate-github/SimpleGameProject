@@ -2332,6 +2332,93 @@ def _исполнить_буржуйка(h, npc, target, spent):
     return said
 
 
+@исполняет("разбор")
+def _исполнить_разбор(h, npc, target, spent):
+    b = h.B
+    пустые = h.пустые_для(npc)
+    pool = [f for f in пустые
+            if f.stripped < b["разбор_максимум"] or вещи(f.stock) > 0] or пустые
+    if not pool:
+        return НЕ_СОСТОЯЛОСЬ
+    flat = что_разбирать(h, pool, b)
+    social.вошёл_в_квартиру(h, npc, flat)
+    # запертую дверь сначала ломают, и это слышит весь подъезд
+    вскрыл = not flat.открыта
+    if вскрыл:
+        flat.открыта = True
+        h.bump("вскрытых_квартир")
+        social.emit(h, npc, 4, "взлом", night=False)
+    got = {}
+    for res, amount in list(flat.stock.items()):
+        take = min(amount, 3.0)      # за один заход больше не утащить
+        if take > 0:
+            flat.stock[res] = amount - take
+            npc.stock[res] = npc.stock.get(res, 0) + take
+            got[res] = take
+    if flat.stripped < b["разбор_максимум"]:
+        npc.stock["материалы"] = npc.stock.get("материалы", 0) + b["разбор_материалов"]
+        got["материалы"] = got.get("материалы", 0) + b["разбор_материалов"]
+        # доски из стен — это приход в мир, а не перекладывание; считаем,
+        # иначе баланс материалов в доме не сходится
+        h.stats["наразобрано_материалы"] = (h.stats.get("наразобрано_материалы", 0)
+                                            + b["разбор_материалов"])
+    if flat.тулуп and npc.одежда < b["одежда_максимум"]:
+        flat.тулуп = False
+        npc.одежда = b["одежда_максимум"]
+        got["тулуп"] = 1
+        h.bump("тулупов_снято_с_мёртвых")
+    # и то, что стоит в углу за дверью: кто разбирает чужую квартиру,
+    # тот первым и находит топор бывшего хозяина
+    взял = conflict.подобрать_оружие(h, npc, flat)
+    if взял:
+        got[взял] = 1
+    # и ключ с гвоздя в прихожей. Без этого запас в подвале умирал бы
+    # вместе с хозяином и выпадал из игры навсегда
+    for kid in sorted(flat.ключи):
+        if h.rng.chance(b["ключи_шанс"]):
+            flat.ключи.discard(kid)
+            npc.ключи_кладовых.add(kid)
+            к = h.кладовые.get(kid)
+            h.bump("ключей_от_кладовых_найдено")
+            if к is not None:
+                h.journal.line(f"   На гвозде в прихожей {vb(npc.sex, 'нашёл')} "
+                               f"ключ от {к.имя_род}.", 1)
+    flat.stripped += 1
+    # доски берут не из воздуха: сначала выламывают то, чем квартира
+    # утеплена, потом дверь. Запасная комната и топливо для буржуйки —
+    # один и тот же ресурс, и дом проедает сам себя
+    если_было = None
+    if flat.shelter.get("утепление", 0) > 0:
+        flat.shelter["утепление"] -= 1
+        если_было = "рамы"
+    elif flat.shelter.get("дверь", 0) > 0:
+        flat.shelter["дверь"] -= 1
+        если_было = "дверь"
+    flat.вложено = max(0.0, flat.вложено - b["разбор_материалов"])
+    if flat.owner_died and sum(v for k, v in got.items() if k != "материалы") > 0:
+        npc.mood = clamp(npc.mood - 5 * npc.t01("лояльность"))
+    took = ", ".join(f"{k} {int(v)}" for k, v in got.items() if v)
+    said = f"{npc.short} {vb(npc.sex, 'разобрал')} часть кв.{flat.apt}" + (f": {vb(npc.sex, 'взял')} {took}" if took else "")
+    if если_было == "рамы":
+        said += "; окна там теперь голые"
+    elif если_было == "дверь":
+        said += "; дверь снял с петель"
+    if вскрыл:
+        said += "; замок пришлось сорвать"
+    # у пустой квартиры может быть живой хозяин: он греется у соседа,
+    # а его угол растаскивают на доски (GDD 15, ловушка для переехавшего).
+    # До сих пор он этого попросту не замечал
+    хозяин = h.чей(flat)
+    if (хозяин is not None and хозяин.id != npc.id
+            and хозяин.alive and not хозяин.exiled):
+        social.adjust(хозяин, npc.id, trust=-2.0, hate=b["ненависть_за_разбор"])
+        хозяин.mood = clamp(хозяин.mood - 8)
+        h.journal.line(f"   {хозяин.short} {vb(хозяин.sex, 'видел')}, как из "
+                       f"{'её' if хозяин.sex == 'ж' else 'его'} квартиры "
+                       f"{vb(npc.sex, 'таскал')} доски.", 1)
+    return said
+
+
 def execute(h, npc, key, target):
     b = h.B
     spent = hours(key, npc, b)
@@ -2464,89 +2551,6 @@ def execute(h, npc, key, target):
         npc.mood = clamp(npc.mood - b["проведать_настроение"])
         npc.bump("нашёл_тело")
         h.bump("тел_найдено")
-
-    elif key == "разбор":
-        пустые = h.пустые_для(npc)
-        pool = [f for f in пустые
-                if f.stripped < b["разбор_максимум"] or вещи(f.stock) > 0] or пустые
-        if not pool:
-            return
-        flat = что_разбирать(h, pool, b)
-        social.вошёл_в_квартиру(h, npc, flat)
-        # запертую дверь сначала ломают, и это слышит весь подъезд
-        вскрыл = not flat.открыта
-        if вскрыл:
-            flat.открыта = True
-            h.bump("вскрытых_квартир")
-            social.emit(h, npc, 4, "взлом", night=False)
-        got = {}
-        for res, amount in list(flat.stock.items()):
-            take = min(amount, 3.0)      # за один заход больше не утащить
-            if take > 0:
-                flat.stock[res] = amount - take
-                npc.stock[res] = npc.stock.get(res, 0) + take
-                got[res] = take
-        if flat.stripped < b["разбор_максимум"]:
-            npc.stock["материалы"] = npc.stock.get("материалы", 0) + b["разбор_материалов"]
-            got["материалы"] = got.get("материалы", 0) + b["разбор_материалов"]
-            # доски из стен — это приход в мир, а не перекладывание; считаем,
-            # иначе баланс материалов в доме не сходится
-            h.stats["наразобрано_материалы"] = (h.stats.get("наразобрано_материалы", 0)
-                                                + b["разбор_материалов"])
-        if flat.тулуп and npc.одежда < b["одежда_максимум"]:
-            flat.тулуп = False
-            npc.одежда = b["одежда_максимум"]
-            got["тулуп"] = 1
-            h.bump("тулупов_снято_с_мёртвых")
-        # и то, что стоит в углу за дверью: кто разбирает чужую квартиру,
-        # тот первым и находит топор бывшего хозяина
-        взял = conflict.подобрать_оружие(h, npc, flat)
-        if взял:
-            got[взял] = 1
-        # и ключ с гвоздя в прихожей. Без этого запас в подвале умирал бы
-        # вместе с хозяином и выпадал из игры навсегда
-        for kid in sorted(flat.ключи):
-            if h.rng.chance(b["ключи_шанс"]):
-                flat.ключи.discard(kid)
-                npc.ключи_кладовых.add(kid)
-                к = h.кладовые.get(kid)
-                h.bump("ключей_от_кладовых_найдено")
-                if к is not None:
-                    h.journal.line(f"   На гвозде в прихожей {vb(npc.sex, 'нашёл')} "
-                                   f"ключ от {к.имя_род}.", 1)
-        flat.stripped += 1
-        # доски берут не из воздуха: сначала выламывают то, чем квартира
-        # утеплена, потом дверь. Запасная комната и топливо для буржуйки —
-        # один и тот же ресурс, и дом проедает сам себя
-        если_было = None
-        if flat.shelter.get("утепление", 0) > 0:
-            flat.shelter["утепление"] -= 1
-            если_было = "рамы"
-        elif flat.shelter.get("дверь", 0) > 0:
-            flat.shelter["дверь"] -= 1
-            если_было = "дверь"
-        flat.вложено = max(0.0, flat.вложено - b["разбор_материалов"])
-        if flat.owner_died and sum(v for k, v in got.items() if k != "материалы") > 0:
-            npc.mood = clamp(npc.mood - 5 * npc.t01("лояльность"))
-        took = ", ".join(f"{k} {int(v)}" for k, v in got.items() if v)
-        said = f"{npc.short} {vb(npc.sex, 'разобрал')} часть кв.{flat.apt}" + (f": {vb(npc.sex, 'взял')} {took}" if took else "")
-        if если_было == "рамы":
-            said += "; окна там теперь голые"
-        elif если_было == "дверь":
-            said += "; дверь снял с петель"
-        if вскрыл:
-            said += "; замок пришлось сорвать"
-        # у пустой квартиры может быть живой хозяин: он греется у соседа,
-        # а его угол растаскивают на доски (GDD 15, ловушка для переехавшего).
-        # До сих пор он этого попросту не замечал
-        хозяин = h.чей(flat)
-        if (хозяин is not None and хозяин.id != npc.id
-                and хозяин.alive and not хозяин.exiled):
-            social.adjust(хозяин, npc.id, trust=-2.0, hate=b["ненависть_за_разбор"])
-            хозяин.mood = clamp(хозяин.mood - 8)
-            h.journal.line(f"   {хозяин.short} {vb(хозяин.sex, 'видел')}, как из "
-                           f"{'её' if хозяин.sex == 'ж' else 'его'} квартиры "
-                           f"{vb(npc.sex, 'таскал')} доски.", 1)
 
     elif key == "вылазка":
         _outing(h, npc, spent, target)
