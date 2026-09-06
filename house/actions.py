@@ -2243,6 +2243,19 @@ def _исполнить_заказать(h, npc, target, spent):
     return said
 
 
+@исполняет("генератор")
+def _исполнить_генератор(h, npc, target, spent):
+    spend(h, h.хозяин_жилья(npc), "топливо", 2)
+    npc.shelter["питание"] = h.day     # свет в квартире на сутки (GDD 15)
+    npc.mood = clamp(npc.mood + 10)
+    npc.warmth = clamp(npc.warmth + 4)
+    for g in sorted(npc.guests):
+        o = h.get(g)
+        if o and o.alive:
+            o.mood = clamp(o.mood + 6)
+    return f"{npc.short} {vb(npc.sex, 'запустил')} генератор — на весь подъезд гул и свет в окне"
+
+
 def execute(h, npc, key, target):
     b = h.B
     spent = hours(key, npc, b)
@@ -2375,17 +2388,6 @@ def execute(h, npc, key, target):
         npc.mood = clamp(npc.mood - b["проведать_настроение"])
         npc.bump("нашёл_тело")
         h.bump("тел_найдено")
-
-    elif key == "генератор":
-        spend(h, h.хозяин_жилья(npc), "топливо", 2)
-        npc.shelter["питание"] = h.day     # свет в квартире на сутки (GDD 15)
-        npc.mood = clamp(npc.mood + 10)
-        npc.warmth = clamp(npc.warmth + 4)
-        for g in sorted(npc.guests):
-            o = h.get(g)
-            if o and o.alive:
-                o.mood = clamp(o.mood + 6)
-        said = f"{npc.short} {vb(npc.sex, 'запустил')} генератор — на весь подъезд гул и свет в окне"
 
     elif key in ПОСТРОЙКИ:
         уровень, мат_ключ, _умения, _потолок = ПОСТРОЙКИ[key]
