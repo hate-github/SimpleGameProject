@@ -6,10 +6,10 @@
 Утро: сводка (GDD 4.4) — что заметили соседи, что пропало, кто что слышал.
 """
 from .util import Rng, clamp, norm, vb
-from .model import House, spend
+from .model import House
 from .schema import load_json, validate_data
 from . import (world, social, actions, conflict, report, meeting, замысел, character, chat,
-               assembly, psyche, household)
+               assembly, psyche, household, services)
 
 
 class Simulation:
@@ -120,69 +120,7 @@ class Simulation:
             p.новый_день(h.B)
         household.дрова_к_печке(h)
 
-        # готовые заказы: мастер отдаёт печь и берёт своё (GDD 18)
-        for p in h.alive():
-            заказ = h.mods.get("заказ_" + p.id)
-            if not заказ or h.day < заказ["готово"]:
-                continue
-            мастер = h.get(заказ["мастер"])
-            if not (мастер and мастер.alive and not мастер.exiled):
-                h.mods.pop("заказ_" + p.id, None)
-                h.mods.pop("мастер_занят_" + заказ["мастер"], None)
-                continue
-            что = заказ.get("что", "буржуйка")
-            у = actions.УСЛУГИ[что]
-            нужно = h.B[у["мат"]]
-            # доски отложены в угол у мастера ещё при уговоре: их не сожгли
-            # и не пустили в свои окна. Если угол растащили — работает из своего
-            склад = h.flats[мастер.apt]
-            отложено = min(нужно, склад.stock.get("материалы", 0.0))
-            if отложено >= нужно:
-                склад.stock["материалы"] -= нужно
-                мастер.stock["материалы"] = мастер.stock.get("материалы", 0.0) + нужно
-            elif мастер.stock.get("материалы", 0) < нужно:
-                continue                       # нет материала — заказ ждёт
-            if что == "генератор":
-                # движок ждал в том же углу. Если угол растащили — работа
-                # стоит: собирать больше не из чего
-                if склад.stock.get("движок", 0.0) < 1.0:
-                    continue
-                склад.stock["движок"] -= 1.0
-                мастер.stock["движок"] = мастер.stock.get("движок", 0.0) + 1.0
-            # цена — та, о которой договорились, включая доски мастера
-            # (actions.цена_услуги). Пока доплата за материал прибавлялась
-            # здесь, при сдаче, объявленная цена не совпадала с взятой
-            цена = заказ.get("цена", h.B["печь_цена"])
-            плата = {}
-            for res in ("еда", "топливо"):
-                берём = min(цена - sum(плата.values()), p.stock.get(res, 0.0))
-                if берём > 0:
-                    p.stock[res] -= берём
-                    мастер.stock[res] = мастер.stock.get(res, 0.0) + берём
-                    плата[res] = берём
-            if sum(плата.values()) < цена * 0.5:
-                continue                       # заказчику нечем платить — ждёт
-            spend(h, мастер, "материалы", нужно)
-            if что == "генератор":
-                spend(h, мастер, "движок", 1.0)
-            flat = h.where(p)
-            if что == "буржуйка" or что == "генератор":
-                flat.shelter[у["поле"]] = True
-            else:
-                flat.shelter[у["поле"]] = flat.shelter.get(у["поле"], 0) + 1
-            flat.вложено += нужно
-            h.mods.pop("заказ_" + p.id, None)
-            h.mods.pop("мастер_занят_" + мастер.id, None)
-            social.adjust(p, мастер.id, trust=2.0, hate=-10)
-            social.adjust(мастер, p.id, trust=1.0)
-            social.сдержал(h, мастер, p, "сделать", что)
-            h.bump("работ_на_заказ")
-            h.bump("заказ_" + что)
-            h.journal.line(f"{мастер.short} {vb(мастер.sex, 'сделал')} {p.form('dat')} "
-                           f"{actions.УСЛУГА_РАБОТА[что]}. Расплатились: "
-                           + ", ".join(f"{k} {round(v, 1):g}"
-                                       for k, v in плата.items()) + ".", 2)
-            h.note(f"{мастер.short}: работа {p.form('dat')} ({что})")
+        services.готовые_заказы(h)
 
         # вышел ли вчерашний дежурный: перед домом, а не перед соседом
         meeting.проверить_дежурство(h)
