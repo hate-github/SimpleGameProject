@@ -115,7 +115,7 @@ class Simulation:
             for p in h.rng.shuffled(h.alive()):
                 # список составлен в начале прохода, а за это время человека
                 # могли выставить на мороз или убить — проверяем ещё раз
-                if p.time_left < 0.3 or p.health <= 0 or not p.alive or p.exiled:
+                if p.time_left < 0.3 or p.health <= 0 or not p.здесь():
                     continue
                 if actions.choose_and_do(h, p):
                     acted = True
