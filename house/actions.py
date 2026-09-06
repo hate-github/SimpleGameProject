@@ -1954,6 +1954,31 @@ def _эпилог(h, npc, key, said):
 
 
 
+# --- быт и убежище ---
+
+@исполняет("поесть")
+def _исполнить_поесть(h, npc, target, spent):
+    b = h.B
+    need = npc.eaters()
+    have = npc.stock.get("еда", 0.0)
+    used = spend(h, npc, "еда", need)
+    доля = used / need
+    # мать ест после него: ребёнку идёт полная порция, пока она есть,
+    # и потому при том же запасе она сама голоднее (GDD 12.6)
+    for р in npc.дети:
+        р["сытость"] = clamp(р["сытость"] + b["ребёнок_еда_за_порцию"]
+                             * min(1.0, доля * 1.4))
+    npc.satiety = clamp(npc.satiety + порция(h, npc, b) * доля
+                        * (1.0 - b["ребёнок_отдаёт"] * len(npc.дети)))
+    h.stats["съедено"] = h.stats.get("съедено", 0) + used
+    # горячая еда пахнет сильнее — и выдаёт хозяина всему подъезду
+    social.smell(h, npc, hot=npc.burning or (h.powered(npc) and npc.shelter.get("обогреватель")))
+    said = f"{npc.short} {vb(npc.sex, 'поел')}" + (
+        f" и {vb(npc.sex, 'покормил')} "
+        f"{npc.dependent_acc or npc.dependent_name}" if npc.dependents else "")
+    return said
+
+
 def execute(h, npc, key, target):
     b = h.B
     spent = hours(key, npc, b)
@@ -2034,24 +2059,6 @@ def execute(h, npc, key, target):
         said = исполнить(h, npc, target, spent)
         if said is НЕ_СОСТОЯЛОСЬ:
             return
-    elif key == "поесть":
-        need = npc.eaters()
-        have = npc.stock.get("еда", 0.0)
-        used = spend(h, npc, "еда", need)
-        доля = used / need
-        # мать ест после него: ребёнку идёт полная порция, пока она есть,
-        # и потому при том же запасе она сама голоднее (GDD 12.6)
-        for р in npc.дети:
-            р["сытость"] = clamp(р["сытость"] + b["ребёнок_еда_за_порцию"]
-                                 * min(1.0, доля * 1.4))
-        npc.satiety = clamp(npc.satiety + порция(h, npc, b) * доля
-                            * (1.0 - b["ребёнок_отдаёт"] * len(npc.дети)))
-        h.stats["съедено"] = h.stats.get("съедено", 0) + used
-        # горячая еда пахнет сильнее — и выдаёт хозяина всему подъезду
-        social.smell(h, npc, hot=npc.burning or (h.powered(npc) and npc.shelter.get("обогреватель")))
-        said = f"{npc.short} {vb(npc.sex, 'поел')}" + (
-            f" и {vb(npc.sex, 'покормил')} "
-            f"{npc.dependent_acc or npc.dependent_name}" if npc.dependents else "")
 
     elif key == "поесть_мясо":
         need = npc.eaters()
