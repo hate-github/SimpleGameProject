@@ -25,7 +25,7 @@ def дрова_к_печке(h):
             continue
         host = h.get(p.living_with)
         дрова = p.stock.get("топливо", 0.0)
-        if host and host.alive and not host.exiled and дрова > 0:
+        if host and host.здесь() and дрова > 0:
             host.stock["топливо"] = host.stock.get("топливо", 0.0) + дрова
             p.stock["топливо"] = 0.0
             # и помнит, сколько снёс. Пока этого не было, съезд был
@@ -179,7 +179,7 @@ def отпустят_со_своим(h, гость, хозяин, b, выгон�
     человека на мороз, о его дровах вспоминают куда реже, чем провожая.
     """
     остаются = [хозяин] + [h.get(g) for g in sorted(хозяин.guests) if g != гость.id]
-    остаются = [o for o in остаются if o and o.alive and not o.exiled]
+    остаются = [o for o in остаются if o and o.здесь()]
     держат = (1.0 - min(1.0, хозяин.secure("топливо"))) * b["дрова_держат_за_нужду"]
     держат += хозяин.hate.get(гость.id, 0.0) / 100.0 * b["дрова_держат_за_злость"]
     держат -= хозяин.t01("лояльность") * b["дрова_отдают_за_совесть"]
@@ -313,7 +313,7 @@ def cut_ties(h, person):
     person.allies.clear()
     for gid in sorted(person.guests):
         g = h.get(gid)
-        if g and g.alive and not g.exiled:
+        if g and g.здесь():
             g.living_with = None
             g.warmth = clamp(g.warmth - 15)
             occupy_flat(h, g)
