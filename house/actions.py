@@ -2568,6 +2568,89 @@ def _исполнить_обмен(h, npc, target, spent):
     return _trade(h, npc, target)
 
 
+@исполняет("лечить")
+def _исполнить_лечить(h, npc, target, spent):
+    b = h.B
+    lvl, kind = COST["лечить"]
+    said = None
+    # медик умеет то, чего не умеет сам себе перевязывающий (GDD 12.6:
+    # «единственная возможность лечить серьёзные травмы и болезни»)
+    медик = "медик" in npc.skills
+    if target.id != npc.id:
+        # перевязывающий видит человека вплотную и целиком: это самый
+        # точный взгляд в доме, и потому именно медик первым понимает,
+        # что сосед не жилец
+        social.встретились(h, npc, target)
+    spend(h, npc, "лекарства", 1)
+    ребёнок = target.слабейший_ребёнок()
+    # ребёнку — первому: и мать так решает, и медик так решает
+    if ребёнок is not None and (ребёнок["болен"] or ребёнок["здоровье"] < 70):
+        ребёнок["здоровье"] = clamp(ребёнок["здоровье"] + b["ребёнок_лечение"]
+                                    * (1.4 if медик else 1.0))
+        if ребёнок["болен"] and h.rng.chance(b["лечение_медиком_болезнь"]
+                                             if медик else b["самолечение_болезнь"]):
+            ребёнок["болен"] = None
+        if target.id != npc.id:
+            social.adjust(target, npc.id, trust=b["доверие_за_лечение"], hate=-14)
+            social.сблизились(h, npc, target, b["близость_за_лечение"])
+            social.загладил(h, npc, target, b["обида_за_лечение"])
+            social.проверить_наговор(h, npc, target)
+            target.mood = clamp(target.mood + 12)
+            npc.mood = clamp(npc.mood + b["настроение_от_помощи"])
+            target.favors[npc.id] = target.favors.get(npc.id, 0) + 1
+            said = (f"{npc.short} {vb(npc.sex, 'осмотрел')} {ребёнок['вин']} "
+                    f"у {target.form('gen')}")
+        else:
+            said = f"{npc.short} {vb(npc.sex, 'выхаживал')} {ребёнок['вин']}"
+        if said:
+            h.journal.line(said, NOTABLE.get("лечить", 0))
+        if lvl and kind:
+            social.emit(h, npc, lvl, kind, night=False)
+        return НЕ_СОСТОЯЛОСЬ
+    if медик:
+        # перевязать — не значит вылечить всё. Медсестра с аптечкой закрывает
+        # одну рану за раз и сбивает жар; перелом от этого не срастается.
+        # Раньше здесь стояло injuries.clear(): один час работы полностью
+        # обнулял человека, и медик в одиночку держал дом на ногах
+        for _ in range(int(b["лечение_медиком_ран"])):
+            if target.injuries:
+                target.injuries.pop()
+        if target.sick and h.rng.chance(b["лечение_медиком_болезнь"]):
+            target.sick = None
+        target.health = clamp(target.health + b["лечение_медиком"])
+    else:
+        if target.injuries:
+            target.injuries.pop()
+        if target.sick and h.rng.chance(b["самолечение_болезнь"]):
+            target.sick = None
+        target.health = clamp(target.health + b["лечение_самому"])
+    if target.id != npc.id:
+        сказать_сразу(h, "лечить", f"{npc.short} {vb(npc.sex, 'перевязал')} {target.form('acc')}")
+        плата = плата_за_лечение(h, npc, target, b) if медик else None
+        social.adjust(target, npc.id, trust=b["доверие_за_лечение"], hate=-12)
+        social.сблизились(h, npc, target, b["близость_за_лечение"])
+        social.загладил(h, npc, target, b["обида_за_лечение"])
+        social.проверить_наговор(h, npc, target)
+        target.mood = clamp(target.mood + 10)
+        npc.mood = clamp(npc.mood + b["настроение_от_помощи"])
+        target.favors[npc.id] = target.favors.get(npc.id, 0) + 1
+        if плата:
+            h.journal.line(f"   {target.short} {vb(target.sex, 'расплатился')} "
+                           f"с {npc.form('ins')}: "
+                           # цена услуги дробная, и в журнале выходило
+                           # «еда 3.02698»: в подъезде так не считают
+                           + ", ".join(f"{k} {round(v, 1):g}"
+                                       for k, v in плата.items()) + ".", 1)
+        elif плата is not None:
+            # взять было нечего, и обе стороны это запомнили
+            social.adjust(npc, target.id, trust=-0.5)
+            h.journal.line(f"   {target.form('dat')} платить нечем. "
+                           f"{npc.short} {vb(npc.sex, 'ушёл')} молча.", 1)
+    else:
+        said = f"{npc.short} {vb(npc.sex, 'обработал')} раны"
+    return said
+
+
 def execute(h, npc, key, target):
     b = h.B
     spent = hours(key, npc, b)
@@ -2865,83 +2948,6 @@ def execute(h, npc, key, target):
         h.journal.secret(f"{npc.short} {vb(npc.sex, 'положил')} "
                          f"{RES_ВИН.get(чем, чем)} под дверь кв.{враг.apt}.")
         said = None
-
-    elif key == "лечить":
-        # медик умеет то, чего не умеет сам себе перевязывающий (GDD 12.6:
-        # «единственная возможность лечить серьёзные травмы и болезни»)
-        медик = "медик" in npc.skills
-        if target.id != npc.id:
-            # перевязывающий видит человека вплотную и целиком: это самый
-            # точный взгляд в доме, и потому именно медик первым понимает,
-            # что сосед не жилец
-            social.встретились(h, npc, target)
-        spend(h, npc, "лекарства", 1)
-        ребёнок = target.слабейший_ребёнок()
-        # ребёнку — первому: и мать так решает, и медик так решает
-        if ребёнок is not None and (ребёнок["болен"] or ребёнок["здоровье"] < 70):
-            ребёнок["здоровье"] = clamp(ребёнок["здоровье"] + b["ребёнок_лечение"]
-                                        * (1.4 if медик else 1.0))
-            if ребёнок["болен"] and h.rng.chance(b["лечение_медиком_болезнь"]
-                                                 if медик else b["самолечение_болезнь"]):
-                ребёнок["болен"] = None
-            if target.id != npc.id:
-                social.adjust(target, npc.id, trust=b["доверие_за_лечение"], hate=-14)
-                social.сблизились(h, npc, target, b["близость_за_лечение"])
-                social.загладил(h, npc, target, b["обида_за_лечение"])
-                social.проверить_наговор(h, npc, target)
-                target.mood = clamp(target.mood + 12)
-                npc.mood = clamp(npc.mood + b["настроение_от_помощи"])
-                target.favors[npc.id] = target.favors.get(npc.id, 0) + 1
-                said = (f"{npc.short} {vb(npc.sex, 'осмотрел')} {ребёнок['вин']} "
-                        f"у {target.form('gen')}")
-            else:
-                said = f"{npc.short} {vb(npc.sex, 'выхаживал')} {ребёнок['вин']}"
-            if said:
-                h.journal.line(said, NOTABLE.get(key, 0))
-            if lvl and kind:
-                social.emit(h, npc, lvl, kind, night=False)
-            return
-        if медик:
-            # перевязать — не значит вылечить всё. Медсестра с аптечкой закрывает
-            # одну рану за раз и сбивает жар; перелом от этого не срастается.
-            # Раньше здесь стояло injuries.clear(): один час работы полностью
-            # обнулял человека, и медик в одиночку держал дом на ногах
-            for _ in range(int(b["лечение_медиком_ран"])):
-                if target.injuries:
-                    target.injuries.pop()
-            if target.sick and h.rng.chance(b["лечение_медиком_болезнь"]):
-                target.sick = None
-            target.health = clamp(target.health + b["лечение_медиком"])
-        else:
-            if target.injuries:
-                target.injuries.pop()
-            if target.sick and h.rng.chance(b["самолечение_болезнь"]):
-                target.sick = None
-            target.health = clamp(target.health + b["лечение_самому"])
-        if target.id != npc.id:
-            сказать_сразу(h, key, f"{npc.short} {vb(npc.sex, 'перевязал')} {target.form('acc')}")
-            плата = плата_за_лечение(h, npc, target, b) if медик else None
-            social.adjust(target, npc.id, trust=b["доверие_за_лечение"], hate=-12)
-            social.сблизились(h, npc, target, b["близость_за_лечение"])
-            social.загладил(h, npc, target, b["обида_за_лечение"])
-            social.проверить_наговор(h, npc, target)
-            target.mood = clamp(target.mood + 10)
-            npc.mood = clamp(npc.mood + b["настроение_от_помощи"])
-            target.favors[npc.id] = target.favors.get(npc.id, 0) + 1
-            if плата:
-                h.journal.line(f"   {target.short} {vb(target.sex, 'расплатился')} "
-                               f"с {npc.form('ins')}: "
-                               # цена услуги дробная, и в журнале выходило
-                               # «еда 3.02698»: в подъезде так не считают
-                               + ", ".join(f"{k} {round(v, 1):g}"
-                                           for k, v in плата.items()) + ".", 1)
-            elif плата is not None:
-                # взять было нечего, и обе стороны это запомнили
-                social.adjust(npc, target.id, trust=-0.5)
-                h.journal.line(f"   {target.form('dat')} платить нечем. "
-                               f"{npc.short} {vb(npc.sex, 'ушёл')} молча.", 1)
-        else:
-            said = f"{npc.short} {vb(npc.sex, 'обработал')} раны"
 
     elif key == "тело":
         подходят = [f for f in h.пустые_для(npc) if f.body and f.body["порций"] > 0]
