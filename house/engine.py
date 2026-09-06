@@ -295,11 +295,19 @@ class Simulation:
                 p.aware[k] = float(v)
 
     # ------------------------------------------------------------ цикл
-    def run(self):
+    def run(self, on_day=None):
+        """on_day(h) — наблюдатель, которого зовут в конце каждого дня.
+
+        Нужен check.py, чтобы снимать отпечаток дома по дням, не подменяя
+        `one_day`, как это делают линейки. Сам ничего не меняет и ничего
+        не тянет из rng: с on_day=None прогон тот же до последнего слова.
+        """
         h = self.h
         world.build_calendar(h, self.events, self.days)
         for _ in range(self.days):
             self.one_day()
+            if on_day is not None:
+                on_day(h)
             if not h.alive():
                 h.journal.line("В подъезде не осталось никого.", 2)
                 h.journal.flush_day(h)
