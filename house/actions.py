@@ -3222,6 +3222,13 @@ def _исполнить_отнять(h, npc, target, spent):
     return None
 
 
+@исполняет("кража_днём")
+def _исполнить_кража_днём(h, npc, target, spent):
+    social.вошёл_в_квартиру(h, npc, h.flats[target.apt])
+    res, moved = conflict.steal(h, npc, target)
+    return None
+
+
 def execute(h, npc, key, target):
     b = h.B
     spent = hours(key, npc, b)
@@ -3305,11 +3312,6 @@ def execute(h, npc, key, target):
 
     elif key == "собрание":
         meeting.провести(h, npc)
-        said = None
-
-    elif key == "кража_днём":
-        social.вошёл_в_квартиру(h, npc, h.flats[target.apt])
-        res, moved = conflict.steal(h, npc, target)
         said = None
 
     _эпилог(h, npc, key, said)
