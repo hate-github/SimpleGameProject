@@ -9,7 +9,7 @@ from .util import Rng, clamp, norm, vb
 from .model import House
 from .schema import load_json, validate_data
 from . import (world, social, actions, conflict, report, meeting, замысел, character, chat,
-               assembly, psyche, household, services, discoveries)
+               assembly, psyche, household, services, discoveries, night)
 
 
 class Simulation:
@@ -69,7 +69,7 @@ class Simulation:
         # на всех, а не по строке на каждого (discoveries.огласить_непрощённых)
         discoveries.огласить_непрощённых(h)
         chat.daily_chat(h, self.lines)
-        self._night(h)
+        night.ночь(h)
         discoveries.огласить_непрощённых(h)
         self._upkeep(h)
         social.проверить_обещания(h)
@@ -152,174 +152,6 @@ class Simulation:
         # ночью все дома: «хозяин ушёл» не должно перетекать в ночную кражу
         for p in h.alive():
             p.away = False
-
-    # ------------------------------------------------------------ ночь
-    def _night(self, h):
-        targets = {}
-        for p in h.alive():
-            mode, target = self._decide_night(h, p)
-            p.tonight = mode
-            targets[p.id] = target
-
-        # налёт — максимум один за ночь и не каждую ночь: после осады дом
-        # несколько дней отходит (GDD 16 — рейд это событие, а не быт)
-        raid_done = h.day - h.mods.get("последний_налёт", -99) < h.B["налёт_перерыв_дней"]
-        # вожаком налёта становится самый злой и жадный, а не просто самый смелый
-        for p in sorted(h.alive(), key=lambda x: -(x.trait("жадность") + x.trait("вспыльчивость")
-                                                   + x.trait("храбрость") * 0.5 - x.trait("лояльность"))):
-            if raid_done or not p.alive or p.exiled:
-                continue
-            t = conflict.consider_raid(h, p)
-            if t:
-                p.tonight = "налёт"
-                conflict.run_siege(h, p, t)
-                h.mods["последний_налёт"] = h.day
-                raid_done = True
-
-        # ночь в общей квартире. До краж: тот, кто на это решился, уже не пойдёт
-        # никуда лезть, а дом наутро будет считать совсем другое
-        for p in h.rng.shuffled(h.alive()):
-            if p.tonight != "убить_соседа" or not p.alive or p.exiled:
-                continue
-            c = targets.get(p.id)
-            if c and c.alive and not c.exiled and h.под_одной_крышей(p, c):
-                conflict.убить_соседа(h, p, c)
-
-        # обобрать и уйти. После ножа и до краж: тот, кто на это решился,
-        # этой ночью больше никуда не пойдёт, а дом наутро считает другое
-        for p in h.rng.shuffled(h.alive()):
-            if p.tonight != "обобрать" or not p.alive or p.exiled:
-                continue
-            c = targets.get(p.id)
-            if c and c.alive and not c.exiled and p.living_with == c.id:
-                conflict.обобрать_и_уйти(h, p, c)
-
-        # кражи. Список составлен до осады, а осада могла кого-то из него убить
-        # или выставить на мороз — поэтому проверяем обоих ещё раз
-        for p in h.rng.shuffled(h.alive()):
-            if p.tonight != "кража" or not p.alive or p.exiled:
-                continue
-            t = targets.get(p.id)
-            if t and t.alive and not t.exiled:
-                conflict.steal(h, p, t)
-
-        # сон
-        for p in h.alive():
-            if p.rest < 35 and p.tonight == "дежурить":
-                p.tonight = "спать"      # человек просто не выдерживает ещё одну ночь
-            if p.rest < 25 and p.tonight in ("кража", "дежурить"):
-                p.tonight = "спать"     # на ногах уже не стоит
-            if p.tonight == "дежурить":
-                slept = 4.5
-                p.bump("ночей_дежурства")
-                p.stats["дежурил_ночь"] = h.day
-            elif p.tonight in ("кража", "налёт", "убить_соседа", "обобрать"):
-                slept = 5.5
-            else:
-                slept = 11.0 if p.rest < 35 else (9.5 if p.rest < 60 else 8.0)
-            p.slept = slept
-            # обезвоженный спит хуже — это единственное, что GDD 6.1 обещает
-            # жажде помимо самой смерти, и до сих пор этого не было
-            качество = 1.0 - h.B["сон_за_жажду"] * (1.0 - norm(p.hydration, 15, 70))
-            p.rest = clamp(p.rest + slept * h.B["сон_за_час"] * качество
-                           - h.B["часов_бодрствования"] * h.B["бодрствование_за_час"])
-
-        # и то, чего в доме до сих пор не могло случиться: смерть, которой
-        # никто не заметил. Считается после сна, потому что угорают спящие
-        world.угар(h)
-
-    def _decide_night(self, h, p):
-        b = h.B
-        tired = 1.0 - norm(p.rest, 20, 80)
-        opts = [(("спать", None), 2.5 + tired * 6.0)]
-
-        gate = character.norm_gate
-        wealth = p.stock.get("еда", 0) * 0.6 + p.stock.get("топливо", 0) * 0.3
-        watch = p.panic / 100.0 * 3.0 + social.recent_incidents(h) * 0.8 + wealth * 0.10 - tired * 6.0
-        watch += p.stats.get("обокрали", 0) * 2.0
-        watch += p.вес_черт("дежурить")
-        watch += p.пунктик("дежурить")
-        # своя ночь по общему расписанию: это уже не желание, а обязательство
-        # перед всеми (см. meeting.проверить_дежурство)
-        дежурный = meeting.чья_ночь(h)
-        if дежурный is not None and дежурный.id == p.id:
-            watch += b["дежурство_обязанность"]
-            h.mods["дежурил_вчера"] = p.id
-        # с ребёнком всю ночь на лестнице не просидишь: он просыпается,
-        # мёрзнет и его надо держать при себе (GDD 12.6)
-        if not p.dependents:
-            opts.append((("дежурить", None), watch * gate(p, "дежурить", b)))
-
-        # тот, с кем он делит комнату: ночью до него два метра и никакой двери
-        соседи = ([h.get(p.living_with)] if p.living_with
-                  else [h.get(g) for g in sorted(p.guests)])
-        for c in соседи:
-            if not (c and c.alive and not c.exiled):
-                continue
-            ночью = (conflict.оценка_убийства(h, p, c)
-                     + p.пунктик("убить_соседа")
-                     + character.своя_мерка(p, "убить_соседа", b))
-            opts.append((("убить_соседа", c), ночью * gate(p, "убить_соседа", b)))
-            # и то, что лежит между «съехать по-хорошему» и ножом: собрать
-            # хозяйское и уйти к себе в ту же ночь. Только гостю — хозяину
-            # уходить некуда, у него эта квартира и есть
-            if p.living_with == c.id:
-                обобрать = (conflict.оценка_обобрать(h, p, c)
-                            + p.пунктик("обобрать")
-                            + character.своя_мерка(p, "обобрать", b))
-                opts.append((("обобрать", c), обобрать * gate(p, "обобрать", b)))
-
-        for t in h.others(p):
-            if not t.alive:
-                continue
-            if t.living_with:
-                continue           # его нет дома, он у соседа
-            if h.под_одной_крышей(p, t):
-                continue           # это тот, у чьей печки я сплю
-            # сытый и незлой человек ночью не лезет к соседу
-            A = conflict.aggr(h)
-            if p.desperation() < 0.30 / A and p.hate.get(t.id, 0) < 25 / A:
-                continue
-            # сначала магазин, к соседу — потом. Пока человек верит, что на
-            # улице ещё есть что взять, чужая дверь почти ничего не стоит
-            greed = (p.loot_value(t.id) * (0.35 + p.t01("жадность") * 0.9)
-                     * (1.0 - actions.есть_куда_сходить(h, p, завтра=True)))
-            score = greed * (0.35 + p.desperation() * 1.3)
-            # «я же только что принёс»
-            if h.day - p.stats.get("день_вылазки", -99) <= 1:
-                score -= b["кража_только_принёс"]
-            # и то, что в доме уже неспокойно: происшествия, отказы, чужая злость
-            score += social.напряжение_дома(h, p) * b["кража_за_напряжение"]
-            score += p.вес_черт("кража")
-            score += p.пунктик("кража") + character.своя_мерка(p, "кража", b)
-            score -= (1.0 - conflict.stealth(p)) * 3.5
-            score -= t.shelter.get("дверь", 0) * 1.2
-            score += p.hate.get(t.id, 0) / 22.0
-            score -= 2.0 if t.id in p.allies else 0.0
-            score -= t.power() * 0.6
-            # сила — это расчёт, а страх — память: к тому, кто на его глазах
-            # уже стрелял, ночью не идут, как бы ни было пусто в шкафу
-            score -= p.боится(t.id) * b["страх_вес_кражи"]
-            # человек прикидывает шансы: в укреплённую дверь при дежурстве не лезут
-            chance = conflict.theft_chance(h, p, t, известно=False)
-            if chance < b["кража_порог_шанса"] / A:
-                continue
-            score *= 0.45 + chance
-            # страх последствий: обжёгся сам, видел, как за это убивали и выгоняли
-            score -= p.stats.get("поймали", 0) * 1.8 / A
-            score -= h.stats.get("убийств", 0) * 0.9 / A
-            score -= h.stats.get("изгнаний", 0) * 1.1 / A
-            opts.append((("кража", t), score * gate(p, "кража", b)))
-
-        # тот же порог, что и днём (actions.choose_and_do): от нечего делать
-        # человек не идёт ночью к чужой двери. Пока порога здесь не было,
-        # мягкий выбор поднимал со дна то, что оценено почти в ноль, — а дешевле
-        # всего «спать» стоит как раз в первую ночь метели, когда все выспались.
-        # Сон остаётся всегда: это не одно из дел, а то, чем ночь кончается
-        стоящие = [(o, s) for o, s in opts
-                   if o[0] == "спать" or s > b["порог_действия"]]
-        temp = b["температура_выбора"] + (p.panic / 100.0) * b["температура_выбора_паника"]
-        return h.rng.softmax_pick(стоящие, temp)
 
     # ------------------------------------------------------------ расчёт суток
     def _upkeep(self, h):
