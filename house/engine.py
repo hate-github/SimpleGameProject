@@ -6,9 +6,9 @@
 Утро: сводка (GDD 4.4) — что заметили соседи, что пропало, кто что слышал.
 """
 from .util import Rng, clamp, norm, vb
-from .model import NPC, House, Flat, Кладовая, spend
+from .model import House, spend
 from .schema import load_json, validate_data
-from . import world, social, actions, conflict, report, meeting, замысел, character, chat
+from . import world, social, actions, conflict, report, meeting, замысел, character, chat, assembly
 
 
 class Simulation:
@@ -37,93 +37,7 @@ class Simulation:
         self.h = House(rng=Rng(seed), B=self.balance)
         self.h.mods["реплики_быт"] = self.lines.get("быт", [])
         self.h.journal = report.Journal(verbosity=verbosity, secrets=secrets, stream=stream)
-        self._build()
-
-    # ------------------------------------------------------------ сборка
-    def _build(self):
-        h = self.h
-        for f in self.npcs_data.get("пустые_квартиры", []):
-            h.flats[f["кв"]] = Flat(apt=f["кв"], floor=f["этаж"],
-                                    shelter=dict(f.get("убежище", {})),
-                                    stock=dict(f.get("запасы", {})))
-        for d in self.npcs_data["жильцы"]:
-            # квартира заводится вместе с жильцом, но принадлежит дому, а не ему:
-            # он может её бросить, её могут занять, и всё, что он в неё вложил,
-            # останется в стенах
-            h.flats[d["кв"]] = Flat(apt=d["кв"], floor=d["этаж"],
-                                    shelter=dict(d.get("убежище", {})),
-                                    вложено=float(d.get("вложено", 3.0)))
-        # погреба и гаражи — то же самое, только за порогом квартиры
-        for k in self.npcs_data.get("кладовые", []):
-            h.кладовые[k["id"]] = Кладовая(
-                id=k["id"], вид=k["вид"], apt=k["кв"],
-                stock=dict(k.get("запасы", {})),
-                оружие=list(k.get("оружие", [])),
-                тулуп=bool(k.get("тулуп", False)))
-        for d in self.npcs_data["жильцы"]:
-            p = NPC(
-                id=d["id"], name=d["имя"], short=d["коротко"], apt=d["кв"], floor=d["этаж"],
-                age=d["возраст"], role=d["роль"], sex=d.get("пол", "м"), skills=list(d.get("умения", [])),
-                values=dict(d.get("ценности") or {}),
-                пунктики=list(d.get("пунктики") or []),
-                gen=d.get("коротко_род", ""), dat=d.get("коротко_дат", ""),
-                acc=d.get("коротко_вин", ""), ins=d.get("коротко_твор", ""),
-                traits=dict(d["черты"]), stock=dict(d["запасы"]),
-                weapon=d.get("оружие", "нет"), одежда=int(d.get("одежда", 0)),
-                счёт=float(d.get("счёт", 0.0)),
-                dependents=d.get("иждивенцы", 0), dependent_name=d.get("иждивенец_имя", ""),
-                dependent_acc=d.get("иждивенец_вин", ""),
-                dependent_gen=d.get("иждивенец_род", ""),
-                dependent_ins=d.get("иждивенец_твор", ""),
-                нормальность_пол=float(d.get("нормальность_пол", 0.1)),
-                нормальность_скорость=float(d.get("нормальность_скорость", 1.0)),
-            )
-            p._h = h
-            # ключ от своего погреба или гаража. Дальше он ходит только вместе
-            # с имуществом: через смерть, отъём, осаду и занятую квартиру
-            p.ключи_кладовых = {k.id for k in h.кладовые.values() if k.apt == p.apt}
-            for _ in range(p.dependents):
-                # падежи ребёнок носит с собой все четыре: он переходит из рук
-                # в руки (conflict._orphan), и на новом месте «ушла с Ваней»
-                # должно читаться так же, как читалось у матери
-                p.дети.append({"имя": p.dependent_name or "ребёнок",
-                               "вин": p.dependent_acc or p.dependent_name or "ребёнка",
-                               "род": p.dependent_gen or p.dependent_name or "ребёнка",
-                               "твор": p.dependent_ins or p.dependent_name or "ребёнком",
-                               "сытость": 85.0, "тепло": 80.0, "здоровье": 100.0,
-                               "болен": None})
-            h.people[p.id] = p
-        # стартовые отношения
-        for d in self.npcs_data["жильцы"]:
-            p = h.people[d["id"]]
-            # оружие, с которым человек вошёл в метель, ему привычно: оно
-            # у него годами. Охотнику привычно любое огнестрельное — это его
-            # ремесло, а не эта конкретная винтовка
-            if p.weapon and p.weapon != "нет":
-                p.рука[p.weapon] = 1.0
-            if "охотник" in p.skills:
-                from .model import FIREARMS
-                for w in sorted(FIREARMS):
-                    p.рука[w] = max(p.рука.get(w, 0.0), h.B["рука_охотника"])
-            for other in h.people.values():
-                if other.id == p.id:
-                    continue
-                p.trust[other.id] = 3.0
-                p.hate[other.id] = 0.0
-                p.страх[other.id] = 0.0
-                p.aware[other.id] = 15.0 + (10.0 if other.floor == p.floor else 0.0)
-                p.est[other.id] = {"еда": 3.0, "топливо": 3.0, "лекарства": 0.5, "материалы": 1.0}
-            for k, v in d.get("доверие_старт", {}).items():
-                p.trust[k] = float(v)
-                # до метели эти двое уже были знакомы, и близость начинается
-                # не с нуля. Оксана с Лидой (8 и 7) входят в метель парой,
-                # Игорь с Петром (1 и 2) — никем друг другу; дальше это или
-                # выдержит, или нет, но начальная несимметрия у дома есть
-                p.близость[k] = float(v) * h.B["близость_старт_от_доверия"]
-            for k, v in d.get("ненависть_старт", {}).items():
-                p.hate[k] = float(v)
-            for k, v in d.get("осведомлённость_старт", {}).items():
-                p.aware[k] = float(v)
+        assembly.build_house(self.h, self.npcs_data)
 
     # ------------------------------------------------------------ цикл
     def run(self, on_day=None):
