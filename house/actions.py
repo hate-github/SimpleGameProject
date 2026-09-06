@@ -2912,6 +2912,14 @@ def _исполнить_отдать_на_ночь(h, npc, target, spent):
     return said
 
 
+# --- улица и кладовые ---
+
+@исполняет("вылазка")
+def _исполнить_вылазка(h, npc, target, spent):
+    _outing(h, npc, spent, target)
+    return None  # текст пишет сам _outing
+
+
 def execute(h, npc, key, target):
     b = h.B
     spent = hours(key, npc, b)
@@ -3044,10 +3052,6 @@ def execute(h, npc, key, target):
         npc.mood = clamp(npc.mood - b["проведать_настроение"])
         npc.bump("нашёл_тело")
         h.bump("тел_найдено")
-
-    elif key == "вылазка":
-        _outing(h, npc, spent, target)
-        said = None  # текст пишет сам _outing
 
     elif key == "кладовая":
         _из_кладовой(h, npc, target, spent)
