@@ -2562,6 +2562,12 @@ def _исполнить_вернуть(h, npc, target, spent):
     return None
 
 
+@исполняет("обмен")
+def _исполнить_обмен(h, npc, target, spent):
+    social.встретились(h, npc, target)
+    return _trade(h, npc, target)
+
+
 def execute(h, npc, key, target):
     b = h.B
     spent = hours(key, npc, b)
@@ -2859,10 +2865,6 @@ def execute(h, npc, key, target):
         h.journal.secret(f"{npc.short} {vb(npc.sex, 'положил')} "
                          f"{RES_ВИН.get(чем, чем)} под дверь кв.{враг.apt}.")
         said = None
-
-    elif key == "обмен":
-        social.встретились(h, npc, target)
-        said = _trade(h, npc, target)
 
     elif key == "лечить":
         # медик умеет то, чего не умеет сам себе перевязывающий (GDD 12.6:
