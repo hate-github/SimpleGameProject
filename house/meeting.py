@@ -33,8 +33,8 @@ def ждут_приговора(h):
     if h.day - з["день"] > h.B["приговор_срок"]:
         h.mods.pop("приговор_нужен", None)
         return None
-    кого = h.get(з["кто"])
-    if not (кого and кого.alive and not кого.exiled):
+    кого = h.живой(з["кто"])
+    if not кого:
         h.mods.pop("приговор_нужен", None)
         return None
     return кого
@@ -126,7 +126,7 @@ def жар_ссоры(h, люди):
     берётся средняя по парам, а не самая громкая: один заклятый враг в доме
     есть всегда, и по нему собрание не судят.
     """
-    люди = [p for p in люди if p.alive and not p.exiled]
+    люди = [p for p in люди if p.здесь()]
     пар = [(a, c) for a in люди for c in люди if a.id != c.id]
     if not пар:
         return 0.0
@@ -222,10 +222,9 @@ def голос(h, кто, зовущий, тема, цель=None):
 
 def социальная_мерка(кто, tag):
     """Личная мерка поступка (GDD 12.1) — тем же способом, что в social.judge."""
-    v = кто.values or {}
-    if tag in (v.get("не_терпит") or ()):
+    if кто.не_терпит(tag):
         return 1.5
-    if tag in (v.get("ценит") or ()):
+    if кто.ценит(tag):
         return -1.0
     return 0.0
 
@@ -468,7 +467,7 @@ def чья_ночь(h):
     if not д or h.day > д["до"]:
         return None
     очередь = [i for i in д["очередь"]
-               if (h.get(i) and h.get(i).alive and not h.get(i).exiled
+               if (h.живой(i)
                    and not h.get(i).dependents)]
     if not очередь:
         return None
@@ -485,8 +484,8 @@ def проверить_дежурство(h):
     кто_id = h.mods.pop("дежурил_вчера", None)
     if not кто_id:
         return
-    кто = h.get(кто_id)
-    if not (кто and кто.alive and not кто.exiled):
+    кто = h.живой(кто_id)
+    if not кто:
         return
     if кто.stats.get("дежурил_ночь") == h.day - 1:
         for p in h.others(кто):
