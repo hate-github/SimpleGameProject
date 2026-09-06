@@ -2309,6 +2309,18 @@ def _исполнить_утепление(h, npc, target, spent):
     return said
 
 
+@исполняет("дверь")
+def _исполнить_дверь(h, npc, target, spent):
+    b = h.B
+    spend(h, npc, "материалы", b["дверь_материалы"])
+    вложить(h, npc, b["дверь_материалы"])
+    # новый засов — старые ключи больше не подходят
+    for кто in h.people.values():
+        кто.ключи.discard(npc.apt)
+    npc.shelter["дверь"] = npc.shelter.get("дверь", 0) + 1
+    return f"{npc.short} {vb(npc.sex, 'укрепил')} дверь (уровень {npc.shelter['дверь']})"
+
+
 def execute(h, npc, key, target):
     b = h.B
     spent = hours(key, npc, b)
@@ -2441,15 +2453,6 @@ def execute(h, npc, key, target):
         npc.mood = clamp(npc.mood - b["проведать_настроение"])
         npc.bump("нашёл_тело")
         h.bump("тел_найдено")
-
-    elif key == "дверь":
-        spend(h, npc, "материалы", b["дверь_материалы"])
-        вложить(h, npc, b["дверь_материалы"])
-        # новый засов — старые ключи больше не подходят
-        for кто in h.people.values():
-            кто.ключи.discard(npc.apt)
-        npc.shelter["дверь"] = npc.shelter.get("дверь", 0) + 1
-        said = f"{npc.short} {vb(npc.sex, 'укрепил')} дверь (уровень {npc.shelter['дверь']})"
 
     elif key == "буржуйка":
         spend(h, npc, "материалы", b["буржуйка_материалы"])
