@@ -2998,6 +2998,46 @@ def _исполнить_вскрыть_кладовую(h, npc, target, spent):
     return None
 
 
+@исполняет("тело")
+def _исполнить_тело(h, npc, target, spent):
+    b = h.B
+    подходят = [f for f in h.пустые_для(npc) if f.body and f.body["порций"] > 0]
+    if not подходят:
+        return НЕ_СОСТОЯЛОСЬ
+    flat = min(подходят, key=lambda f: abs(f.floor - npc.floor))
+    social.вошёл_в_квартиру(h, npc, flat)
+    take = min(flat.body["порций"], 4.0)
+    flat.body["порций"] -= take
+    flat.body["тронуто"] = True
+    npc.stock["мясо"] = npc.stock.get("мясо", 0) + take
+    h.stats["принесено_мясо"] = h.stats.get("принесено_мясо", 0) + take
+    npc.mood = clamp(npc.mood - b["людоедство_настроение"])
+    npc.panic = clamp(npc.panic + 12)
+    npc.stats["переступил"] = 1
+    h.bump("людоедство")
+    if npc.stats.get("раскрыт"):
+        # прятаться больше не от кого
+        h.journal.line(f"{npc.short} {vb(npc.sex, 'ходил')} в кв.{flat.apt}. "
+                       f"Уже не таясь.", 1)
+    else:
+        h.journal.line(h.rng.pick([
+            f"{npc.short} {vb(npc.sex, 'ходил')} в кв.{flat.apt} и {vb(npc.sex, 'вернулся')} "
+            f"с чем-то тяжёлым, завёрнутым в простыню.",
+            f"Ночью на лестнице долго возились. Утром дверь кв.{flat.apt} была приоткрыта.",
+            f"{npc.short} {vb(npc.sex, 'провёл')} полдня в кв.{flat.apt} и не {vb(npc.sex, 'сказал')}, зачем.",
+        ]), 1)
+    h.journal.secret(f"{npc.short} взял тело {flat.body['падеж']} — {take:g} порц.")
+    # мог кто-то увидеть на лестнице
+    for other in h.others(npc):
+        if other.away or other.id == npc.id:
+            continue
+        seen = 0.14 + (0.12 if abs(other.floor - flat.floor) <= 1 else 0.0)
+        if h.rng.chance(seen):
+            conflict.reveal_taboo(h, npc, witness=other)
+            break
+    return None
+
+
 def execute(h, npc, key, target):
     b = h.B
     spent = hours(key, npc, b)
@@ -3159,43 +3199,6 @@ def execute(h, npc, key, target):
         # journal пишет только то, что видно дому; сам поступок — секрет
         h.journal.secret(f"{npc.short} {vb(npc.sex, 'положил')} "
                          f"{RES_ВИН.get(чем, чем)} под дверь кв.{враг.apt}.")
-        said = None
-
-    elif key == "тело":
-        подходят = [f for f in h.пустые_для(npc) if f.body and f.body["порций"] > 0]
-        if not подходят:
-            return
-        flat = min(подходят, key=lambda f: abs(f.floor - npc.floor))
-        social.вошёл_в_квартиру(h, npc, flat)
-        take = min(flat.body["порций"], 4.0)
-        flat.body["порций"] -= take
-        flat.body["тронуто"] = True
-        npc.stock["мясо"] = npc.stock.get("мясо", 0) + take
-        h.stats["принесено_мясо"] = h.stats.get("принесено_мясо", 0) + take
-        npc.mood = clamp(npc.mood - b["людоедство_настроение"])
-        npc.panic = clamp(npc.panic + 12)
-        npc.stats["переступил"] = 1
-        h.bump("людоедство")
-        if npc.stats.get("раскрыт"):
-            # прятаться больше не от кого
-            h.journal.line(f"{npc.short} {vb(npc.sex, 'ходил')} в кв.{flat.apt}. "
-                           f"Уже не таясь.", 1)
-        else:
-            h.journal.line(h.rng.pick([
-                f"{npc.short} {vb(npc.sex, 'ходил')} в кв.{flat.apt} и {vb(npc.sex, 'вернулся')} "
-                f"с чем-то тяжёлым, завёрнутым в простыню.",
-                f"Ночью на лестнице долго возились. Утром дверь кв.{flat.apt} была приоткрыта.",
-                f"{npc.short} {vb(npc.sex, 'провёл')} полдня в кв.{flat.apt} и не {vb(npc.sex, 'сказал')}, зачем.",
-            ]), 1)
-        h.journal.secret(f"{npc.short} взял тело {flat.body['падеж']} — {take:g} порц.")
-        # мог кто-то увидеть на лестнице
-        for other in h.others(npc):
-            if other.away or other.id == npc.id:
-                continue
-            seen = 0.14 + (0.12 if abs(other.floor - flat.floor) <= 1 else 0.0)
-            if h.rng.chance(seen):
-                conflict.reveal_taboo(h, npc, witness=other)
-                break
         said = None
 
     elif key == "вынести":
