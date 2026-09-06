@@ -3229,6 +3229,12 @@ def _исполнить_кража_днём(h, npc, target, spent):
     return None
 
 
+@исполняет("собрание")
+def _исполнить_собрание(h, npc, target, spent):
+    meeting.провести(h, npc)
+    return None
+
+
 def execute(h, npc, key, target):
     b = h.B
     spent = hours(key, npc, b)
@@ -3309,10 +3315,6 @@ def execute(h, npc, key, target):
         said = исполнить(h, npc, target, spent)
         if said is НЕ_СОСТОЯЛОСЬ:
             return
-
-    elif key == "собрание":
-        meeting.провести(h, npc)
-        said = None
 
     _эпилог(h, npc, key, said)
 
