@@ -244,8 +244,8 @@ def готовые_заказы(h):
         заказ = h.mods.get("заказ_" + p.id)
         if not заказ or h.day < заказ["готово"]:
             continue
-        мастер = h.get(заказ["мастер"])
-        if not (мастер and мастер.alive and not мастер.exiled):
+        мастер = h.живой(заказ["мастер"])
+        if not мастер:
             h.mods.pop("заказ_" + p.id, None)
             h.mods.pop("мастер_занят_" + заказ["мастер"], None)
             continue
