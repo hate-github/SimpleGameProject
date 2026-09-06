@@ -2069,6 +2069,17 @@ def _исполнить_банкомат(h, npc, target, spent):
     return said
 
 
+@исполняет("одежда")
+def _исполнить_одежда(h, npc, target, spent):
+    b = h.B
+    spend(h, npc, "материалы", b["одежда_материалы"])
+    npc.одежда += 1
+    новый = npc.мороз_предел(b)
+    said = (f"{npc.short} {vb(npc.sex, 'подбил')} куртку изнутри "
+            f"(теперь держит до {новый:.0f}°)")
+    return said
+
+
 def execute(h, npc, key, target):
     b = h.B
     spent = hours(key, npc, b)
@@ -2149,13 +2160,6 @@ def execute(h, npc, key, target):
         said = исполнить(h, npc, target, spent)
         if said is НЕ_СОСТОЯЛОСЬ:
             return
-
-    elif key == "одежда":
-        spend(h, npc, "материалы", b["одежда_материалы"])
-        npc.одежда += 1
-        новый = npc.мороз_предел(b)
-        said = (f"{npc.short} {vb(npc.sex, 'подбил')} куртку изнутри "
-                f"(теперь держит до {новый:.0f}°)")
 
     elif key == "уйти":
         # один бросок по четырём вещам, и все четыре уже есть в модели.
