@@ -2286,6 +2286,29 @@ for _k in ПОСТРОЙКИ:
 del _k
 
 
+@исполняет("утепление")
+def _исполнить_утепление(h, npc, target, spent):
+    b = h.B
+    said = None
+    spend(h, npc, "материалы", b["утепление_материалы"])
+    вложить(h, npc, b["утепление_материалы"])
+    flat = h.where(npc)
+    дыра = next((в for в in ("окно", "стена", "потолок", "пол")
+                 if flat.дыры.get(в, 0) > 0), None)
+    if дыра is not None:
+        # сначала заделывают то, через что вошли: плёнка на окне не держит
+        # ничего, пока в стене пролом от чужого лома
+        flat.дыры[дыра] -= 1
+        if flat.дыры[дыра] <= 0:
+            del flat.дыры[дыра]
+        h.bump("дыр_заделано")
+        said = f"{npc.short} {vb(npc.sex, 'заделал')} {ДЫРА_ВИН[дыра]}"
+    elif npc.shelter.get("утепление", 0) < b["максимум_утепления"]:
+        npc.shelter["утепление"] = npc.shelter.get("утепление", 0) + 1
+        said = f"{npc.short} {vb(npc.sex, 'утеплил')} окна (уровень {npc.shelter['утепление']})"
+    return said
+
+
 def execute(h, npc, key, target):
     b = h.B
     spent = hours(key, npc, b)
@@ -2418,24 +2441,6 @@ def execute(h, npc, key, target):
         npc.mood = clamp(npc.mood - b["проведать_настроение"])
         npc.bump("нашёл_тело")
         h.bump("тел_найдено")
-
-    elif key == "утепление":
-        spend(h, npc, "материалы", b["утепление_материалы"])
-        вложить(h, npc, b["утепление_материалы"])
-        flat = h.where(npc)
-        дыра = next((в for в in ("окно", "стена", "потолок", "пол")
-                     if flat.дыры.get(в, 0) > 0), None)
-        if дыра is not None:
-            # сначала заделывают то, через что вошли: плёнка на окне не держит
-            # ничего, пока в стене пролом от чужого лома
-            flat.дыры[дыра] -= 1
-            if flat.дыры[дыра] <= 0:
-                del flat.дыры[дыра]
-            h.bump("дыр_заделано")
-            said = f"{npc.short} {vb(npc.sex, 'заделал')} {ДЫРА_ВИН[дыра]}"
-        elif npc.shelter.get("утепление", 0) < b["максимум_утепления"]:
-            npc.shelter["утепление"] = npc.shelter.get("утепление", 0) + 1
-            said = f"{npc.short} {vb(npc.sex, 'утеплил')} окна (уровень {npc.shelter['утепление']})"
 
     elif key == "дверь":
         spend(h, npc, "материалы", b["дверь_материалы"])
