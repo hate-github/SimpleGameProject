@@ -2875,6 +2875,43 @@ def _исполнить_позвать(h, npc, target, spent):
     return said
 
 
+@исполняет("отдать_на_ночь")
+def _исполнить_отдать_на_ночь(h, npc, target, spent):
+    b = h.B
+    t = target
+    р = npc.слабейший_ребёнок()
+    said = None
+    if р is None or р.get("у") or t is None or not (t.alive and not t.exiled):
+        pass
+    elif возьмёт_ребёнка(h, npc, t, р, b) > 0:
+        р["у"] = t.id
+        # и кормит его тот, к кому отнесли: те же 0.6 рта, что он ест дома
+        need = b["ребёнок_рот"]
+        used = spend(h, t, "еда", need)
+        р["сытость"] = clamp(р["сытость"] + b["ребёнок_еда_за_порцию"]
+                             * min(1.0, used / need))
+        # для матери это тяжелее любой просьбы: она отдаёт то, ради чего
+        # живёт. Нормальность падает не потому, что поступок плохой,
+        # а потому, что до такого дошло
+        social.переступил(h, npc, "отдать_на_ночь")
+        social.сблизились(h, npc, t, b["близость_за_ночёвку"])
+        npc.mood = clamp(npc.mood - 6)
+        t.mood = clamp(t.mood + 4)
+        h.bump("ночей_у_чужих")
+        h.journal.line(f"{npc.short} {vb(npc.sex, 'отнёс')} {р['вин']} "
+                       f"к {t.form('dat')} на ночь — там топят.", 2)
+        h.note(f"{р['имя']} ночует у {t.form('gen')}")
+    else:
+        social.отдалились(npc, t.id, b["близость_за_отказ"])
+        npc.ask_record(t.id)["отказ_ночёвка"] = h.day
+        npc.mood = clamp(npc.mood - 8)
+        h.bump("отказов_взять_ребёнка")
+        h.journal.line(f"{npc.short} {vb(npc.sex, 'просил')} {t.form('acc')} "
+                       f"взять {р['вин']} на ночь. {t.short} не "
+                       f"{vb(t.sex, 'взял')}.", 2)
+    return said
+
+
 def execute(h, npc, key, target):
     b = h.B
     spent = hours(key, npc, b)
@@ -3011,39 +3048,6 @@ def execute(h, npc, key, target):
     elif key == "вылазка":
         _outing(h, npc, spent, target)
         said = None  # текст пишет сам _outing
-
-    elif key == "отдать_на_ночь":
-        t = target
-        р = npc.слабейший_ребёнок()
-        said = None
-        if р is None or р.get("у") or t is None or not (t.alive and not t.exiled):
-            pass
-        elif возьмёт_ребёнка(h, npc, t, р, b) > 0:
-            р["у"] = t.id
-            # и кормит его тот, к кому отнесли: те же 0.6 рта, что он ест дома
-            need = b["ребёнок_рот"]
-            used = spend(h, t, "еда", need)
-            р["сытость"] = clamp(р["сытость"] + b["ребёнок_еда_за_порцию"]
-                                 * min(1.0, used / need))
-            # для матери это тяжелее любой просьбы: она отдаёт то, ради чего
-            # живёт. Нормальность падает не потому, что поступок плохой,
-            # а потому, что до такого дошло
-            social.переступил(h, npc, "отдать_на_ночь")
-            social.сблизились(h, npc, t, b["близость_за_ночёвку"])
-            npc.mood = clamp(npc.mood - 6)
-            t.mood = clamp(t.mood + 4)
-            h.bump("ночей_у_чужих")
-            h.journal.line(f"{npc.short} {vb(npc.sex, 'отнёс')} {р['вин']} "
-                           f"к {t.form('dat')} на ночь — там топят.", 2)
-            h.note(f"{р['имя']} ночует у {t.form('gen')}")
-        else:
-            social.отдалились(npc, t.id, b["близость_за_отказ"])
-            npc.ask_record(t.id)["отказ_ночёвка"] = h.day
-            npc.mood = clamp(npc.mood - 8)
-            h.bump("отказов_взять_ребёнка")
-            h.journal.line(f"{npc.short} {vb(npc.sex, 'просил')} {t.form('acc')} "
-                           f"взять {р['вин']} на ночь. {t.short} не "
-                           f"{vb(t.sex, 'взял')}.", 2)
 
     elif key == "кладовая":
         _из_кладовой(h, npc, target, spent)
