@@ -9,7 +9,7 @@ from .util import Rng, clamp, norm, vb
 from .model import House
 from .schema import load_json, validate_data
 from . import (world, social, actions, conflict, report, meeting, замысел, character, chat,
-               assembly, psyche, household, services)
+               assembly, psyche, household, services, discoveries)
 
 
 class Simulation:
@@ -66,11 +66,11 @@ class Simulation:
         self._morning(h)
         self._day(h)
         # то, чего человек не простил за сегодняшний день, — одной строкой
-        # на всех, а не по строке на каждого (social.огласить_непрощённых)
-        social.огласить_непрощённых(h)
+        # на всех, а не по строке на каждого (discoveries.огласить_непрощённых)
+        discoveries.огласить_непрощённых(h)
         chat.daily_chat(h, self.lines)
         self._night(h)
-        social.огласить_непрощённых(h)
+        discoveries.огласить_непрощённых(h)
         self._upkeep(h)
         social.проверить_обещания(h)
         social.alliance_check(h)
@@ -107,7 +107,6 @@ class Simulation:
 
     # ------------------------------------------------------------ утро
     def _morning(self, h):
-        b_n = h.B
         h.новый_день()
         # утро после ночи у чужих: ребёнка забирают. Или не отдают
         conflict.вернуть_детей(h)
@@ -125,76 +124,15 @@ class Simulation:
         # вышел ли вчерашний дежурный: перед домом, а не перед соседом
         meeting.проверить_дежурство(h)
 
-        # сорванный замок в подвале хозяин видит не сразу: он туда не каждый
-        # день ходит. Тем же путём, что и пропажа из квартиры, — наутро
-        for вор_id, kid in h.mods.pop("вскрытые_кладовые", []):
-            к = h.кладовые.get(kid)
-            вор = h.get(вор_id)
-            хозяин = h.хозяин_кладовой(к) if к is not None else None
-            if not (к and вор and хозяин) or not (хозяин.alive and not хозяин.exiled):
-                continue
-            if not h.rng.chance(h.B["кладовая_шанс_заметить"]):
-                continue
-            h.journal.line(f"{хозяин.short} {vb(хозяин.sex, 'спустился')} к своей "
-                           f"кладовке — замок сорван, дверь настежь.", 2)
-            хозяин.mood = clamp(хозяин.mood - 12)
-            хозяин.panic = clamp(хозяин.panic + 14)
-            social.register_incident(h, "вскрытие", None)
-            # кто это был, он знает не всегда: подвал общий, следов на бетоне
-            # не остаётся. Это тот же вопрос, что и с ночной кражей
-            if h.rng.chance(h.B["кладовая_шанс_узнать_вора"]):
-                social.adjust(хозяин, вор.id, trust=-3.0,
-                              hate=h.B["кладовая_вскрытие_ненависть"], aware=20)
-                social.испугался(h, хозяин, вор, h.B["страх_за_насилие"] * 0.5)
-                h.journal.line(f"   {хозяин.short} {vb(хозяин.sex, 'уверен')}, "
-                               f"что это {вор.short}.", 2)
-                h.bump("вскрытий_раскрыто")
-            else:
-                for p in h.alive():
-                    if p.id != хозяин.id:
-                        social.adjust(хозяин, p.id, hate=3.0, aware=5)
+        discoveries.вскрытые_кладовые(h)
 
-        # то, что за ночь оказалось под чужой дверью (house/замысел.py).
-        # Дом видит вещь и хозяина двери, а того, кто её положил, не видит
-        # никто: в этом весь смысл подброса
-        for apt, что in list(h.mods.pop("подброшено", {}).items()):
-            хозяин = h.чей(h.flats[apt])
-            if хозяин is None or not (хозяин.alive and not хозяин.exiled):
-                continue
-            нашли = [w for w in h.alive()
-                     if w.id != хозяин.id and w.id != что["кто"]
-                     and h.rng.chance(b_n["подброс_заметность"]
-                                      * (1.6 if h.floor_gap(w, хозяин) == 0 else 1.0))]
-            if not нашли:
-                continue
-            for w in нашли:
-                social.adjust(w, хозяин.id, hate=b_n["подброс_ненависть"],
-                              trust=-b_n["подброс_доверие"], aware=12)
-                social.испугался(h, w, хозяин, b_n["подброс_страх"])
-                social.отдалились(w, хозяин.id, b_n["близость_за_обиду"])
-            social.register_incident(h, "подброс", None, witnesses=нашли)
-            вещь = "кусок мяса" if что["что"] == "мясо" else "чужая аптечка"
-            один = нашли[0] if len(нашли) == 1 else None
-            h.journal.line(f"У двери кв.{apt} с утра лежал{'' if что['что'] == 'мясо' else 'а'} "
-                           f"{вещь}. {', '.join(w.short for w in нашли)} "
-                           + (f"{vb(один.sex, 'видел')} и {vb(один.sex, 'сделал')}" if один
-                              else "видели и сделали")
-                           + " свои выводы.", 2)
-            h.journal.secret(f"положил{'а' if h.get(что['кто']).sex == 'ж' else ''} это "
-                             f"{h.get(что['кто']).short}.")
-            h.note(f"под дверью кв.{apt} нашли {вещь}")
-            h.bump("подбросов_сработало")
+        discoveries.подброшенное(h)
 
         # не пора ли дому сложить одно к одному про того, кто ведёт свою игру
         for p in h.alive():
             замысел.напор_виден(h, p)
 
-        # обнаружение ночных пропаж (GDD 4.4 — сводка утром)
-        losses = h.mods.pop("пропажи", [])
-        for thief_id, victim_id in losses:
-            victim = h.get(victim_id)
-            if victim and victim.alive and h.rng.chance(h.B["кража_шанс_заметить_пропажу"]):
-                conflict.notice_theft(h, victim, thief_id=thief_id)
+        discoveries.пропажи(h)
 
     # ------------------------------------------------------------ день
     def _day(self, h):
