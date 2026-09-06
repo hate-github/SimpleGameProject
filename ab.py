@@ -20,7 +20,7 @@
 import argparse
 import sys
 
-from house.engine import load_json
+from house.schema import load_json
 from house.runner import many, парное, парное_поле, причины
 
 МЕТРИКИ = [

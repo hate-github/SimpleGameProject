@@ -179,7 +179,7 @@ def где_разошлись(было, стало):
 # ---------------------------------------------------------------- проверки
 
 def проверить_данные(w):
-    from house.engine import load_json, validate_data
+    from house.schema import load_json, validate_data
     try:
         validate_data(load_json("balance.json"), load_json("npcs.json"),
                       load_json("events.json"), load_json("lines.json"))
@@ -191,7 +191,7 @@ def проверить_данные(w):
 
 def проверить_ручки(w):
     """Ручки, которых нет в коде, и ключи, которых нет в файле."""
-    from house.engine import load_json
+    from house.schema import load_json
     B = load_json("balance.json")
     src = ""
     for name in sorted(os.listdir(os.path.join(ROOT, "house"))):
@@ -257,7 +257,7 @@ def проверить_прогоны(w, прогонов, дней):
         w("  предлагаются, но никогда не выбираются: " + ", ".join(невыбранные))
     # текст тоже бывает мёртвым: у реплики есть условие, и оно может
     # не выполниться ни разу за всю жизнь дома
-    from house.engine import load_json
+    from house.schema import load_json
     немые = cov.немые_реплики(load_json("lines.json"))
     if немые:
         w(f"  реплик, которые ни разу не прозвучали: {len(немые)}")
