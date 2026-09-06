@@ -11,7 +11,7 @@ import os
 from .util import Rng, clamp, norm, vb
 from .checks import _разделы as checks_разделы
 from .model import NPC, House, Flat, Кладовая
-from . import world, social, actions, conflict, report, meeting, замысел
+from . import world, social, actions, conflict, report, meeting, замысел, character
 
 DATA = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data")
 
@@ -668,7 +668,7 @@ class Simulation:
         tired = 1.0 - norm(p.rest, 20, 80)
         opts = [(("спать", None), 2.5 + tired * 6.0)]
 
-        gate = actions.norm_gate
+        gate = character.norm_gate
         wealth = p.stock.get("еда", 0) * 0.6 + p.stock.get("топливо", 0) * 0.3
         watch = p.panic / 100.0 * 3.0 + social.recent_incidents(h) * 0.8 + wealth * 0.10 - tired * 6.0
         watch += p.stats.get("обокрали", 0) * 2.0
@@ -693,7 +693,7 @@ class Simulation:
                 continue
             ночью = (conflict.оценка_убийства(h, p, c)
                      + p.пунктик("убить_соседа")
-                     + actions.своя_мерка(p, "убить_соседа", b))
+                     + character.своя_мерка(p, "убить_соседа", b))
             opts.append((("убить_соседа", c), ночью * gate(p, "убить_соседа", b)))
             # и то, что лежит между «съехать по-хорошему» и ножом: собрать
             # хозяйское и уйти к себе в ту же ночь. Только гостю — хозяину
@@ -701,7 +701,7 @@ class Simulation:
             if p.living_with == c.id:
                 обобрать = (conflict.оценка_обобрать(h, p, c)
                             + p.пунктик("обобрать")
-                            + actions.своя_мерка(p, "обобрать", b))
+                            + character.своя_мерка(p, "обобрать", b))
                 opts.append((("обобрать", c), обобрать * gate(p, "обобрать", b)))
 
         for t in h.others(p):
@@ -726,7 +726,7 @@ class Simulation:
             # и то, что в доме уже неспокойно: происшествия, отказы, чужая злость
             score += social.напряжение_дома(h, p) * b["кража_за_напряжение"]
             score += p.вес_черт("кража")
-            score += p.пунктик("кража") + actions.своя_мерка(p, "кража", b)
+            score += p.пунктик("кража") + character.своя_мерка(p, "кража", b)
             score -= (1.0 - conflict.stealth(p)) * 3.5
             score -= t.shelter.get("дверь", 0) * 1.2
             score += p.hate.get(t.id, 0) / 22.0
