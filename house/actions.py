@@ -3160,6 +3160,68 @@ def _исполнить_подбросить(h, npc, target, spent):
     return None
 
 
+@исполняет("отнять")
+def _исполнить_отнять(h, npc, target, spent):
+    b = h.B
+    victim = target
+    npc.bump("отъёмов")
+    h.bump("отъёмов")
+    social.нарушил(h, npc, victim, "не_делать", victim.id)
+    # смысл разбоя в том, что слабый не сопротивляется
+    scared = victim.t01("храбрость") * 3.0 + victim.power() * 1.2 < npc.power() * 2.6
+    if scared or h.rng.chance(0.75):
+        moved = conflict.take_carried(h, victim, npc, limit=b["отъём_максимум"])
+        h.journal.line(f"{npc.short} {vb(npc.sex, 'зажал')} {victim.form('acc')} на лестнице "
+                       f"и {vb(npc.sex, 'забрал')} {conflict._fmt(moved)}.", 2)
+        victim.mood = clamp(victim.mood - 14)
+        victim.panic = clamp(victim.panic + 16)
+    else:
+        h.journal.line(f"{npc.short} {vb(npc.sex, 'полез')} к {victim.form('dat')} на лестнице — "
+                       f"{victim.short} не {vb(victim.sex, 'отдал')}.", 2)
+        won = conflict.scuffle(h, npc, victim, place="на лестнице")
+        if won:
+            conflict.take_carried(h, victim, npc, limit=b["отъём_максимум"] * 0.5)
+    # заодно вытряхивают карманы: ключи стоят дороже банки тушёнки
+    if (not victim.guests and not victim.living_with
+            and conflict.хочу_его_квартиру(h, npc, victim) > 0
+            and h.rng.chance(b["ключи_шанс"])):
+        npc.ключи.add(victim.apt)
+        h.journal.line(f"   Ключи от кв.{victim.apt} {vb(npc.sex, 'забрал')} тоже.", 2)
+        h.bump("ключей_отнято")
+        # на той же связке висит и ключ от погреба. Это самое дорогое,
+        # что можно вытряхнуть из чужого кармана: не банка, а доступ
+        for kid in sorted(victim.ключи_кладовых):
+            к = h.кладовые.get(kid)
+            victim.ключи_кладовых.discard(kid)
+            npc.ключи_кладовых.add(kid)
+            h.bump("ключей_от_кладовых_отнято")
+            if к is not None:
+                h.journal.line(f"   И ключ от {к.имя_род} — с той же связки.", 2)
+    # и нож из кармана. За оружием на лестницу и ходят: у того, кто зажал
+    # соседа, оно обычно уже есть, а у того, кто пришёл за ним, — нет
+    отнял = conflict.отнять_оружие(h, victim, npc, b["оружие_при_отъёме"])
+    if отнял:
+        from .model import ОРУЖИЕ_ВИН
+        h.journal.line(f"   И {ОРУЖИЕ_ВИН.get(отнял, отнял)} — "
+                       f"{vb(npc.sex, 'забрал')} тоже.", 2)
+    social.встретились(h, npc, victim)
+    social.обидели(h, victim, npc, b["обида_за_отъём"])
+    social.adjust(victim, npc.id, trust=-5.0, hate=b["ненависть_за_налёт"] * 0.8, aware=15)
+    social.отдалились(victim, npc.id, b["близость_за_обиду"])
+    social.испугался(h, victim, npc, b["страх_за_насилие"])
+    social.register_incident(h, "отъём", None)
+    # это видят и слышат: разбой в подъезде не спрячешь
+    видели = [w for w in h.others(npc) if w.id != victim.id and h.rng.chance(0.8)]
+    # и видят, с чем он к человеку полез
+    social.увидел_оружие(h, victim, npc, свидетели=видели)
+    for w in видели:
+        social.adjust(w, npc.id, aware=8)
+        w.panic = clamp(w.panic + 7)
+    # разбой каждый мерит своей меркой (GDD 12.1, «Ценности»)
+    social.judge(h, npc, ТЕГИ["отнять"], hate=20 + 12 * 0.5, trust=-2.5, witnesses=видели)
+    return None
+
+
 def execute(h, npc, key, target):
     b = h.B
     spent = hours(key, npc, b)
@@ -3240,65 +3302,6 @@ def execute(h, npc, key, target):
         said = исполнить(h, npc, target, spent)
         if said is НЕ_СОСТОЯЛОСЬ:
             return
-
-    elif key == "отнять":
-        victim = target
-        npc.bump("отъёмов")
-        h.bump("отъёмов")
-        social.нарушил(h, npc, victim, "не_делать", victim.id)
-        # смысл разбоя в том, что слабый не сопротивляется
-        scared = victim.t01("храбрость") * 3.0 + victim.power() * 1.2 < npc.power() * 2.6
-        if scared or h.rng.chance(0.75):
-            moved = conflict.take_carried(h, victim, npc, limit=b["отъём_максимум"])
-            h.journal.line(f"{npc.short} {vb(npc.sex, 'зажал')} {victim.form('acc')} на лестнице "
-                           f"и {vb(npc.sex, 'забрал')} {conflict._fmt(moved)}.", 2)
-            victim.mood = clamp(victim.mood - 14)
-            victim.panic = clamp(victim.panic + 16)
-        else:
-            h.journal.line(f"{npc.short} {vb(npc.sex, 'полез')} к {victim.form('dat')} на лестнице — "
-                           f"{victim.short} не {vb(victim.sex, 'отдал')}.", 2)
-            won = conflict.scuffle(h, npc, victim, place="на лестнице")
-            if won:
-                conflict.take_carried(h, victim, npc, limit=b["отъём_максимум"] * 0.5)
-        # заодно вытряхивают карманы: ключи стоят дороже банки тушёнки
-        if (not victim.guests and not victim.living_with
-                and conflict.хочу_его_квартиру(h, npc, victim) > 0
-                and h.rng.chance(b["ключи_шанс"])):
-            npc.ключи.add(victim.apt)
-            h.journal.line(f"   Ключи от кв.{victim.apt} {vb(npc.sex, 'забрал')} тоже.", 2)
-            h.bump("ключей_отнято")
-            # на той же связке висит и ключ от погреба. Это самое дорогое,
-            # что можно вытряхнуть из чужого кармана: не банка, а доступ
-            for kid in sorted(victim.ключи_кладовых):
-                к = h.кладовые.get(kid)
-                victim.ключи_кладовых.discard(kid)
-                npc.ключи_кладовых.add(kid)
-                h.bump("ключей_от_кладовых_отнято")
-                if к is not None:
-                    h.journal.line(f"   И ключ от {к.имя_род} — с той же связки.", 2)
-        # и нож из кармана. За оружием на лестницу и ходят: у того, кто зажал
-        # соседа, оно обычно уже есть, а у того, кто пришёл за ним, — нет
-        отнял = conflict.отнять_оружие(h, victim, npc, b["оружие_при_отъёме"])
-        if отнял:
-            from .model import ОРУЖИЕ_ВИН
-            h.journal.line(f"   И {ОРУЖИЕ_ВИН.get(отнял, отнял)} — "
-                           f"{vb(npc.sex, 'забрал')} тоже.", 2)
-        social.встретились(h, npc, victim)
-        social.обидели(h, victim, npc, b["обида_за_отъём"])
-        social.adjust(victim, npc.id, trust=-5.0, hate=b["ненависть_за_налёт"] * 0.8, aware=15)
-        social.отдалились(victim, npc.id, b["близость_за_обиду"])
-        social.испугался(h, victim, npc, b["страх_за_насилие"])
-        social.register_incident(h, "отъём", None)
-        # это видят и слышат: разбой в подъезде не спрячешь
-        видели = [w for w in h.others(npc) if w.id != victim.id and h.rng.chance(0.8)]
-        # и видят, с чем он к человеку полез
-        social.увидел_оружие(h, victim, npc, свидетели=видели)
-        for w in видели:
-            social.adjust(w, npc.id, aware=8)
-            w.panic = clamp(w.panic + 7)
-        # разбой каждый мерит своей меркой (GDD 12.1, «Ценности»)
-        social.judge(h, npc, ТЕГИ["отнять"], hate=20 + 12 * 0.5, trust=-2.5, witnesses=видели)
-        said = None
 
     elif key == "собрание":
         meeting.провести(h, npc)
