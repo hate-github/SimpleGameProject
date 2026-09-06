@@ -32,7 +32,7 @@ def invariants(h):
         bad.append(f"день {h.day}: {text}")
 
     for p in h.people.values():
-        живой = p.alive and not p.exiled
+        живой = p.здесь()
 
         for res, v in p.stock.items():
             if v < -1e-9:
@@ -95,7 +95,7 @@ def invariants(h):
             host = h.get(p.living_with)
             if host is None:
                 say(f"{p.short} живёт у несуществующего «{p.living_with}»")
-            elif not host.alive or host.exiled:
+            elif not host.здесь():
                 say(f"{p.short} живёт у выбывшего {host.short} — топить свою печь он уже не может")
             elif p.id not in host.guests:
                 say(f"{p.short} живёт у {host.short}, а тот об этом не знает")
@@ -105,7 +105,7 @@ def invariants(h):
                 say(f"у {p.short} в гостях несуществующий «{gid}»")
             elif g.living_with != p.id:
                 say(f"{p.short} считает гостем {g.short}, а тот живёт у «{g.living_with}»")
-            elif not (g.alive and not g.exiled):
+            elif not g.здесь():
                 say(f"у {p.short} в гостях выбывший {g.short}")
         for other in h.people.values():
             if other.id != p.id and p.id in other.allies and other.id not in p.allies:
@@ -146,7 +146,7 @@ def invariants(h):
         for kid in sorted(p.ключи_кладовых):
             if kid not in h.кладовые:
                 say(f"{p.short}: ключ от несуществующей кладовой «{kid}»")
-        if not (p.alive and not p.exiled) and p.ключи_кладовых:
+        if not p.здесь() and p.ключи_кладовых:
             say(f"{p.short} выбыл, но ключи от кладовых при нём: {sorted(p.ключи_кладовых)}")
 
     return bad
