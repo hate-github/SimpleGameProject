@@ -5,11 +5,11 @@
 Ночь: сон, дежурство, кражи и налёты (GDD 4.3 «Ночью происходит основной риск»).
 Утро: сводка (GDD 4.4) — что заметили соседи, что пропало, кто что слышал.
 """
-from .util import Rng, clamp, norm, vb
+from .util import Rng
 from .model import House
 from .schema import load_json, validate_data
-from . import (world, social, actions, conflict, report, meeting, замысел, character, chat,
-               assembly, psyche, household, services, discoveries, night, physiology, child)
+from . import (world, social, actions, conflict, report, meeting, замысел, chat, assembly,
+               psyche, household, services, discoveries, night, physiology, child)
 
 
 class Simulation:
@@ -77,30 +77,8 @@ class Simulation:
         social.update_groups(h)
         social.daily_decay(h)
         social.spread_panic(h)
-        # чем кончился день у тех, кто его пролежал: одна строка вместо восьми
-        for p in h.alive():
-            if p.stats.get("отдых_день") != h.day:
-                continue
-            раз = p.stats.get("отдых_раз", 0)
-            # и то, отчего этот день прошёл впустую. У матери, которой нечем
-            # помочь ребёнку, «лежала и ничего не делала» — неправда журнала,
-            # а не поведения: делать ей и правда нечего, но она не лежит
-            с_ребёнком = (p.дети
-                          and p.ребёнку_плохо() >= h.B["быт_ребёнку_плохо"])
-            если_ребёнок = f" рядом с {p.dependent_ins or p.dependent_name or 'ребёнком'}"
-            if раз >= h.B["отдых_весь_день"]:
-                h.journal.line(f"{p.short} почти весь день "
-                               + (f"{vb(p.sex, 'просидел')}{если_ребёнок}." if с_ребёнком
-                                  else f"{vb(p.sex, 'пролежал')} и ничего не {vb(p.sex, 'делал')}."), 1)
-            elif раз >= 2:
-                h.journal.line(f"{p.short} подолгу "
-                               + (f"{vb(p.sex, 'сидел')}{если_ребёнок}." if с_ребёнком
-                                  else f"{vb(p.sex, 'лежал')} и ничего не {vb(p.sex, 'делал')}."), 0)
-            else:
-                h.journal.line(f"{p.short} "
-                               + (f"{vb(p.sex, 'сидел')}{если_ребёнок}." if с_ребёнком
-                                  else f"{vb(p.sex, 'лежал')} и ничего не {vb(p.sex, 'делал')}."), 0)
-        self._firsts(h)
+        report.отдых_за_день(h)
+        report.первые_дни(h)
         h.journal.сводка_дня(h)
         h.journal.flush_day(h)
         h.journal.panel(h)
@@ -170,17 +148,3 @@ class Simulation:
         # аукнется не этой ночью, а следующими
         world.вытяжка_мёрзнет(h)
         world.запах_по_стояку(h)
-
-    # ------------------------------------------------------------ диагностика
-    def _firsts(self, h):
-        s = h.stats
-        if s.get("налётов") and "первый_налёт_день" not in s:
-            s["первый_налёт_день"] = h.day
-        if s.get("смертей") and "первая_смерть_день" not in s:
-            s["первая_смерть_день"] = h.day
-        if s.get("союзов_заключено") and "первый_союз_день" not in s:
-            s["первый_союз_день"] = h.day
-        if s.get("краж") and "первая_кража_день" not in s:
-            s["первая_кража_день"] = h.day
-        if (s.get("ушедших") or s.get("возвратов_с_полпути")) and "первая_попытка_уйти" not in s:
-            s["первая_попытка_уйти"] = h.day
