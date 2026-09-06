@@ -2049,6 +2049,26 @@ def _исполнить_топить(h, npc, target, spent):
     return said
 
 
+@исполняет("банкомат")
+def _исполнить_банкомат(h, npc, target, spent):
+    b = h.B
+    said = None
+    касса = h.mods.get("банкомат", 0.0)
+    снял = float(int(min(npc.счёт, b["банкомат_лимит"], касса)))
+    if снял <= 0:
+        said = f"{npc.short} {vb(npc.sex, 'сходил')} к банкомату — пусто"
+    else:
+        npc.счёт -= снял
+        npc.stock["деньги"] = npc.stock.get("деньги", 0.0) + снял
+        h.mods["банкомат"] = касса - снял
+        h.stats["принесено_деньги"] = h.stats.get("принесено_деньги", 0.0) + снял
+        h.stats["снято_наличных"] = h.stats.get("снято_наличных", 0.0) + снял
+        said = (f"{npc.short} {vb(npc.sex, 'отстоял')} очередь к банкомату: "
+                f"{vb(npc.sex, 'снял')} {снял:g}")
+    npc.warmth = clamp(npc.warmth - b["банкомат_холод"])
+    return said
+
+
 def execute(h, npc, key, target):
     b = h.B
     spent = hours(key, npc, b)
@@ -2129,21 +2149,6 @@ def execute(h, npc, key, target):
         said = исполнить(h, npc, target, spent)
         if said is НЕ_СОСТОЯЛОСЬ:
             return
-
-    elif key == "банкомат":
-        касса = h.mods.get("банкомат", 0.0)
-        снял = float(int(min(npc.счёт, b["банкомат_лимит"], касса)))
-        if снял <= 0:
-            said = f"{npc.short} {vb(npc.sex, 'сходил')} к банкомату — пусто"
-        else:
-            npc.счёт -= снял
-            npc.stock["деньги"] = npc.stock.get("деньги", 0.0) + снял
-            h.mods["банкомат"] = касса - снял
-            h.stats["принесено_деньги"] = h.stats.get("принесено_деньги", 0.0) + снял
-            h.stats["снято_наличных"] = h.stats.get("снято_наличных", 0.0) + снял
-            said = (f"{npc.short} {vb(npc.sex, 'отстоял')} очередь к банкомату: "
-                    f"{vb(npc.sex, 'снял')} {снял:g}")
-        npc.warmth = clamp(npc.warmth - b["банкомат_холод"])
 
     elif key == "одежда":
         spend(h, npc, "материалы", b["одежда_материалы"])
