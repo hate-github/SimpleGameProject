@@ -1880,8 +1880,8 @@ def засада_ждёт(h, npc, key, target):
 
 # Ключ действия -> исполнитель(h, npc, target, spent). Возвращает текст главной
 # строки хода (или None), дальше — общий для всех эпилог: журнал, шум, суд,
-# нормальность. Ветки execute переезжают сюда по одной (план, задача 2);
-# пока ветка не переехала, её исполняет сам execute
+# нормальность. Одна запись на действие; полноту таблицы против COST
+# проверяет check.py через Coverage.dead_branches, а с задачи 3 — сам catalog
 ИСПОЛНИТЕЛИ = {}
 
 # Исполнитель возвращает это, когда дело не состоялось и дому нечего слышать:
@@ -3290,7 +3290,6 @@ def execute(h, npc, key, target):
     mark(h, npc, key, target)
     npc.stats["часы_работы"] = npc.stats.get("часы_работы", 0) + (spent if key in ("утепление", "дверь", "буржуйка", "разбор", "вылазка") else 0)
     lvl, kind = COST[key]
-    said = None
 
     # у работы есть шанс провала (GDD 7: «провал — потеря материалов, травма руки»)
     if key in СТРОЙКА and not h.rng.chance(npc.success(b)):
@@ -3310,12 +3309,9 @@ def execute(h, npc, key, target):
             social.emit(h, npc, lvl, kind, night=False)
         return
 
-    исполнить = ИСПОЛНИТЕЛИ.get(key)
-    if исполнить is not None:
-        said = исполнить(h, npc, target, spent)
-        if said is НЕ_СОСТОЯЛОСЬ:
-            return
-
+    said = ИСПОЛНИТЕЛИ[key](h, npc, target, spent)
+    if said is НЕ_СОСТОЯЛОСЬ:
+        return
     _эпилог(h, npc, key, said)
 
 
