@@ -124,10 +124,9 @@ def износ(h, p, infra):
         p.panic += (floor - p.panic) * b["паника_дно_притяжение"]
 
     if p.health <= 0:
-        p.cause = причина_смерти(p)
-        p.died_day = h.day
-        h.journal.line(f"† {p.name} {'умерла' if p.sex == 'ж' else 'умер'}. {p.cause}.", 2)
-        conflict.on_death(h, p)
+        причина = причина_смерти(p)
+        conflict.умер(h, p, причина,
+                      строка=f"† {p.name} {'умерла' if p.sex == 'ж' else 'умер'}. {причина}.")
 
 
 def причина_смерти(p):
