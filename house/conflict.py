@@ -173,6 +173,22 @@ def take_household(h, victim, taker, greed, limit=None):
     return moved
 
 
+def вынести_на_всех(h, victim, crew, доля):
+    """Пришедшие делят долю поровну и выносят квартиру каждый в свой карман.
+
+    Одно место на откуп, побег через окно, сдачу и разграбление после драки:
+    в run_siege этот цикл стоял пять раз подряд, и забыть слить moved в одном
+    из выходов было проще простого. Возвращает всё вынесенное одной кучей —
+    для строки журнала.
+    """
+    moved = {}
+    for p in crew:
+        m = take_household(h, victim, p, greed=доля / max(1, len(crew)))
+        for k, v in m.items():
+            moved[k] = moved.get(k, 0) + v
+    return moved
+
+
 def take_carried(h, victim, taker, limit):
     """Отнять то, что человек несёт в руках, а не весь его шкаф.
 
@@ -1740,11 +1756,7 @@ def run_siege(h, leader, target):
     готов_платить = clamp(0.45 / aggr(h) * (1.0 + страшно * b["страх_вес_откупа"]), 0.0, 0.95)
     if (pay_ok and (fear > 0.5 or target.t01("храбрость") < 0.45 or страшно > 0.35)
             and h.rng.chance(готов_платить)):
-        moved = {}
-        for p in crew:
-            m = take_household(h, target, p, greed=b["откуп_доля"] / len(crew))
-            for k, v in m.items():
-                moved[k] = moved.get(k, 0) + v
+        moved = вынести_на_всех(h, target, crew, b["откуп_доля"])
         h.journal.line(f"{target.short} {'откупилась: отдала' if target.sex == 'ж' else 'откупился: отдал'} {_fmt(moved)}. Ушли.", 2)
         for p in crew:
             social.adjust(p, target.id, hate=-12)
@@ -1807,11 +1819,7 @@ def run_siege(h, leader, target):
         if len(defenders) > 1:
             уйти *= 0.4                    # при своих не бегут
         if h.rng.chance(clamp(уйти, 0.0, 0.9)):
-            moved = {}
-            for p in crew:
-                m = take_household(h, target, p, greed=b["налёт_доля_пустой_квартиры"] / len(crew))
-                for k, v in m.items():
-                    moved[k] = moved.get(k, 0) + v
+            moved = вынести_на_всех(h, target, crew, b["налёт_доля_пустой_квартиры"])
             target.warmth = clamp(target.warmth - 25)
             h.journal.line(f"{target.short} {vb(target.sex, 'ушёл')} через окно на пожарную лестницу, "
                            f"пока били дверь. Квартиру вынесли: {_fmt(moved)}.", 2)
@@ -1870,11 +1878,7 @@ def run_siege(h, leader, target):
                  or target.t01("храбрость") < b["сдаться_трусость"])
 
     if surrender:
-        moved = {}
-        for p in crew:
-            m = take_household(h, target, p, greed=0.75 / len(crew))
-            for k, v in m.items():
-                moved[k] = moved.get(k, 0) + v
+        moved = вынести_на_всех(h, target, crew, 0.75)
         # выносят и то, чем он мог бы ответить в другой раз: топор из угла,
         # ружьё над дверью. Отсюда и берётся то, чего в модели не было вовсе, —
         # осада, после которой человек беззащитен не на вечер, а до конца метели
@@ -1949,11 +1953,7 @@ def run_siege(h, leader, target):
         h.bump("исход_занял")
         return "занял"
     if res == "a":
-        moved = {}
-        for p in [c for c in crew if c.alive]:
-            m = take_household(h, target, p, greed=0.85 / max(1, len([c for c in crew if c.alive])))
-            for k, v in m.items():
-                moved[k] = moved.get(k, 0) + v
+        moved = вынести_на_всех(h, target, [c for c in crew if c.alive], 0.85)
         if moved:
             h.journal.line(f"Квартиру кв.{target.apt} обобрали: {_fmt(moved)}.", 2)
             for p in crew:
