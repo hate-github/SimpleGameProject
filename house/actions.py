@@ -1979,6 +1979,17 @@ def _исполнить_поесть(h, npc, target, spent):
     return said
 
 
+@исполняет("поесть_мясо")
+def _исполнить_поесть_мясо(h, npc, target, spent):
+    b = h.B
+    need = npc.eaters()
+    used = spend(h, npc, "мясо", need)
+    npc.satiety = clamp(npc.satiety + порция(h, npc, b) * (used / need))
+    npc.mood = clamp(npc.mood - b["людоедство_настроение_за_раз"])
+    social.smell(h, npc, hot=True)
+    return None
+
+
 def execute(h, npc, key, target):
     b = h.B
     spent = hours(key, npc, b)
@@ -2059,14 +2070,6 @@ def execute(h, npc, key, target):
         said = исполнить(h, npc, target, spent)
         if said is НЕ_СОСТОЯЛОСЬ:
             return
-
-    elif key == "поесть_мясо":
-        need = npc.eaters()
-        used = spend(h, npc, "мясо", need)
-        npc.satiety = clamp(npc.satiety + порция(h, npc, b) * (used / need))
-        npc.mood = clamp(npc.mood - b["людоедство_настроение_за_раз"])
-        social.smell(h, npc, hot=True)
-        said = None
 
     elif key == "попить":
         if h.water_on:
