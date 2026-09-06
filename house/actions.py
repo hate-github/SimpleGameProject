@@ -3081,6 +3081,33 @@ def _исполнить_подкараулить(h, npc, target, spent):
     return None
 
 
+@исполняет("лестница")
+def _исполнить_лестница(h, npc, target, spent):
+    b = h.B
+    said = None
+    h.mods.setdefault("смотрел_лестницу", {})[npc.id] = h.day
+    караулит = None
+    for жертва_id, кто_id in h.mods.get("караулят", {}).items():
+        if жертва_id == npc.id:
+            караулит = h.get(кто_id)
+            break
+    if караулит is not None and караулит.alive and not караулит.exiled:
+        # увидел. Сегодня он никуда не пойдёт — и это уже победа того,
+        # кто сидит: чтобы отнять у человека день, необязательно его бить
+        h.mods.setdefault("не_выходить", {})[npc.id] = h.day
+        social.испугался(h, npc, караулит, b["страх_за_насилие"])
+        social.adjust(npc, караулит.id, hate=b["ненависть_за_налёт"] * 0.5, aware=20)
+        h.bump("засад_замечено")
+        h.journal.line(f"{npc.short} {vb(npc.sex, 'приоткрыл')} дверь и "
+                       f"{vb(npc.sex, 'постоял')}, слушая. На площадке кто-то был. "
+                       f"{vb(npc.sex, 'Закрыл')} обратно.", 2)
+        said = None
+    else:
+        said = (f"{npc.short} {vb(npc.sex, 'постоял')} у двери, слушая площадку, "
+                f"прежде чем выйти")
+    return said
+
+
 def execute(h, npc, key, target):
     b = h.B
     spent = hours(key, npc, b)
@@ -3161,28 +3188,6 @@ def execute(h, npc, key, target):
         said = исполнить(h, npc, target, spent)
         if said is НЕ_СОСТОЯЛОСЬ:
             return
-
-    elif key == "лестница":
-        h.mods.setdefault("смотрел_лестницу", {})[npc.id] = h.day
-        караулит = None
-        for жертва_id, кто_id in h.mods.get("караулят", {}).items():
-            if жертва_id == npc.id:
-                караулит = h.get(кто_id)
-                break
-        if караулит is not None and караулит.alive and not караулит.exiled:
-            # увидел. Сегодня он никуда не пойдёт — и это уже победа того,
-            # кто сидит: чтобы отнять у человека день, необязательно его бить
-            h.mods.setdefault("не_выходить", {})[npc.id] = h.day
-            social.испугался(h, npc, караулит, b["страх_за_насилие"])
-            social.adjust(npc, караулит.id, hate=b["ненависть_за_налёт"] * 0.5, aware=20)
-            h.bump("засад_замечено")
-            h.journal.line(f"{npc.short} {vb(npc.sex, 'приоткрыл')} дверь и "
-                           f"{vb(npc.sex, 'постоял')}, слушая. На площадке кто-то был. "
-                           f"{vb(npc.sex, 'Закрыл')} обратно.", 2)
-            said = None
-        else:
-            said = (f"{npc.short} {vb(npc.sex, 'постоял')} у двери, слушая площадку, "
-                    f"прежде чем выйти")
 
     elif key == "шепнуть":
         # то же вранье о человеке, что и в разговоре, но не от злости,
