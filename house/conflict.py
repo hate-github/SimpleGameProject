@@ -1080,10 +1080,6 @@ def убить_соседа(h, killer, victim):
         if v:
             killer.stock[res] = killer.stock.get(res, 0.0) + v
             victim.stock[res] = 0.0
-    victim.health = 0.0
-    victim.alive = False
-    victim.cause = vb(victim.sex, "убит") + " ночью, в собственной квартире"
-    victim.died_day = h.day
     killer.bump("убийств")
     h.bump("убийств")
     h.bump("убийств_соседа")
@@ -1093,7 +1089,8 @@ def убить_соседа(h, killer, victim):
         # он остаётся здесь: ради этих стен всё и было
         killer.apt, killer.floor = victim.apt, victim.floor
     h.journal.secret(f"ночью {killer.short} убил {victim.form('gen')} и забрал всё")
-    on_death(h, victim)          # без killer: дом ещё не знает, кто это
+    # без killer: дом ещё не знает, кто это
+    умер(h, victim, vb(victim.sex, "убит") + " ночью, в собственной квартире")
     if гость_был:
         killer.living_with = None
     h.note(f"{victim.short}: {victim.cause}")
