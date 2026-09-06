@@ -3038,6 +3038,26 @@ def _исполнить_тело(h, npc, target, spent):
     return None
 
 
+@исполняет("вынести")
+def _исполнить_вынести(h, npc, target, spent):
+    подходят = [f for f in h.пустые_для(npc) if f.body and f.body["порций"] > 0]
+    if not подходят:
+        return НЕ_СОСТОЯЛОСЬ
+    flat = min(подходят, key=lambda f: abs(f.floor - npc.floor))
+    social.вошёл_в_квартиру(h, npc, flat)
+    name = flat.body.get("вин") or flat.body["кто"]
+    flat.body["порций"] = 0.0
+    npc.warmth = clamp(npc.warmth - 10)
+    npc.mood = clamp(npc.mood - 6)
+    for p in h.alive():
+        social.adjust(p, npc.id, trust=1.0)
+        p.mood = clamp(p.mood + 3)
+    h.bump("тел_вынесено")
+    h.journal.line(f"{npc.short} {vb(npc.sex, 'вынес')} {name} во двор и {vb(npc.sex, 'завалил')} снегом. "
+                   f"Больше в той квартире брать нечего.", 2)
+    return None
+
+
 def execute(h, npc, key, target):
     b = h.B
     spent = hours(key, npc, b)
@@ -3199,24 +3219,6 @@ def execute(h, npc, key, target):
         # journal пишет только то, что видно дому; сам поступок — секрет
         h.journal.secret(f"{npc.short} {vb(npc.sex, 'положил')} "
                          f"{RES_ВИН.get(чем, чем)} под дверь кв.{враг.apt}.")
-        said = None
-
-    elif key == "вынести":
-        подходят = [f for f in h.пустые_для(npc) if f.body and f.body["порций"] > 0]
-        if not подходят:
-            return
-        flat = min(подходят, key=lambda f: abs(f.floor - npc.floor))
-        social.вошёл_в_квартиру(h, npc, flat)
-        name = flat.body.get("вин") or flat.body["кто"]
-        flat.body["порций"] = 0.0
-        npc.warmth = clamp(npc.warmth - 10)
-        npc.mood = clamp(npc.mood - 6)
-        for p in h.alive():
-            social.adjust(p, npc.id, trust=1.0)
-            p.mood = clamp(p.mood + 3)
-        h.bump("тел_вынесено")
-        h.journal.line(f"{npc.short} {vb(npc.sex, 'вынес')} {name} во двор и {vb(npc.sex, 'завалил')} снегом. "
-                       f"Больше в той квартире брать нечего.", 2)
         said = None
 
     elif key == "отнять":
