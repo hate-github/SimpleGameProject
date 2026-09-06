@@ -164,23 +164,14 @@ def take_from(h, victim, taker, greed, limit=None):
 
 
 def household(h, person):
-    """Кто физически живёт в этой квартире: хозяин и его гости.
-
-    К одной двери приходят за всем, что за ней лежит. Пока налёт брал только
-    у хозяина, переезд к соседу делал человека неприкосновенным.
-    """
-    люди = [person]
-    for gid in sorted(person.guests):
-        g = h.get(gid)
-        if g and g.alive and not g.exiled:
-            люди.append(g)
-    return люди
+    """Хозяин и его гости — см. `House.household`."""
+    return h.household(person)
 
 
 def take_household(h, victim, taker, greed, limit=None):
     """Вынести квартиру целиком — со всем, что принесли в неё жильцы."""
     moved = {}
-    for кто in household(h, victim):
+    for кто in h.household(victim):
         m = take_from(h, кто, taker, greed, limit)
         for k, v in m.items():
             moved[k] = moved.get(k, 0.0) + v
@@ -237,7 +228,7 @@ def theft_chance(h, thief, target, известно=True):
     # в квартиру, которую уже вскрыли осадой, входят через ту же дыру: пролом
     # в стене отменяет любой засов, и это самая долгая цена налёта
     p += b["дыра_кража"] * h.where(target).дыр()
-    if target.away and not [g for g in household(h, target)[1:] if not g.away]:
+    if target.away and not [g for g in h.household(target)[1:] if not g.away]:
         p += b["кража_хозяин_ушёл"]      # ушёл, и дома никого не оставил
     if известно:
         if target.tonight == "дежурить":
@@ -815,7 +806,7 @@ def свидетели_смерти(h, dead, killer=None):
     """
     кто = {killer.id} if killer is not None else set()
     for p in h.alive():
-        if p.id != dead.id and social.под_одной_крышей(h, p, dead):
+        if p.id != dead.id and h.под_одной_крышей(p, dead):
             кто.add(p.id)
     return кто
 
@@ -1341,7 +1332,7 @@ def consider_raid(h, npc):
     best = None
     for t in h.others(npc):
         # к тому, с кем живёшь под одной крышей, не идут с ломом
-        if social.под_одной_крышей(h, npc, t):
+        if h.под_одной_крышей(npc, t):
             continue
         # и к двери переехавшего тоже: за ней пусто, а сам он у хозяина —
         # если нужны его запасы, идти надо к хозяину, он в этом же списке
@@ -1369,13 +1360,13 @@ def consider_raid(h, npc):
         # по определению (см. defenders_of). Пока страх считался по одному
         # хозяину, «вместе безопаснее» было правдой только в момент драки,
         # а в голове у налётчика этого не было — и съезжаться не защищало
-        fear = sum(p.power() for p in household(h, t)) * (1.4 - npc.t01("храбрость")) * 1.5
+        fear = sum(p.power() for p in h.household(t)) * (1.4 - npc.t01("храбрость")) * 1.5
         fear /= 1.0 + 0.45 * (crew_size - 1)
         fear += t.shelter.get("дверь", 0) * 0.8
         # и то, кого он за этой дверью боится. Не «сильный», а именно
         # страшный: тот, кто на его глазах стрелял, зарубил соседа или
         # вышел на площадку со стволом. Сила забывается, страх помнится
-        fear += max(npc.боится(p.id) for p in household(h, t)) * b["страх_вес_налёта"]
+        fear += max(npc.боится(p.id) for p in h.household(t)) * b["страх_вес_налёта"]
         from .model import FIREARMS
         if t.weapon in FIREARMS and npc.aware.get(t.id, 0) > 30:
             fear += 2.2
@@ -1383,7 +1374,7 @@ def consider_raid(h, npc):
         # мира — по правде мира у осаждающего нет способа узнать, сколько
         # у соседа здоровья, — а лицо, которое он видел на площадке
         # (social.разглядел). Тот, кто держится прямо, этим и защищается
-        слабость = max((npc.плох(p.id) for p in household(h, t)), default=0.0)
+        слабость = max((npc.плох(p.id) for p in h.household(t)), default=0.0)
         fear -= слабость * b["добить_за_слабость"]
         # к тому, кого не простил, идут и через страх: это не расчёт, а счёт
         if t.id in npc.не_прощу:

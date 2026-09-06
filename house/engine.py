@@ -617,7 +617,7 @@ class Simulation:
             if p.tonight != "убить_соседа" or not p.alive or p.exiled:
                 continue
             c = targets.get(p.id)
-            if c and c.alive and not c.exiled and social.под_одной_крышей(h, p, c):
+            if c and c.alive and not c.exiled and h.под_одной_крышей(p, c):
                 conflict.убить_соседа(h, p, c)
 
         # обобрать и уйти. После ножа и до краж: тот, кто на это решился,
@@ -709,7 +709,7 @@ class Simulation:
                 continue
             if t.living_with:
                 continue           # его нет дома, он у соседа
-            if social.под_одной_крышей(h, p, t):
+            if h.под_одной_крышей(p, t):
                 continue           # это тот, у чьей печки я сплю
             # сытый и незлой человек ночью не лезет к соседу
             A = conflict.aggr(h)
