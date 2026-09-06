@@ -2466,6 +2466,67 @@ def _исполнить_попросить(h, npc, target, spent):
     return _ask(h, npc, target)
 
 
+@исполняет("поделиться")
+def _исполнить_поделиться(h, npc, target, spent):
+    b = h.B
+    n = 1.0
+    # чем помочь, решено тем же кодом, что и оценивал помощь: пока помощь
+    # была только едой, замерзающему по своей воле не носили дров ни разу
+    чем, _из = чем_поделиться(h, npc, target, b)
+    social.встретились(h, npc, target)
+    if чем is not None and npc.stock.get(чем, 0) >= n:
+        npc.stock[чем] -= n
+        target.stock[чем] = target.stock.get(чем, 0) + n
+        # банка от своего и банка от чужого — не одно и то же: первая
+        # подтверждает то, что уже есть, вторая только начинает
+        social.adjust(target, npc.id,
+                      trust=b["доверие_за_помощь"] * 1.3
+                      * (b["доверие_слов_от_чужого"]
+                         + (1.0 - b["доверие_слов_от_чужого"]) * target.свой(npc.id) * 2.0),
+                      hate=-10)
+        social.adjust(npc, target.id, trust=0.6)
+        npc.mood = clamp(npc.mood + b["настроение_от_помощи"])
+        target.mood = clamp(target.mood + 8)
+        target.favors[npc.id] = target.favors.get(npc.id, 0) + 1
+        target.ask_record(npc.id)["я_дал"] = h.day
+        target.ask_record(npc.id)["должен"] = target.ask_record(npc.id).get("должен", 0.0) + 1.0
+        # долг помнит, чем брали: взял дрова — верни дрова, а не банку
+        target.ask_record(npc.id)["должен_чем"] = чем
+        npc.дал[target.id] = npc.дал.get(target.id, 0.0) + 1.0
+        npc.ask_record(target.id)["дали"] += 0.5   # он мне не отказывал, я сам принёс
+        сказать_сразу(h, "поделиться", f"{npc.short} {'сама занесла' if npc.sex == 'ж' else 'сам занёс'} "
+                f"{RES_ВИН.get(чем, чем)} {target.form('dat')}")
+        # принёсший знает, что теперь у соседа банкой больше; и лестница
+        # не пустая — соседи видят, к чьей двери сегодня ходили. Пока
+        # этого не было, четверо в один день несли еду одному человеку,
+        # и каждый следующий по-прежнему считал, что тот голодает
+        social.note_signal(npc, target.id, чем,
+                           npc.believed(target.id, чем) + n, 0.8)
+        заметили = []
+        for сосед in h.others(npc):
+            if сосед.id == target.id or сосед.away:
+                continue
+            if h.rng.chance(b["заметность_помощи"]):
+                заметили.append(сосед)
+                social.adjust(сосед, target.id, aware=3)
+                social.note_signal(сосед, target.id, чем,
+                                   сосед.believed(target.id, чем) + n, 0.5)
+        # судят те, кто это видел, а не весь дом. Пока «щедрость» весом 0.35
+        # доставалась всем пятерым безусловно, помощь работала не на того,
+        # кому помогли, а на общую репутацию помогающего: дом добавлял
+        # столько же доверия, сколько получал сам одаренный, — и Лида
+        # становилась общей опорой, к которой ходят все и ни к кому больше
+        social.judge(h, npc, "щедрость", trust=0.35,
+                     witnesses=заметили + [target], участники=[target])
+        social.сблизились(h, npc, target, b["близость_за_помощь"])
+        # безвозмездная банка — единственное, чем гасится обида. Ни разговор,
+        # ни сделка её не трогают: словами и меной это не улаживается
+        social.загладил(h, npc, target, b["обида_за_помощь"])
+        social.проверить_наговор(h, npc, target)
+        h.bump("поделились_" + чем)
+    return None
+
+
 def execute(h, npc, key, target):
     b = h.B
     spent = hours(key, npc, b)
@@ -2763,63 +2824,6 @@ def execute(h, npc, key, target):
         h.journal.secret(f"{npc.short} {vb(npc.sex, 'положил')} "
                          f"{RES_ВИН.get(чем, чем)} под дверь кв.{враг.apt}.")
         said = None
-
-    elif key == "поделиться":
-        n = 1.0
-        # чем помочь, решено тем же кодом, что и оценивал помощь: пока помощь
-        # была только едой, замерзающему по своей воле не носили дров ни разу
-        чем, _из = чем_поделиться(h, npc, target, b)
-        social.встретились(h, npc, target)
-        if чем is not None and npc.stock.get(чем, 0) >= n:
-            npc.stock[чем] -= n
-            target.stock[чем] = target.stock.get(чем, 0) + n
-            # банка от своего и банка от чужого — не одно и то же: первая
-            # подтверждает то, что уже есть, вторая только начинает
-            social.adjust(target, npc.id,
-                          trust=b["доверие_за_помощь"] * 1.3
-                          * (b["доверие_слов_от_чужого"]
-                             + (1.0 - b["доверие_слов_от_чужого"]) * target.свой(npc.id) * 2.0),
-                          hate=-10)
-            social.adjust(npc, target.id, trust=0.6)
-            npc.mood = clamp(npc.mood + b["настроение_от_помощи"])
-            target.mood = clamp(target.mood + 8)
-            target.favors[npc.id] = target.favors.get(npc.id, 0) + 1
-            target.ask_record(npc.id)["я_дал"] = h.day
-            target.ask_record(npc.id)["должен"] = target.ask_record(npc.id).get("должен", 0.0) + 1.0
-            # долг помнит, чем брали: взял дрова — верни дрова, а не банку
-            target.ask_record(npc.id)["должен_чем"] = чем
-            npc.дал[target.id] = npc.дал.get(target.id, 0.0) + 1.0
-            npc.ask_record(target.id)["дали"] += 0.5   # он мне не отказывал, я сам принёс
-            сказать_сразу(h, key, f"{npc.short} {'сама занесла' if npc.sex == 'ж' else 'сам занёс'} "
-                    f"{RES_ВИН.get(чем, чем)} {target.form('dat')}")
-            # принёсший знает, что теперь у соседа банкой больше; и лестница
-            # не пустая — соседи видят, к чьей двери сегодня ходили. Пока
-            # этого не было, четверо в один день несли еду одному человеку,
-            # и каждый следующий по-прежнему считал, что тот голодает
-            social.note_signal(npc, target.id, чем,
-                               npc.believed(target.id, чем) + n, 0.8)
-            заметили = []
-            for сосед in h.others(npc):
-                if сосед.id == target.id or сосед.away:
-                    continue
-                if h.rng.chance(b["заметность_помощи"]):
-                    заметили.append(сосед)
-                    social.adjust(сосед, target.id, aware=3)
-                    social.note_signal(сосед, target.id, чем,
-                                       сосед.believed(target.id, чем) + n, 0.5)
-            # судят те, кто это видел, а не весь дом. Пока «щедрость» весом 0.35
-            # доставалась всем пятерым безусловно, помощь работала не на того,
-            # кому помогли, а на общую репутацию помогающего: дом добавлял
-            # столько же доверия, сколько получал сам одаренный, — и Лида
-            # становилась общей опорой, к которой ходят все и ни к кому больше
-            social.judge(h, npc, "щедрость", trust=0.35,
-                         witnesses=заметили + [target], участники=[target])
-            social.сблизились(h, npc, target, b["близость_за_помощь"])
-            # безвозмездная банка — единственное, чем гасится обида. Ни разговор,
-            # ни сделка её не трогают: словами и меной это не улаживается
-            social.загладил(h, npc, target, b["обида_за_помощь"])
-            social.проверить_наговор(h, npc, target)
-            h.bump("поделились_" + чем)
 
     elif key == "вернуть":
         social.встретились(h, npc, target)
