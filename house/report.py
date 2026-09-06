@@ -75,7 +75,7 @@ class Journal:
         сводка = h.mods.pop("сводка", {})
         for pid in sorted(сводка):
             p = h.people.get(pid)
-            if not p or not p.alive or p.exiled:
+            if not p or not p.здесь():
                 continue
             строки = сводка[pid][:3]
             if строки:
@@ -149,10 +149,10 @@ class Journal:
 
 def final_report(h, days, seed, w=None):
     w = w or h.journal.w
-    alive = [p for p in h.people.values() if p.alive and not p.exiled]
+    alive = [p for p in h.people.values() if p.здесь()]
     ушли = [p for p in h.people.values() if p.ушёл]
     dead = [p for p in h.people.values()
-            if (not p.alive or p.exiled) and not p.ушёл]
+            if not p.здесь() and not p.ушёл]
     w("")
     w("═" * 78)
     w(f"ИТОГ. {days} дней, зерно {seed}")
@@ -286,7 +286,7 @@ def final_report(h, days, seed, w=None):
             другой = h.get(кому)
             if другой is None:
                 continue
-            жив = "" if (p_.alive and not p_.exiled) else " (не дожил)"
+            жив = "" if (p_.здесь()) else " (не дожил)"
             счета.append(f"  {p_.short} → {другой.short}{жив}")
     if счета:
         w("")
