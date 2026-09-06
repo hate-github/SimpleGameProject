@@ -2722,6 +2722,34 @@ def _исполнить_переехать(h, npc, target, spent):
     return None
 
 
+@исполняет("съехать")
+def _исполнить_съехать(h, npc, target, spent):
+    b = h.B
+    host = target
+    # своё он забирает — но спросив: поленница уже общая и стоит
+    # в хозяйской прихожей. Уходящего по-хорошему держат редко.
+    # А сверх своего хозяин даёт на дорогу, если не в ссоре
+    дров = (забрать_своё(h, npc, host, b["выгнать_доля_дров"])
+            if отпустят_со_своим(h, npc, host, b, выгоняют=False) else 0.0)
+    if host.hate.get(npc.id, 0.0) < 40:
+        сверх = min(b["выгнать_дров_на_дорогу"], host.stock.get("топливо", 0.0))
+        host.stock["топливо"] = host.stock.get("топливо", 0.0) - сверх
+        npc.stock["топливо"] = npc.stock.get("топливо", 0.0) + сверх
+        дров += сверх
+    npc.living_with = None
+    host.guests.discard(npc.id)
+    conflict.occupy_flat(h, npc)
+    npc.warmth = clamp(npc.warmth - 8)
+    social.adjust(npc, host.id, trust=-0.5)
+    social.adjust(host, npc.id, trust=-0.5)
+    h.bump("съездов")
+    h.journal.line(f"{npc.short} {vb(npc.sex, 'вернулся')} к себе в кв.{npc.apt}"
+                   + (f" — {host.short} {vb(host.sex, 'дал')} дров на первое время." if дров
+                      else ". Ушёл молча."), 2)
+    h.note(f"{npc.short} {vb(npc.sex, 'съехал')} от {host.form('gen')}")
+    return None
+
+
 def execute(h, npc, key, target):
     b = h.B
     spent = hours(key, npc, b)
@@ -3132,31 +3160,6 @@ def execute(h, npc, key, target):
             w.panic = clamp(w.panic + 7)
         # разбой каждый мерит своей меркой (GDD 12.1, «Ценности»)
         social.judge(h, npc, ТЕГИ["отнять"], hate=20 + 12 * 0.5, trust=-2.5, witnesses=видели)
-        said = None
-
-    elif key == "съехать":
-        host = target
-        # своё он забирает — но спросив: поленница уже общая и стоит
-        # в хозяйской прихожей. Уходящего по-хорошему держат редко.
-        # А сверх своего хозяин даёт на дорогу, если не в ссоре
-        дров = (забрать_своё(h, npc, host, b["выгнать_доля_дров"])
-                if отпустят_со_своим(h, npc, host, b, выгоняют=False) else 0.0)
-        if host.hate.get(npc.id, 0.0) < 40:
-            сверх = min(b["выгнать_дров_на_дорогу"], host.stock.get("топливо", 0.0))
-            host.stock["топливо"] = host.stock.get("топливо", 0.0) - сверх
-            npc.stock["топливо"] = npc.stock.get("топливо", 0.0) + сверх
-            дров += сверх
-        npc.living_with = None
-        host.guests.discard(npc.id)
-        conflict.occupy_flat(h, npc)
-        npc.warmth = clamp(npc.warmth - 8)
-        social.adjust(npc, host.id, trust=-0.5)
-        social.adjust(host, npc.id, trust=-0.5)
-        h.bump("съездов")
-        h.journal.line(f"{npc.short} {vb(npc.sex, 'вернулся')} к себе в кв.{npc.apt}"
-                       + (f" — {host.short} {vb(host.sex, 'дал')} дров на первое время." if дров
-                          else ". Ушёл молча."), 2)
-        h.note(f"{npc.short} {vb(npc.sex, 'съехал')} от {host.form('gen')}")
         said = None
 
     elif key == "выгнать":
