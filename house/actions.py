@@ -3058,6 +3058,16 @@ def _исполнить_вынести(h, npc, target, spent):
     return None
 
 
+# --- интрига и прочее ---
+
+@исполняет("наблюдение")
+def _исполнить_наблюдение(h, npc, target, spent):
+    social.observe(h, npc, target)
+    said = (f"{npc.short} {vb(npc.sex, 'присматривался')} "
+            f"к кв.{h.хозяин_жилья(target).apt}")
+    return said
+
+
 def execute(h, npc, key, target):
     b = h.B
     spent = hours(key, npc, b)
@@ -3138,11 +3148,6 @@ def execute(h, npc, key, target):
         said = исполнить(h, npc, target, spent)
         if said is НЕ_СОСТОЯЛОСЬ:
             return
-
-    elif key == "наблюдение":
-        social.observe(h, npc, target)
-        said = (f"{npc.short} {vb(npc.sex, 'присматривался')} "
-                f"к кв.{h.хозяин_жилья(target).apt}")
 
     elif key == "подкараулить":
         h.mods.setdefault("караулят", {})[target.id] = npc.id
