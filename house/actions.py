@@ -2321,6 +2321,17 @@ def _исполнить_дверь(h, npc, target, spent):
     return f"{npc.short} {vb(npc.sex, 'укрепил')} дверь (уровень {npc.shelter['дверь']})"
 
 
+@исполняет("буржуйка")
+def _исполнить_буржуйка(h, npc, target, spent):
+    b = h.B
+    spend(h, npc, "материалы", b["буржуйка_материалы"])
+    вложить(h, npc, b["буржуйка_материалы"])
+    npc.shelter["буржуйка"] = True
+    said = f"{npc.short} {vb(npc.sex, 'собрал')} буржуйку"
+    h.note(f"{npc.short} {vb(npc.sex, 'собрал')} буржуйку")
+    return said
+
+
 def execute(h, npc, key, target):
     b = h.B
     spent = hours(key, npc, b)
@@ -2453,13 +2464,6 @@ def execute(h, npc, key, target):
         npc.mood = clamp(npc.mood - b["проведать_настроение"])
         npc.bump("нашёл_тело")
         h.bump("тел_найдено")
-
-    elif key == "буржуйка":
-        spend(h, npc, "материалы", b["буржуйка_материалы"])
-        вложить(h, npc, b["буржуйка_материалы"])
-        npc.shelter["буржуйка"] = True
-        said = f"{npc.short} {vb(npc.sex, 'собрал')} буржуйку"
-        h.note(f"{npc.short} {vb(npc.sex, 'собрал')} буржуйку")
 
     elif key == "разбор":
         пустые = h.пустые_для(npc)
