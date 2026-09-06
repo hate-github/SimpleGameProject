@@ -2789,6 +2789,56 @@ def _исполнить_выгнать(h, npc, target, spent):
     return None
 
 
+@исполняет("занять")
+def _исполнить_занять(h, npc, target, spent):
+    b = h.B
+    flat = target
+    старая = h.flats[npc.apt]
+    прежний = h.чей(flat)
+    if прежний is not None and not прежний.living_with:
+        return НЕ_СОСТОЯЛОСЬ                     # пока он собирался, туда уже въехали
+    social.вошёл_в_квартиру(h, npc, flat)
+    npc.apt, npc.floor = flat.apt, flat.floor      # и гости переезжают с ним
+    flat.открыта = True                            # он как-то туда вошёл
+    if прежний is not None:
+        # у него был этот угол, но сам он жил у соседа. Меняются местами:
+        # человек не остаётся без адреса, он получает брошенную дыру
+        прежний.apt, прежний.floor = старая.apt, старая.floor
+    conflict.occupy_flat(h, npc)                   # забрать то, что лежало
+    if flat.тулуп and npc.одежда < b["одежда_максимум"]:
+        flat.тулуп = False
+        npc.одежда = b["одежда_максимум"]
+        h.bump("тулупов_снято_с_мёртвых")
+        h.journal.line(f"   В прихожей висел тулуп. {npc.short} "
+                       f"{vb(npc.sex, 'забрал')} его себе.", 1)
+    h.bump("занято_квартир")
+    npc.bump("занял_квартиру")
+    чем_лучше = []
+    if flat.shelter.get("буржуйка") and not старая.shelter.get("буржуйка"):
+        чем_лучше.append("там буржуйка")
+    if flat.shelter.get("утепление", 0) > старая.shelter.get("утепление", 0):
+        чем_лучше.append("окна заклеены")
+    if flat.shelter.get("дверь", 0) > старая.shelter.get("дверь", 0):
+        чем_лучше.append("дверь целее")
+    хвост = (" — " + ", ".join(чем_лучше)) if чем_лучше else ""
+    h.journal.line(f"{npc.short} {vb(npc.sex, 'перебрался')} в кв.{flat.apt}{хвост}. "
+                   f"Свою {vb(npc.sex, 'бросил')}.", 2)
+    h.note(f"{npc.short} {vb(npc.sex, 'занял')} кв.{flat.apt}"
+           + (f" (была {прежний.form('gen')})" if прежний else ""))
+    if flat.body and flat.body.get("порций", 0) > 0:
+        npc.mood = clamp(npc.mood - b["занять_тело_штраф"])
+    for w in h.others(npc):
+        social.adjust(w, npc.id, aware=12)
+    if прежний is not None and прежний.alive:
+        прежний.mood = clamp(прежний.mood - 15)
+        прежний.panic = clamp(прежний.panic + 12)
+        social.adjust(прежний, npc.id, trust=-3.0, hate=b["ненависть_за_захват"])
+        h.journal.line(f"{прежний.short} {vb(прежний.sex, 'остался')} без своего угла.", 2)
+        social.register_incident(h, "захват", None)
+        social.judge(h, npc, "воровство", hate=10.0, trust=-1.0)
+    return None
+
+
 def execute(h, npc, key, target):
     b = h.B
     spent = hours(key, npc, b)
@@ -3199,53 +3249,6 @@ def execute(h, npc, key, target):
             w.panic = clamp(w.panic + 7)
         # разбой каждый мерит своей меркой (GDD 12.1, «Ценности»)
         social.judge(h, npc, ТЕГИ["отнять"], hate=20 + 12 * 0.5, trust=-2.5, witnesses=видели)
-        said = None
-
-    elif key == "занять":
-        flat = target
-        старая = h.flats[npc.apt]
-        прежний = h.чей(flat)
-        if прежний is not None and not прежний.living_with:
-            return                     # пока он собирался, туда уже въехали
-        social.вошёл_в_квартиру(h, npc, flat)
-        npc.apt, npc.floor = flat.apt, flat.floor      # и гости переезжают с ним
-        flat.открыта = True                            # он как-то туда вошёл
-        if прежний is not None:
-            # у него был этот угол, но сам он жил у соседа. Меняются местами:
-            # человек не остаётся без адреса, он получает брошенную дыру
-            прежний.apt, прежний.floor = старая.apt, старая.floor
-        conflict.occupy_flat(h, npc)                   # забрать то, что лежало
-        if flat.тулуп and npc.одежда < b["одежда_максимум"]:
-            flat.тулуп = False
-            npc.одежда = b["одежда_максимум"]
-            h.bump("тулупов_снято_с_мёртвых")
-            h.journal.line(f"   В прихожей висел тулуп. {npc.short} "
-                           f"{vb(npc.sex, 'забрал')} его себе.", 1)
-        h.bump("занято_квартир")
-        npc.bump("занял_квартиру")
-        чем_лучше = []
-        if flat.shelter.get("буржуйка") and not старая.shelter.get("буржуйка"):
-            чем_лучше.append("там буржуйка")
-        if flat.shelter.get("утепление", 0) > старая.shelter.get("утепление", 0):
-            чем_лучше.append("окна заклеены")
-        if flat.shelter.get("дверь", 0) > старая.shelter.get("дверь", 0):
-            чем_лучше.append("дверь целее")
-        хвост = (" — " + ", ".join(чем_лучше)) if чем_лучше else ""
-        h.journal.line(f"{npc.short} {vb(npc.sex, 'перебрался')} в кв.{flat.apt}{хвост}. "
-                       f"Свою {vb(npc.sex, 'бросил')}.", 2)
-        h.note(f"{npc.short} {vb(npc.sex, 'занял')} кв.{flat.apt}"
-               + (f" (была {прежний.form('gen')})" if прежний else ""))
-        if flat.body and flat.body.get("порций", 0) > 0:
-            npc.mood = clamp(npc.mood - b["занять_тело_штраф"])
-        for w in h.others(npc):
-            social.adjust(w, npc.id, aware=12)
-        if прежний is not None and прежний.alive:
-            прежний.mood = clamp(прежний.mood - 15)
-            прежний.panic = clamp(прежний.panic + 12)
-            social.adjust(прежний, npc.id, trust=-3.0, hate=b["ненависть_за_захват"])
-            h.journal.line(f"{прежний.short} {vb(прежний.sex, 'остался')} без своего угла.", 2)
-            social.register_incident(h, "захват", None)
-            social.judge(h, npc, "воровство", hate=10.0, trust=-1.0)
         said = None
 
     elif key == "собрание":
