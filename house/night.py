@@ -25,7 +25,7 @@ def ночь(h):
     # вожаком налёта становится самый злой и жадный, а не просто самый смелый
     for p in sorted(h.alive(), key=lambda x: -(x.trait("жадность") + x.trait("вспыльчивость")
                                                + x.trait("храбрость") * 0.5 - x.trait("лояльность"))):
-        if raid_done or not p.alive or p.exiled:
+        if raid_done or not p.здесь():
             continue
         t = consider_raid(h, p)
         if t:
@@ -37,28 +37,28 @@ def ночь(h):
     # ночь в общей квартире. До краж: тот, кто на это решился, уже не пойдёт
     # никуда лезть, а дом наутро будет считать совсем другое
     for p in h.rng.shuffled(h.alive()):
-        if p.tonight != "убить_соседа" or not p.alive or p.exiled:
+        if p.tonight != "убить_соседа" or not p.здесь():
             continue
         c = targets.get(p.id)
-        if c and c.alive and not c.exiled and h.под_одной_крышей(p, c):
+        if c and c.здесь() and h.под_одной_крышей(p, c):
             conflict.убить_соседа(h, p, c)
 
     # обобрать и уйти. После ножа и до краж: тот, кто на это решился,
     # этой ночью больше никуда не пойдёт, а дом наутро считает другое
     for p in h.rng.shuffled(h.alive()):
-        if p.tonight != "обобрать" or not p.alive or p.exiled:
+        if p.tonight != "обобрать" or not p.здесь():
             continue
         c = targets.get(p.id)
-        if c and c.alive and not c.exiled and p.living_with == c.id:
+        if c and c.здесь() and p.living_with == c.id:
             conflict.обобрать_и_уйти(h, p, c)
 
     # кражи. Список составлен до осады, а осада могла кого-то из него убить
     # или выставить на мороз — поэтому проверяем обоих ещё раз
     for p in h.rng.shuffled(h.alive()):
-        if p.tonight != "кража" or not p.alive or p.exiled:
+        if p.tonight != "кража" or not p.здесь():
             continue
         t = targets.get(p.id)
-        if t and t.alive and not t.exiled:
+        if t and t.здесь():
             conflict.steal(h, p, t)
 
     # сон
@@ -113,7 +113,7 @@ def решение(h, p):
     соседи = ([h.get(p.living_with)] if p.living_with
               else [h.get(g) for g in sorted(p.guests)])
     for c in соседи:
-        if not (c and c.alive and not c.exiled):
+        if not (c and c.здесь()):
             continue
         ночью = (оценка_убийства(h, p, c)
                  + p.пунктик("убить_соседа")
