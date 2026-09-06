@@ -26,11 +26,8 @@ def мерка_поступка(npc, key, b):
     теги = ТЕГИ.get(key)
     if not теги:
         return 0.0, 0.0
-    v = npc.values or {}
-    не_терпит = v.get("не_терпит") or ()
-    ценит = v.get("ценит") or ()
-    запрет = sum(b["своя_мерка"] for tag in теги if tag in не_терпит)
-    склонность = sum(b["своя_мерка_склонность"] for tag in теги if tag in ценит)
+    запрет = sum(b["своя_мерка"] for tag in теги if npc.не_терпит(tag))
+    склонность = sum(b["своя_мерка_склонность"] for tag in теги if npc.ценит(tag))
     return запрет, склонность
 
 
@@ -48,14 +45,11 @@ def своя_мерка(npc, key, b):
     теги = ТЕГИ.get(key)
     if not теги:
         return 0.0
-    v = npc.values or {}
-    не_терпит = v.get("не_терпит") or ()
-    ценит = v.get("ценит") or ()
     s = 0.0
     for tag in теги:
-        if tag in не_терпит:
+        if npc.не_терпит(tag):
             s -= b["своя_мерка"]
-        if tag in ценит:
+        if npc.ценит(tag):
             s += b["своя_мерка"] * 0.6
     return s
 
