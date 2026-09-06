@@ -2094,6 +2094,37 @@ def _исполнить_вытяжка(h, npc, target, spent):
     return said
 
 
+@исполняет("костёр")
+def _исполнить_костёр(h, npc, target, spent):
+    b = h.B
+    said = None
+    flat = h.where(npc)
+    if npc.stock.get("топливо", 0) >= 1:
+        spend(h, npc, "топливо", 1)
+        чем = "на дровах"
+    else:
+        spend(h, npc, "материалы", b["костёр_материалы"])
+        чем = "на мебели"
+    flat.костёр = h.day
+    npc.warmth = clamp(npc.warmth + 6)
+    if h.rng.chance(b["костёр_пожар"]):
+        # то, ради чего это и опасно
+        npc.injuries.append("ожог руки")
+        npc.health = clamp(npc.health - h.rng.uni(8, 18))
+        if flat.shelter.get("утепление", 0) > 0:
+            flat.shelter["утепление"] -= 1
+        flat.вложено = max(0.0, flat.вложено - 2.0)
+        npc.panic = clamp(npc.panic + 20)
+        h.journal.line(f"В кв.{flat.apt} занялось. {npc.short} {vb(npc.sex, 'сбил')} огонь, "
+                       f"но {vb(npc.sex, 'обжёг')} руки, и окна выгорели.", 2)
+        social.house_shock(h, panic=10, mood=-5)
+        social.emit(h, npc, 4, "ссора", night=False)
+        h.bump("пожаров")
+    else:
+        said = f"{npc.short} {vb(npc.sex, 'развёл')} костёр посреди комнаты {чем}"
+    return said
+
+
 def execute(h, npc, key, target):
     b = h.B
     spent = hours(key, npc, b)
@@ -2226,32 +2257,6 @@ def execute(h, npc, key, target):
         npc.mood = clamp(npc.mood - b["проведать_настроение"])
         npc.bump("нашёл_тело")
         h.bump("тел_найдено")
-
-    elif key == "костёр":
-        flat = h.where(npc)
-        if npc.stock.get("топливо", 0) >= 1:
-            spend(h, npc, "топливо", 1)
-            чем = "на дровах"
-        else:
-            spend(h, npc, "материалы", b["костёр_материалы"])
-            чем = "на мебели"
-        flat.костёр = h.day
-        npc.warmth = clamp(npc.warmth + 6)
-        if h.rng.chance(b["костёр_пожар"]):
-            # то, ради чего это и опасно
-            npc.injuries.append("ожог руки")
-            npc.health = clamp(npc.health - h.rng.uni(8, 18))
-            if flat.shelter.get("утепление", 0) > 0:
-                flat.shelter["утепление"] -= 1
-            flat.вложено = max(0.0, flat.вложено - 2.0)
-            npc.panic = clamp(npc.panic + 20)
-            h.journal.line(f"В кв.{flat.apt} занялось. {npc.short} {vb(npc.sex, 'сбил')} огонь, "
-                           f"но {vb(npc.sex, 'обжёг')} руки, и окна выгорели.", 2)
-            social.house_shock(h, panic=10, mood=-5)
-            social.emit(h, npc, 4, "ссора", night=False)
-            h.bump("пожаров")
-        else:
-            said = f"{npc.short} {vb(npc.sex, 'развёл')} костёр посреди комнаты {чем}"
 
     elif key == "заказать":
         мастер = target
