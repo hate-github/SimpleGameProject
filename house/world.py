@@ -324,7 +324,7 @@ def про_кого(h, npc, кто):
             if знач not in npc.пунктики:
                 return False
         elif ключ == "ценит":
-            if знач not in ((npc.values or {}).get("ценит") or ()):
+            if not npc.ценит(знач):
                 return False
         elif ключ == "черта":
             # {"черта": ["жадность", 6]} — не ниже шести из десяти
@@ -602,7 +602,7 @@ def угар(h):
         нашёл = {p.id for p in h.alive()
                  if h.where(p).apt == flat.apt and p.tonight == "дежурить"}
         for p in list(спали):
-            if not (p.alive and not p.exiled):
+            if not p.здесь():
                 continue
             for р in list(p.дети):
                 conflict.смерть_ребёнка(h, p, р)
