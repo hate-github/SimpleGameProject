@@ -2125,6 +2125,22 @@ def _исполнить_костёр(h, npc, target, spent):
     return said
 
 
+@исполняет("отдых")
+def _исполнить_отдых(h, npc, target, spent):
+    npc.mood = clamp(npc.mood + 5)
+    npc.rest = clamp(npc.rest + 6)
+    npc.panic = clamp(npc.panic - 3)
+    # отдых стоит два часа, и восемь раз подряд — это ровно сутки. Поведение
+    # честное (сил нет, дел нет), а вот восемь одинаковых строк в журнале
+    # превращают человека в сломанный автомат. Пишется он поэтому не здесь,
+    # а один раз за день, в конце (engine.one_day)
+    if npc.stats.get("отдых_день") != h.day:
+        npc.stats["отдых_день"] = h.day
+        npc.stats["отдых_раз"] = 0
+    npc.stats["отдых_раз"] = npc.stats.get("отдых_раз", 0) + 1
+    return None
+
+
 def execute(h, npc, key, target):
     b = h.B
     spent = hours(key, npc, b)
@@ -3159,20 +3175,6 @@ def execute(h, npc, key, target):
                  .replace("{ребёнок_род}", npc.dependent_gen or npc.dependent_name or "ребёнка")
                  .replace("{ребёнок_вин}", npc.dependent_acc or npc.dependent_name or "ребёнка"))
         said = f"{npc.short} {gform(текст, npc.sex)}"
-
-    elif key == "отдых":
-        npc.mood = clamp(npc.mood + 5)
-        npc.rest = clamp(npc.rest + 6)
-        npc.panic = clamp(npc.panic - 3)
-        # отдых стоит два часа, и восемь раз подряд — это ровно сутки. Поведение
-        # честное (сил нет, дел нет), а вот восемь одинаковых строк в журнале
-        # превращают человека в сломанный автомат. Пишется он поэтому не здесь,
-        # а один раз за день, в конце (engine.one_day)
-        if npc.stats.get("отдых_день") != h.day:
-            npc.stats["отдых_день"] = h.day
-            npc.stats["отдых_раз"] = 0
-        npc.stats["отдых_раз"] = npc.stats.get("отдых_раз", 0) + 1
-        said = None
 
     elif key == "собрание":
         meeting.провести(h, npc)
