@@ -2005,6 +2005,34 @@ def _исполнить_попить(h, npc, target, spent):
     return said
 
 
+@исполняет("топить_снег")
+def _исполнить_топить_снег(h, npc, target, spent):
+    b = h.B
+    # на электроплитке, пока есть свет, вода достаётся даром
+    очаг = h.хозяин_жилья(npc)
+    on_power = (not npc.shelter.get("буржуйка")) and h.powered(npc) and npc.shelter.get("обогреватель")
+    if on_power:
+        cost = 0.0
+        how = "на плитке"
+    else:
+        # печка уже топится — доплачиваем немного; холодная — платим как за топку,
+        # но тогда и квартира прогревается, топливо не выброшено
+        already = очаг.burning
+        cost = b["снег_топливо"] * (b["снег_на_горящей_печке"] if already else 1.0)
+        очаг.burning = True
+        how = "на горячей печке" if already else "затопив печку"
+    if очаг.stock.get("топливо", 0) < cost and npc.stock.get("материалы", 0) >= b["мебель_за_топку"]:
+        spend(h, npc, "материалы", b["мебель_за_топку"])   # в ход пошла мебель
+        cost = 0.0
+        how = "на мебели"
+    spend(h, очаг, "топливо", cost)
+    npc.stock["вода"] = npc.stock.get("вода", 0) + b["снег_вода"]
+    h.stats["натоплено_вода"] = h.stats.get("натоплено_вода", 0) + b["снег_вода"]
+    said = (f"{npc.short} {vb(npc.sex, 'натопил')} снега {how}"
+            + (f" (-{cost:g} топлива)" if cost else ""))
+    return said
+
+
 def execute(h, npc, key, target):
     b = h.B
     spent = hours(key, npc, b)
@@ -2085,30 +2113,6 @@ def execute(h, npc, key, target):
         said = исполнить(h, npc, target, spent)
         if said is НЕ_СОСТОЯЛОСЬ:
             return
-
-    elif key == "топить_снег":
-        # на электроплитке, пока есть свет, вода достаётся даром
-        очаг = h.хозяин_жилья(npc)
-        on_power = (not npc.shelter.get("буржуйка")) and h.powered(npc) and npc.shelter.get("обогреватель")
-        if on_power:
-            cost = 0.0
-            how = "на плитке"
-        else:
-            # печка уже топится — доплачиваем немного; холодная — платим как за топку,
-            # но тогда и квартира прогревается, топливо не выброшено
-            already = очаг.burning
-            cost = b["снег_топливо"] * (b["снег_на_горящей_печке"] if already else 1.0)
-            очаг.burning = True
-            how = "на горячей печке" if already else "затопив печку"
-        if очаг.stock.get("топливо", 0) < cost and npc.stock.get("материалы", 0) >= b["мебель_за_топку"]:
-            spend(h, npc, "материалы", b["мебель_за_топку"])   # в ход пошла мебель
-            cost = 0.0
-            how = "на мебели"
-        spend(h, очаг, "топливо", cost)
-        npc.stock["вода"] = npc.stock.get("вода", 0) + b["снег_вода"]
-        h.stats["натоплено_вода"] = h.stats.get("натоплено_вода", 0) + b["снег_вода"]
-        said = (f"{npc.short} {vb(npc.sex, 'натопил')} снега {how}"
-                + (f" (-{cost:g} топлива)" if cost else ""))
 
     elif key == "топить":
         # в буран тепло вылетает в щели, и та же печка съедает больше
