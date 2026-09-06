@@ -9,7 +9,7 @@ from .util import Rng, clamp, norm, vb
 from .model import House
 from .schema import load_json, validate_data
 from . import (world, social, actions, conflict, report, meeting, замысел, character, chat,
-               assembly, psyche, household, services, discoveries, night, physiology)
+               assembly, psyche, household, services, discoveries, night, physiology, child)
 
 
 class Simulation:
@@ -155,7 +155,6 @@ class Simulation:
 
     # ------------------------------------------------------------ расчёт суток
     def _upkeep(self, h):
-        b = h.B
         # сколько всего в доме отключено: одно число на настроение и на панику
         infra = ((not h.heating) + (not h.water_on) + (not h.power_on) + (h.network <= 0))
         for p in list(h.alive()):
@@ -163,40 +162,7 @@ class Simulation:
 
             household.теснота_ночи(h, p)
 
-            # --- ребёнок: своя шкала, и она короче (GDD 12.6) ---
-            for р in list(p.дети):
-                р["сытость"] = clamp(р["сытость"] - b["ребёнок_расход_сытости"])
-                # ту ночь, которую он провёл у соседа, он греется соседской
-                # печкой: ради этого его туда и отнесли (actions.отдать_на_ночь)
-                комната = room
-                у_кого = h.get(р.get("у")) if р.get("у") else None
-                if у_кого is not None and у_кого.alive and not у_кого.exiled:
-                    комната = h.room_temp(у_кого, burning=у_кого.burning)
-                # та же комната, но ребёнок остывает быстрее взрослого
-                р["тепло"] = clamp(р["тепло"] + (комната - b["комфортная_температура"])
-                                   * b["тепло_за_градус"] * b["ребёнок_мёрзнет"])
-                урон = 0.0
-                for v in (р["сытость"], р["тепло"]):
-                    if v < b["критичный_порог"]:
-                        урон += ((b["критичный_порог"] - v) * b["здоровье_за_критичное"]
-                                 * b["ребёнок_хрупкость"])
-                if р["болен"]:
-                    урон += b["болезнь_урон_в_день"] * b["ребёнок_хрупкость"]
-                if урон > 0:
-                    р["здоровье"] = clamp(р["здоровье"] - урон)
-                elif min(р["сытость"], р["тепло"]) > b["порог_восстановления"]:
-                    р["здоровье"] = clamp(р["здоровье"] + b["здоровье_восстановление"])
-                if not р["болен"] and р["тепло"] < 40 and h.rng.chance(
-                        b["болезнь_шанс_на_холоде"] * b["ребёнок_болеет"]):
-                    р["болен"] = "простуда"
-                    h.journal.line(f"{р['имя']} закашлял у {p.form('gen')} на руках.", 1)
-                elif р["болен"] and h.rng.chance(b["болезнь_проходит"]
-                                                 * b["ребёнок_болезнь_проходит"]
-                                                 * (b["болезнь_проходит_в_тепле"]
-                                                    if р["тепло"] > 55 else 1.0)):
-                    р["болен"] = None
-                if р["здоровье"] <= 0:
-                    conflict.смерть_ребёнка(h, p, р)
+            child.сутки(h, p, room)
 
             physiology.износ(h, p, infra)
 
