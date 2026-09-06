@@ -624,12 +624,9 @@ def fight(h, side_a, side_b, place="", reason=""):
                 # третье попадание почти всегда последнее (GDD 17)
                 добьёт *= 1.0 + 0.6 * max(0, len(victim.injuries) - 2)
                 if h.rng.chance(добьёт):
-                    victim.health = 0.0
-                    victim.alive = False
-                    victim.cause = vb(victim.sex, "убит") + (" выстрелом" if gun else " в драке")
-                    victim.died_day = h.day
-                    h.journal.line(f"{victim.short} не {vb(victim.sex, 'дожил')} до утра.", 2)
-                    on_death(h, victim, killer=shooter, оружие=чем, свидетели=весь_дом(h))
+                    умер(h, victim, vb(victim.sex, "убит") + (" выстрелом" if gun else " в драке"),
+                         killer=shooter, оружие=чем, свидетели=весь_дом(h),
+                         строка=f"{victim.short} не {vb(victim.sex, 'дожил')} до утра.")
         # мораль: получил — чаще всего выходит из драки (GDD 17: numbers decide,
         # но никто не бьётся до последнего за банку тушёнки)
         a_alive = [p for p in side_a if p.alive and p.health > 0]
