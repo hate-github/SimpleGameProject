@@ -11,7 +11,7 @@ import os
 
 from .checks import _разделы as checks_разделы
 from .model import WEAPONS
-from .catalog import ПУНКТИК_КЛЮЧИ, ВЕСА_КЛЮЧИ, ЦЕННОСТИ
+from .catalog import COST, ПУНКТИК_КЛЮЧИ, ВЕСА_КЛЮЧИ, ЦЕННОСТИ
 from .street import КЛАДОВЫЕ_ВИДЫ
 from . import world
 
@@ -83,6 +83,19 @@ def validate_data(balance, npcs, events, lines=None):
         for черта in веса:
             if черта not in ЧЕРТЫ:
                 bad.append(f"веса_черт[{решение}]: нет такой черты «{черта}»")
+
+    # часы и лимиты в balance.json — таблицы по ключу действия, как и записи
+    # catalog. Действие без часов упало бы KeyError в hours() на первом ходу,
+    # а часы без действия — ручка, которую никто не читает
+    действия = set(COST)
+    часы = set(balance.get("часы_действий", {}))
+    for ключ in sorted(часы - действия):
+        bad.append(f"часы_действий: «{ключ}» — такого действия в catalog нет")
+    for ключ in sorted(действия - часы):
+        bad.append(f"часы_действий: у действия «{ключ}» нет часов")
+    for таблица in ("лимит_в_день", "лимит_на_пару_в_день"):
+        for ключ in sorted(set(balance.get(таблица, {})) - действия):
+            bad.append(f"{таблица}: «{ключ}» — такого действия в catalog нет")
 
     ids = [d["id"] for d in npcs["жильцы"]]
     dupes = {i for i in ids if ids.count(i) > 1}
