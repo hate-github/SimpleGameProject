@@ -2460,6 +2460,12 @@ def _исполнить_разговор(h, npc, target, spent):
     return f"{npc.short} {vb(npc.sex, 'зашёл')} к {target.form('dat')}"
 
 
+@исполняет("попросить")
+def _исполнить_попросить(h, npc, target, spent):
+    social.встретились(h, npc, target)
+    return _ask(h, npc, target)
+
+
 def execute(h, npc, key, target):
     b = h.B
     spent = hours(key, npc, b)
@@ -2757,10 +2763,6 @@ def execute(h, npc, key, target):
         h.journal.secret(f"{npc.short} {vb(npc.sex, 'положил')} "
                          f"{RES_ВИН.get(чем, чем)} под дверь кв.{враг.apt}.")
         said = None
-
-    elif key == "попросить":
-        social.встретились(h, npc, target)
-        said = _ask(h, npc, target)
 
     elif key == "поделиться":
         n = 1.0
