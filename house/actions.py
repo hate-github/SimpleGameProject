@@ -2527,6 +2527,41 @@ def _исполнить_поделиться(h, npc, target, spent):
     return None
 
 
+@исполняет("вернуть")
+def _исполнить_вернуть(h, npc, target, spent):
+    b = h.B
+    social.встретились(h, npc, target)
+    rec = npc.ask_record(target.id)
+    # чем брал, тем и отдаёт. Пока долг всегда номинировался в еде, человек,
+    # взявший дрова, возвращал банку тушёнки — и у соседа по-прежнему
+    # не было чем топить
+    чем = rec.get("должен_чем") or "еда"
+    if npc.stock.get(чем, 0.0) < 1.0:
+        чем = max(("еда", "топливо", "вода"), key=lambda r: npc.days_of(r))
+    сколько = min(1.0, npc.stock.get(чем, 0.0))
+    if сколько <= 0:
+        return НЕ_СОСТОЯЛОСЬ
+    npc.stock[чем] -= сколько
+    target.stock[чем] = target.stock.get(чем, 0.0) + сколько
+    rec["должен"] = max(0.0, rec.get("должен", 0.0) - 1.0)
+    target.дал[npc.id] = max(0.0, target.дал.get(npc.id, 0.0) - 1.0)
+    сказать_сразу(h, "вернуть", f"{npc.short} {vb(npc.sex, 'занёс')} {RES_ВИН.get(чем, чем)} "
+            f"{target.form('dat')} — "
+            f"{'отдала' if npc.sex == 'ж' else 'отдал'} долг")
+    # возврат восстанавливает равновесие, а не создаёт новое доверие:
+    # иначе пара «дал — вернул» кончается тем, что оба доверяют друг другу
+    # больше прежнего, хотя ничего не произошло и никто ничего не потерял
+    social.adjust(target, npc.id, trust=b["доверие_за_возврат"], hate=-3)
+    npc.mood = clamp(npc.mood + 3)
+    target.mood = clamp(target.mood + 4)
+    h.bump("долгов_возвращено")
+    # сдержанное слово стоит больше самого возврата (GDD 14)
+    social.сдержал(h, npc, target, "отдать")
+    social.сблизились(h, npc, target, b["близость_за_возврат"])
+    social.проверить_наговор(h, npc, target)
+    return None
+
+
 def execute(h, npc, key, target):
     b = h.B
     spent = hours(key, npc, b)
@@ -2824,37 +2859,6 @@ def execute(h, npc, key, target):
         h.journal.secret(f"{npc.short} {vb(npc.sex, 'положил')} "
                          f"{RES_ВИН.get(чем, чем)} под дверь кв.{враг.apt}.")
         said = None
-
-    elif key == "вернуть":
-        social.встретились(h, npc, target)
-        rec = npc.ask_record(target.id)
-        # чем брал, тем и отдаёт. Пока долг всегда номинировался в еде, человек,
-        # взявший дрова, возвращал банку тушёнки — и у соседа по-прежнему
-        # не было чем топить
-        чем = rec.get("должен_чем") or "еда"
-        if npc.stock.get(чем, 0.0) < 1.0:
-            чем = max(("еда", "топливо", "вода"), key=lambda r: npc.days_of(r))
-        сколько = min(1.0, npc.stock.get(чем, 0.0))
-        if сколько <= 0:
-            return
-        npc.stock[чем] -= сколько
-        target.stock[чем] = target.stock.get(чем, 0.0) + сколько
-        rec["должен"] = max(0.0, rec.get("должен", 0.0) - 1.0)
-        target.дал[npc.id] = max(0.0, target.дал.get(npc.id, 0.0) - 1.0)
-        сказать_сразу(h, key, f"{npc.short} {vb(npc.sex, 'занёс')} {RES_ВИН.get(чем, чем)} "
-                f"{target.form('dat')} — "
-                f"{'отдала' if npc.sex == 'ж' else 'отдал'} долг")
-        # возврат восстанавливает равновесие, а не создаёт новое доверие:
-        # иначе пара «дал — вернул» кончается тем, что оба доверяют друг другу
-        # больше прежнего, хотя ничего не произошло и никто ничего не потерял
-        social.adjust(target, npc.id, trust=b["доверие_за_возврат"], hate=-3)
-        npc.mood = clamp(npc.mood + 3)
-        target.mood = clamp(target.mood + 4)
-        h.bump("долгов_возвращено")
-        # сдержанное слово стоит больше самого возврата (GDD 14)
-        social.сдержал(h, npc, target, "отдать")
-        social.сблизились(h, npc, target, b["близость_за_возврат"])
-        social.проверить_наговор(h, npc, target)
 
     elif key == "обмен":
         social.встретились(h, npc, target)
