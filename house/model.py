@@ -29,6 +29,21 @@ def вещи(stock: Dict[str, float]) -> float:
     """
     return sum(v for k, v in stock.items() if k != "деньги")
 
+
+def spend(h, npc, res, amount):
+    """Израсходовать ресурс безвозвратно и записать это.
+
+    Съеденное, сожжённое и потраченное на стройку уходит из мира. Пока это
+    не считалось, баланс дома не сходился, и настоящую утечку было не отличить
+    от нормальной траты.
+    """
+    have = npc.stock.get(res, 0.0)
+    used = min(amount, have)
+    npc.stock[res] = have - used
+    h.stats["израсходовано_" + res] = h.stats.get("израсходовано_" + res, 0.0) + used
+    return used
+
+
 # Оружие и его вес в бою (GDD 17: бой намеренно простой и смертельный)
 WEAPONS = {
     "нет": 0.0,

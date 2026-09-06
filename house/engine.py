@@ -10,7 +10,7 @@ import os
 
 from .util import Rng, clamp, norm, vb
 from .checks import _разделы as checks_разделы
-from .model import NPC, House, Flat, Кладовая
+from .model import NPC, House, Flat, Кладовая, spend
 from . import world, social, actions, conflict, report, meeting, замысел, character
 
 DATA = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data")
@@ -132,7 +132,7 @@ def validate_data(balance, npcs, events, lines=None):
     # кладовые: по той же причине, по какой проверяются пунктики и ценности.
     # Опечатка в виде («пoгреб» с латинской «o») дала бы кладовку, в которую
     # никто никогда не сходит, и понять это по логу невозможно
-    from .actions import КЛАДОВЫЕ_ВИДЫ
+    from .street import КЛАДОВЫЕ_ВИДЫ
     кл_ids = [k.get("id") for k in npcs.get("кладовые", [])]
     if len(кл_ids) != len(set(кл_ids)):
         bad.append("две кладовые с одним id в npcs.json")
@@ -473,9 +473,9 @@ class Simulation:
                     плата[res] = берём
             if sum(плата.values()) < цена * 0.5:
                 continue                       # заказчику нечем платить — ждёт
-            actions.spend(h, мастер, "материалы", нужно)
+            spend(h, мастер, "материалы", нужно)
             if что == "генератор":
-                actions.spend(h, мастер, "движок", 1.0)
+                spend(h, мастер, "движок", 1.0)
             flat = h.where(p)
             if что == "буржуйка" or что == "генератор":
                 flat.shelter[у["поле"]] = True

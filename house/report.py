@@ -7,6 +7,7 @@
 import sys
 
 from .util import clamp, vb
+from .street import МЕСТА
 
 BAR = "─" * 78
 
@@ -430,7 +431,6 @@ def final_report(h, days, seed, w=None):
         w(f"  вытяжка ниже половины: в {len(вент)} квартирах "
           f"(худшая {min(вент):.2f}); угорело {s.get('смертей_от_угара', 0)}")
     w(f"  богатство района:    {h.scav_richness:.2f} (стартовало с 1.00)")
-    from .actions import МЕСТА
     w("  что осталось где:    " + ", ".join(
         f"{м.имя} {h.богатство_места(м.имя):.2f}" for м in МЕСТА))
     w(f"  средняя паника:      {sum(p.panic for p in alive)/len(alive):.0f}" if alive else "  средняя паника: —")
