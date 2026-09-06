@@ -3140,6 +3140,26 @@ def _исполнить_шепнуть(h, npc, target, spent):
     return said
 
 
+@исполняет("подбросить")
+def _исполнить_подбросить(h, npc, target, spent):
+    b = h.B
+    з = npc.замысел
+    враг = target
+    чем = что_подбросить(h, npc)
+    if враг is None or чем is None or з is None:
+        return НЕ_СОСТОЯЛОСЬ
+    spend(h, npc, чем, 1)
+    h.mods.setdefault("подброшено", {})[враг.apt] = {
+        "кто": npc.id, "что": чем, "день": h.day}
+    з["напор"] += b["напор_за_подброс"]
+    з["ходов"] += 1
+    h.bump("подбросов")
+    # journal пишет только то, что видно дому; сам поступок — секрет
+    h.journal.secret(f"{npc.short} {vb(npc.sex, 'положил')} "
+                     f"{RES_ВИН.get(чем, чем)} под дверь кв.{враг.apt}.")
+    return None
+
+
 def execute(h, npc, key, target):
     b = h.B
     spent = hours(key, npc, b)
@@ -3220,23 +3240,6 @@ def execute(h, npc, key, target):
         said = исполнить(h, npc, target, spent)
         if said is НЕ_СОСТОЯЛОСЬ:
             return
-
-    elif key == "подбросить":
-        з = npc.замысел
-        враг = target
-        чем = что_подбросить(h, npc)
-        if враг is None or чем is None or з is None:
-            return
-        spend(h, npc, чем, 1)
-        h.mods.setdefault("подброшено", {})[враг.apt] = {
-            "кто": npc.id, "что": чем, "день": h.day}
-        з["напор"] += b["напор_за_подброс"]
-        з["ходов"] += 1
-        h.bump("подбросов")
-        # journal пишет только то, что видно дому; сам поступок — секрет
-        h.journal.secret(f"{npc.short} {vb(npc.sex, 'положил')} "
-                         f"{RES_ВИН.get(чем, чем)} под дверь кв.{враг.apt}.")
-        said = None
 
     elif key == "отнять":
         victim = target
