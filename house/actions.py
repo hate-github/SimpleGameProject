@@ -2986,6 +2986,18 @@ def _исполнить_кладовая(h, npc, target, spent):
     return None
 
 
+@исполняет("вскрыть_кладовую")
+def _исполнить_вскрыть_кладовую(h, npc, target, spent):
+    к = target
+    got = вскрыть_кладовую(h, npc, к)
+    взято = ", ".join(f"{r} {v:g}" for r, v in got.items()) if got else "ничего"
+    h.journal.line(f"{npc.short} {vb(npc.sex, 'сорвал')} замок с "
+                   f"{'погреба' if к.вид == 'погреб' else 'гаража'} кв.{к.apt}: "
+                   f"{взято}.", 2)
+    h.note(f"{npc.short} вскрыл {к.имя}")
+    return None
+
+
 def execute(h, npc, key, target):
     b = h.B
     spent = hours(key, npc, b)
@@ -3066,16 +3078,6 @@ def execute(h, npc, key, target):
         said = исполнить(h, npc, target, spent)
         if said is НЕ_СОСТОЯЛОСЬ:
             return
-
-    elif key == "вскрыть_кладовую":
-        к = target
-        got = вскрыть_кладовую(h, npc, к)
-        взято = ", ".join(f"{r} {v:g}" for r, v in got.items()) if got else "ничего"
-        h.journal.line(f"{npc.short} {vb(npc.sex, 'сорвал')} замок с "
-                       f"{'погреба' if к.вид == 'погреб' else 'гаража'} кв.{к.apt}: "
-                       f"{взято}.", 2)
-        h.note(f"{npc.short} вскрыл {к.имя}")
-        said = None
 
     elif key == "наблюдение":
         social.observe(h, npc, target)
