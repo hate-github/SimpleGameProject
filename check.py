@@ -463,7 +463,10 @@ def проверить_чтение_правды(w):
                     fn = node.func
                     имя_fn = fn.id if isinstance(fn, ast.Name) else getattr(fn, "attr", None)
                     i = ЧИТАЮТ_ТЕЛО.get(имя_fn)
-                    if i is not None and i < len(node.args):
+                    # value_of(сосед, …, глазами=решающий) читает соседа
+                    # по знанию решающего — это не чтение тела
+                    глазами = {_корень(k.value) for k in node.keywords if k.arg == "глазами"}
+                    if i is not None and i < len(node.args) and not (глазами & свои):
                         кто, что = _корень(node.args[i]), имя_fn + "()"
                 if что is None or кто in свои:
                     continue

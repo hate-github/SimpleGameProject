@@ -1290,7 +1290,7 @@ def _люди(корзина, h, npc, b, des, зову, плохо, средни
             # опаснее пустой полки, и тем опаснее, чем он сильнее
             give += (виноват * b["загладить_вес"]
                      * (0.4 + npc.t01("лояльность") * 0.6
-                        + clamp(t.power() / max(0.2, npc.power()) - 1.0, 0.0, 1.0)))  # правда: фаза 1: видимая_сила
+                        + clamp(npc.видимая_сила(t) / max(0.2, npc.power()) - 1.0, 0.0, 1.0)))
             # на чужую беду отзываются тем слабее, чем дольше идёт метель.
             # Это не жестокость, а самосохранение: в первый день отдать банку
             # осунувшемуся соседу почти ничего не стоит, на двадцать пятый
@@ -1591,7 +1591,7 @@ def find_deal(h, a, b_npc):
     b = h.B
     va = {r: social.value_of(a, r, 1.0) for r in TRADABLE}
     # как, по мнению a, живёт b_npc — а не как он живёт на самом деле
-    vb = {r: social.value_of(b_npc, r, 1.0, days=social.believed_days(a, b_npc, r))  # правда: фаза 1: value_of читает тело соседа — патроны, хворь
+    vb = {r: social.value_of(b_npc, r, 1.0, days=social.believed_days(a, b_npc, r), глазами=a)
           for r in TRADABLE}
     best = None
     for give in TRADABLE:
