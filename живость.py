@@ -8,8 +8,8 @@
 import io, sys, collections, statistics as st
 
 sys.stdout.reconfigure(encoding="utf-8")
-from house import actions
 from house.engine import Simulation
+from house.hooks import Хуки
 
 ВАРИАНТОВ = []          # сколько вариантов прошло порог
 ОТРЫВ = []              # (лучший - второй) / лучший
@@ -35,23 +35,19 @@ from house.engine import Simulation
 БЫТ = collections.defaultdict(collections.Counter)   # кто -> какой вариант быта
 РУКА = []          # (привычно ли оружие, чьё оно было) в конце жизни
 
-_gather = actions.gather
-_choose = actions.choose_and_do
-_execute = actions.execute
+ПОСЛЕДНИЕ = {}          # кто -> варианты, собранные перед его последним выбором
 
 
-def gather(h, npc):
-    opts = _gather(h, npc)
-    прошли = sorted([s for _o, s in opts if s > h.B["порог_действия"]], reverse=True)
+def собраны(h, npc, итог):
+    прошли = sorted([s for _o, s in итог if s > h.B["порог_действия"]], reverse=True)
     ВАРИАНТОВ.append(len(прошли))
     if len(прошли) >= 2 and прошли[0] > 0:
         ОТРЫВ.append((прошли[0] - прошли[1]) / прошли[0])
-    npc._последние = opts
-    return opts
+    ПОСЛЕДНИЕ[npc.id] = итог
 
 
-def execute(h, npc, key, target):
-    opts = getattr(npc, "_последние", None)
+def перед_делом(h, npc, key, target):
+    opts = ПОСЛЕДНИЕ.get(npc.id)
     if opts:
         лучший = max(opts, key=lambda x: x[1])[0][0]
         ВЫБРАН_ЛУЧШИЙ[0 if key == лучший else 1] += 1
@@ -68,18 +64,9 @@ def execute(h, npc, key, target):
             ЦЕЛИ_ВИД["доброй воли"][npc.short][target.short] += 1
         elif key in РАСЧЁТ:
             ЦЕЛИ_ВИД["расчёта"][npc.short][target.short] += 1
-    return _execute(h, npc, key, target)
 
 
-actions.gather = gather
-actions.execute = execute
-
-_day = Simulation.one_day
-
-
-def one_day(self):
-    r = _day(self)
-    h = self.h
+def конец_дня(h):
     if h.day in (7, 14, 21, 28):
         for a in h.alive():
             for c in h.others(a):
@@ -88,10 +75,9 @@ def one_day(self):
                     ОШИБКА.append((abs(v.get("сыт", 80) - c.satiety)
                                    + abs(v.get("цел", 100) - c.health)
                                    + abs(v.get("тепло", 80) - c.warmth)) / 3.0)
-    return r
 
 
-Simulation.one_day = one_day
+ХУКИ = Хуки(after_gather=[собраны], on_execute=[перед_делом], on_day=[конец_дня])
 
 ПАРЫ_ДОВЕРИЕ = collections.defaultdict(list)   # (кто, о_ком) -> доверие в конце
 ЦЕЛЬ_ДОВЕРИЕ = collections.defaultdict(list)   # о_ком -> все доверия
@@ -113,7 +99,7 @@ for arg in sys.argv[1:]:
 for seed in range(1, N + 1):
     ЗЕРНО[0] = seed
     sim = Simulation(seed=seed, days=30, verbosity=0, stream=io.StringIO(),
-                     overrides=ПОДМЕНА or None)
+                     overrides=ПОДМЕНА or None, hooks=ХУКИ)
     старт = {(a.id, c.id): a.trust.get(c.id, 3.0)
              for a in sim.h.people.values() for c in sim.h.people.values() if a.id != c.id}
     h = sim.run()
