@@ -8,6 +8,8 @@
 import functools
 
 from .util import clamp, norm, vb, gform
+from enum import StrEnum
+
 from .model import вещи, spend, Оружие, Режим
 from .hooks import наблюдаемо
 from .decision import монета, по_правилу
@@ -1608,6 +1610,16 @@ def засада_ждёт(h, npc, key, target):
 НЕ_СОСТОЯЛОСЬ = object()
 
 
+class Исход(StrEnum):
+    """Чем кончилось исполнение: действие состоялось или сорвалось на пороге —
+    засада на площадке, пустая кладовая, некуда идти, исполнитель сказал
+    НЕ_СОСТОЯЛОСЬ. Дом это не читает; читают наблюдатели (after_execute,
+    checks.Coverage): пока execute молчал, покрытие считало выполненным
+    и то, что не случилось."""
+    СДЕЛАНО = "сделано"
+    СОРВАНО = "сорвано"
+
+
 def исполняет(key):
     """Зарегистрировать исполнителя действия `key` в ИСПОЛНИТЕЛИ."""
     def регистрирует(f):
@@ -2802,13 +2814,13 @@ def execute(h, npc, key, target):
     if (key in ВЫХОД_НА_ПЛОЩАДКУ
             and h.сутки.не_выходить.get(npc.id) == h.day):
         mark(h, npc, key, target)
-        return
+        return Исход.СОРВАНО
     ждущий = засада_ждёт(h, npc, key, target)
     if ждущий is not None:
         h.сутки.караулят.pop(npc.id, None)
         npc.time_left -= min(npc.time_left, 1.0)
         conflict.засада(h, ждущий, npc)
-        return
+        return Исход.СОРВАНО
     if key == "вылазка":
         # место выбрано в `gather` вместе с самим решением выйти и пришло
         # сюда целью. Дорога стоит времени, и это время уже учтено в воротах
@@ -2818,7 +2830,7 @@ def execute(h, npc, key, target):
             # идти некуда. Отмечаем, чтобы тот же вариант не предлагался
             # заново весь оставшийся день, и выходим, не тратя часов
             mark(h, npc, key, None)
-            return
+            return Исход.СОРВАНО
         if target.магазин and h.магазины:
             # в работающий магазин не «ходят полдня»: дошёл, отстоял очередь,
             # взял, сколько хватило денег и сколько унёс, вернулся. Пока время
@@ -2838,12 +2850,12 @@ def execute(h, npc, key, target):
     elif key == "кладовая":
         if target is None or target.пусто():
             mark(h, npc, key, target)
-            return                     # пока он шёл, там уже ничего не осталось
+            return Исход.СОРВАНО       # пока он шёл, там уже ничего не осталось
         spent = min(часы_кладовой(h, target), npc.time_left)
     elif key == "вскрыть_кладовую":
         if target is None or target.пусто() or h.есть_ключ(npc, target):
             mark(h, npc, key, target)
-            return                     # уже вскрыли до него, или брать нечего
+            return Исход.СОРВАНО       # уже вскрыли до него, или брать нечего
         spent = min(часы_вскрытия(h, target), npc.time_left)
     npc.time_left -= spent
     mark(h, npc, key, target)
@@ -2866,12 +2878,13 @@ def execute(h, npc, key, target):
         h.journal.line(текст + ".", 1)
         if lvl and kind:
             social.emit(h, npc, lvl, kind, night=False)
-        return
+        return Исход.СДЕЛАНО           # взялся и испортил — но взялся
 
     said = ИСПОЛНИТЕЛИ[key](h, npc, target, spent)
     if said is НЕ_СОСТОЯЛОСЬ:
-        return
+        return Исход.СОРВАНО
     _эпилог(h, npc, key, said)
+    return Исход.СДЕЛАНО
 
 
 def откроет_дверь(h, хозяин, просящий, b):

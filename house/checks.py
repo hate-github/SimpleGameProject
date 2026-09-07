@@ -256,11 +256,12 @@ class Coverage:
 
     def __init__(self):
         self.offered = Counter()
-        self.done = Counter()
+        self.done = Counter()          # состоялось
+        self.сорвано = Counter()       # выбрано, но сорвалось на пороге (actions.Исход)
         self.siege = Counter()
         self.night = Counter()
         self.реплики = Counter()
-        self.хуки = Хуки(after_gather=[self._предложено], on_execute=[self._выполнено],
+        self.хуки = Хуки(after_gather=[self._предложено], after_execute=[self._исполнено],
                          on_siege=[self._осада_началась], after_siege=[self._осада_кончилась],
                          on_реплика=[self._реплика])
 
@@ -269,8 +270,9 @@ class Coverage:
         for (key, _t), _s in итог:
             self.offered[key] += 1
 
-    def _выполнено(self, h, npc, key, target):
-        self.done[key] += 1
+    def _исполнено(self, h, npc, key, target, итог=None):
+        # исход сравнивается по значению, чтобы не тянуть actions в checks
+        (self.done if итог == "сделано" else self.сорвано)[key] += 1
 
     def _осада_началась(self, h, leader, target):
         self.siege["осад"] += 1
@@ -318,11 +320,13 @@ class Coverage:
 
     def report(self, w=print):
         from .catalog import COST
-        w("Действия — предложено / выполнено:")
+        w("Действия — предложено / состоялось (сорвано на пороге):")
         for key in sorted(COST, key=lambda k: -self.done.get(k, 0)):
-            o, d = self.offered.get(key, 0), self.done.get(key, 0)
-            метка = "   ← мёртвая ветка" if o == 0 else ("   ← ни разу не выбрано" if d == 0 else "")
-            w(f"  {key:<14} {o:>8} / {d:<6}{метка}")
+            o, d, s = self.offered.get(key, 0), self.done.get(key, 0), self.сорвано.get(key, 0)
+            метка = ("   ← мёртвая ветка" if o == 0
+                     else "   ← ни разу не выбрано" if d == 0 and s == 0
+                     else "   ← выбирали, но не состоялось" if d == 0 else "")
+            w(f"  {key:<14} {o:>8} / {d:<6}" + (f"({s})" if s else "      ") + метка)
         if self.siege:
             осад = self.siege.get("осад", 0)
             w("")
