@@ -658,10 +658,18 @@ class NPC:
         """Сколько ртов кормит (GDD 12.1: дневное потребление)."""
         return 1.0 + 0.6 * self.dependents
 
+    def расход_в_день(self, res: str) -> float:
+        """Сколько этого уходит в день на его семью (GDD 12.1)."""
+        return {"еда": 0.85, "вода": 0.9, "топливо": 1.0}.get(res, 1.0) * self.eaters()
+
     def days_of(self, res: str) -> float:
         """На сколько дней хватит ресурса при текущем потреблении."""
-        per_day = {"еда": 0.85, "вода": 0.9, "топливо": 1.0}.get(res, 1.0) * self.eaters()
-        return self.stock.get(res, 0.0) / max(0.2, per_day)
+        return self.stock.get(res, 0.0) / max(0.2, self.расход_в_день(res))
+
+    def believed_days(self, other, res: str) -> float:
+        """На сколько дней, по-моему, хватит соседу: моя оценка его запасов
+        на его расход. Семью его я знаю (ADR-9), а шкаф — только по слухам."""
+        return self.believed(other.id, res) / max(0.2, other.расход_в_день(res))
 
     def secure(self, res: str) -> float:
         """1.0 = запасов ровно на тот срок, который человек считает нужным.
