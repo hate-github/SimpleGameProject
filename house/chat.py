@@ -7,6 +7,7 @@
 """
 from .util import clamp
 from . import social, world
+from .model import Память
 
 
 def daily_chat(h, lines):
@@ -112,6 +113,12 @@ def daily_chat(h, lines):
                              witnesses=слышат)
                 social.adjust(p, who.id, hate=b["чат_подозрение_ненависть"], trust=-0.5)
                 h.названы_в_чате[who.id] = h.day
+                # и те, кто это прочёл, теперь знают: в доме крадут — если
+                # говорящий знает это сам, а не тычет пальцем после драки:
+                # эта реплика идёт после любого происшествия, не только кражи
+                if p.знает_о_кражах():
+                    for o in слышат:
+                        o.memory.append(Память(h.day, "слышал_о_воре", who.id))
                 h.bump("обвинений_в_чате")
         elif key == "тоска":
             for o in слышат:

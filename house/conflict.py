@@ -530,6 +530,7 @@ def notice_theft(h, victim, thief_id=None):
     b = h.B
     victim.panic = clamp(victim.panic + b["паника_от_кражи_у_себя"])
     victim.mood = clamp(victim.mood - 12)
+    victim.memory.append(Память(h.day, "пропажа", victim.id))   # теперь он знает: крадут
     social.register_incident(h, "кража", f"{victim.label()} {vb(victim.sex, 'обнаружил')}, что запасы стали меньше.")
     suspect(h, victim, exclude=None, real=thief_id)
 
