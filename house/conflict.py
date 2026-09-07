@@ -8,7 +8,7 @@ GDD 17: бой намеренно простой и смертельный; чи
 from .util import clamp, vb
 from . import social, household
 from .character import своя_мерка
-from .model import Ребёнок, Тело
+from .model import Ребёнок, Тело, Память, Приговор
 
 
 # ---------------------------------------------------------------- вспомогательное
@@ -274,7 +274,7 @@ def steal(h, thief, target):
         if унёс:
             moved = dict(moved)
             moved[унёс] = 1
-        thief.memory.append(f"д{h.day}:украл:{target.id}")
+        thief.memory.append(Память(h.day, "украл", target.id))
         thief.bump("краж")
         h.bump("краж")
         thief.mood = clamp(thief.mood - 4 * thief.t01("лояльность"))
@@ -291,7 +291,7 @@ def steal(h, thief, target):
     h.bump("краж_сорвано")
     if caught_seen:
         social.adjust(target, thief.id, trust=-4.0, hate=b["ненависть_за_кражу"], aware=20)
-        target.memory.append(f"д{h.day}:поймал_вора:{thief.id}")
+        target.memory.append(Память(h.day, "поймал_вора", thief.id))
         social.register_incident(h, "кража", f"{target.short} {vb(target.sex, 'застал')} {thief.form('acc')} у себя в квартире.")
         thief.поймали += 1
         if house_verdict(h, thief, target):
@@ -471,7 +471,7 @@ def приговор_дома(h, кого, повод, причина_изгна
     for p in judges:
         social.adjust(p, кого.id, trust=-3.0, hate=15)
     if len(judges) >= h.B["собрание_минимум"]:
-        h.приговор_нужен = {"кто": кого.id, "день": h.day}
+        h.приговор_нужен = Приговор(кто=кого.id, день=h.day)
         h.journal.line(f"С {кого.form('ins')} больше никто не разговаривает. "
                        f"Дом молчит и ждёт, что скажут все.", 2)
         return
@@ -502,7 +502,7 @@ def house_verdict(h, thief, victim):
     if caught < 2:
         return False
     if len([p for p in h.others(thief) if p.health > 35]) >= h.B["собрание_минимум"]:
-        h.приговор_нужен = {"кто": thief.id, "день": h.day}
+        h.приговор_нужен = Приговор(кто=thief.id, день=h.day)
         return False
     # выгнать человека на мороз — решение, которое дом принимает тяжело:
     # нужно, чтобы злы были почти все и чтобы сил хватило
@@ -545,7 +545,7 @@ def suspect(h, victim, exclude=None, real=None):
         if h.day - назван <= b["чат_подозрение_дней"]:
             w += b["чат_подозрение_вес"]
         w += max(0.0, 1.0 - other.days_of("еда") / 4.0) * victim.confidence(other.id) * 2.0
-        if any(f"слышал" in m and other.id in m and f"д{h.day}" in m for m in victim.memory):
+        if any(m.вид == "слышал" and m.кто == other.id and m.день == h.day for m in victim.memory):
             w += 1.5
         w = max(0.05, w)
         pool.append((other, w))

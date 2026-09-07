@@ -129,6 +129,54 @@ class Замысел:
 
 
 @dataclass
+class Обещание:
+    """Слово, данное соседу (GDD 14): вернуть, сделать, не делать — со сроком."""
+    кому: str
+    вид: str
+    что: Optional[str]
+    срок: int
+    день: int
+
+
+@dataclass
+class Ложь:
+    """Сказанная неправда: пока её не разоблачили, она работает (social.проверить_ложь)."""
+    кому: str
+    тема: str                           # своё / место / человек
+    что: Optional[str]
+    день: int
+    раскрыто: bool = False
+
+
+@dataclass
+class Память:
+    """Что человек сам видел, слышал или учуял — и когда.
+
+    Раньше это была строка «д12:слышал:буржуйка:игорь», которую conflict.suspect
+    разбирал подстроками. Теперь у записи есть день, вид, о ком и что именно.
+    """
+    день: int
+    вид: str                            # слышал / учуял / смотрел / догадался / украл / поймал_вора / поймал_на_лжи
+    кто: str                            # о ком
+    что: Optional[str] = None           # что именно: вид шума, ресурс
+
+
+@dataclass
+class Приговор:
+    """Дом уже всё узнал и ещё не решил: кого судить и с какого дня ждёт (meeting)."""
+    кто: str
+    день: int
+
+
+@dataclass
+class Дежурство:
+    """Расписание ночей на площадке, принятое собранием (meeting)."""
+    очередь: List[str]
+    до: int
+    начало: int
+
+
+@dataclass
 class Flat:
     """Квартира — вещь, а не приложение к жильцу (GDD 12, 15).
 
@@ -402,8 +450,8 @@ class NPC:
     ключи_кладовых: set = field(default_factory=set)
     asking: Dict[str, Dict[str, float]] = field(default_factory=dict)  # память о просьбах
     # --- слово (GDD 14) ---
-    врал: List[Dict[str, Any]] = field(default_factory=list)      # что я кому наговорил
-    обещал: List[Dict[str, Any]] = field(default_factory=list)    # и что обещал
+    врал: List[Ложь] = field(default_factory=list)      # что я кому наговорил
+    обещал: List[Обещание] = field(default_factory=list)    # и что обещал
     не_верю: Dict[str, float] = field(default_factory=dict)        # кто мне уже врал
     # --- о чьей смерти он знает (GDD 12.3, 13) ---
     # Факт и знание о факте — разные вещи, и до сих пор их не различал никто:
@@ -437,7 +485,7 @@ class NPC:
     tonight: str = "спать"
     away: bool = False
     burning: bool = False
-    memory: List[str] = field(default_factory=list)
+    memory: List[Память] = field(default_factory=list)
 
     # состояние, которое раньше лежало в stats строковыми ключами (аудит §4)
     часы_работы: float = 0.0            # сколько сегодня работал руками; сбрасывается утром
@@ -1032,8 +1080,8 @@ class House:
     # многодневные дела
     заказы: Dict[str, Заказ] = field(default_factory=dict) # заказчик -> заказ (services)
     мастер_занят: Dict[str, str] = field(default_factory=dict)      # мастер -> заказчик
-    дежурство: Optional[Dict[str, Any]] = None                      # расписание ночей (meeting)
-    приговор_нужен: Optional[Dict[str, Any]] = None                 # кого дом должен судить
+    дежурство: Optional[Дежурство] = None                      # расписание ночей (meeting)
+    приговор_нужен: Optional[Приговор] = None                 # кого дом должен судить
     # данные, а не состояние
     реплики_быт: List[Any] = field(default_factory=list)            # реплики быта из lines.json
     # только для линеек и внешних наблюдателей (своё.py: «дико», «_пусто»); домен сюда не пишет
