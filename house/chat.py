@@ -110,7 +110,7 @@ def daily_chat(h, lines):
                              hate=b["чат_подозрение_ненависть"], trust=-0.4,
                              witnesses=слышат)
                 social.adjust(p, who.id, hate=b["чат_подозрение_ненависть"], trust=-0.5)
-                h.mods.setdefault("названы_в_чате", {})[who.id] = h.day
+                h.названы_в_чате[who.id] = h.day
                 h.bump("обвинений_в_чате")
         elif key == "тоска":
             for o in слышат:

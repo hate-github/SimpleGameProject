@@ -26,6 +26,7 @@
 `--золотой` и записью в ПЛАН.md о том, почему эталон изменился.
 """
 import argparse
+import dataclasses
 import hashlib
 import io
 import json
@@ -78,6 +79,8 @@ def _канон(x):
         return [_канон(v) for v in x]
     if hasattr(x, "id"):
         return ("#", x.id)
+    if dataclasses.is_dataclass(x) and not isinstance(x, type):
+        return _канон({f.name: getattr(x, f.name) for f in dataclasses.fields(x)})
     return repr(x)
 
 
@@ -85,20 +88,21 @@ def снимок(h):
     """Всё состояние дома в конце дня, одной канонической строкой.
 
     Люди, квартиры и кладовые целиком (dataclass → его поля), мир (погода,
-    отключения, снег, богатство мест, stats, хроника) и h.mods — временные
-    модификаторы и очереди на утро. mods снимаются нарочно: то, что забыли
-    туда записать, всплыло бы в поведении через несколько дней, а здесь видно
-    в тот же день. Не снимаются: rng (это лента, а не состояние), B (ручки),
-    journal (текст дня снимается отдельно) и «реплики_быт» — это данные
-    из lines.json, а не состояние.
+    отключения, снег, богатство мест, stats, хроника), сутки, ожидает
+    и календарь — временные модификаторы и очереди на утро. Они снимаются
+    нарочно: то, что забыли туда записать, всплыло бы в поведении через
+    несколько дней, а здесь видно в тот же день. Не снимаются: rng (это лента,
+    а не состояние), B (ручки), journal (текст дня снимается отдельно)
+    и реплики_быт — это данные из lines.json, а не состояние. h.mods остался
+    линейкам и снимается как есть.
     """
     люди = {pid: {k: v for k, v in vars(p).items() if k != "_h"}
             for pid, p in h.people.items()}
     квартиры = {apt: vars(f) for apt, f in h.flats.items()}
     кладовые = {kid: vars(k) for kid, k in h.кладовые.items()}
     мир = {k: v for k, v in vars(h).items()
-           if k not in ("rng", "B", "journal", "people", "flats", "кладовые", "mods")}
-    mods = {k: v for k, v in h.mods.items() if k != "реплики_быт"}
+           if k not in ("rng", "B", "journal", "people", "flats", "кладовые", "mods", "реплики_быт")}
+    mods = dict(h.mods)
     return repr(_канон({"люди": люди, "квартиры": квартиры, "кладовые": кладовые,
                         "мир": мир, "mods": mods}))
 

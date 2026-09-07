@@ -278,7 +278,7 @@ class Coverage:
             self.siege["осад"] += 1
             жива = target.alive
             r = self._siege(h, leader, target)
-            self.siege["состав всего"] += len(h.mods.get("состав_налёта", []))
+            self.siege["состав всего"] += len(h.сутки.состав_налёта)
             self.siege["исход: " + r] += 1
             if жива and not target.alive:
                 self.siege["цель погибла"] += 1

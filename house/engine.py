@@ -36,7 +36,7 @@ class Simulation:
             self.lines = {}
         validate_data(self.balance, self.npcs_data, self.events, self.lines)
         self.h = House(rng=Rng(seed), B=self.balance)
-        self.h.mods["реплики_быт"] = self.lines.get("быт", [])
+        self.h.реплики_быт = self.lines.get("быт", [])
         self.h.journal = report.Journal(verbosity=verbosity, secrets=secrets, stream=stream)
         assembly.build_house(self.h, self.npcs_data)
 

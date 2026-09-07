@@ -53,7 +53,7 @@ class Наблюдатель:
                 self._крайний(h, npc)
             if key == "вылазка":
                 self.вылазки.add((self.зерно, h.day))
-            self.действия[(h.mods.get("режим", "метель"), key)] += 1
+            self.действия[(h.режим, key)] += 1
             return self._execute(h, npc, key, target)
 
         def steal(h, thief, target):
@@ -103,7 +103,7 @@ class Наблюдатель:
             self.крайние[ключ] = h.day
 
     def _снимок(self, h):
-        self.режим_дня[(self.зерно, h.day)] = h.mods.get("режим", "метель")
+        self.режим_дня[(self.зерно, h.day)] = h.режим
         живые = h.alive()
         доверие = [a.trust.get(c.id, 3.0) for a in живые for c in живые if a.id != c.id]
         self.дни[(self.зерно, h.day)] = {

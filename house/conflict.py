@@ -280,7 +280,7 @@ def steal(h, thief, target):
         h.journal.secret(f"ночью {thief.short} вынес из кв.{target.apt}: {_fmt(moved)}")
         # хозяин обнаружит пропажу утром (GDD 4.4 — сводка дня)
         if moved:
-            h.mods.setdefault("пропажи", []).append((thief.id, target.id))
+            h.ожидает.пропажи.append((thief.id, target.id))
             target.stats["обокрали"] = target.stats.get("обокрали", 0) + 1
         return ("успех", moved)
 
@@ -470,7 +470,7 @@ def приговор_дома(h, кого, повод, причина_изгна
     for p in judges:
         social.adjust(p, кого.id, trust=-3.0, hate=15)
     if len(judges) >= h.B["собрание_минимум"]:
-        h.mods["приговор_нужен"] = {"кто": кого.id, "день": h.day}
+        h.приговор_нужен = {"кто": кого.id, "день": h.day}
         h.journal.line(f"С {кого.form('ins')} больше никто не разговаривает. "
                        f"Дом молчит и ждёт, что скажут все.", 2)
         return
@@ -501,7 +501,7 @@ def house_verdict(h, thief, victim):
     if caught < 2:
         return False
     if len([p for p in h.others(thief) if p.health > 35]) >= h.B["собрание_минимум"]:
-        h.mods["приговор_нужен"] = {"кто": thief.id, "день": h.day}
+        h.приговор_нужен = {"кто": thief.id, "день": h.day}
         return False
     # выгнать человека на мороз — решение, которое дом принимает тяжело:
     # нужно, чтобы злы были почти все и чтобы сил хватило
@@ -540,7 +540,7 @@ def suspect(h, victim, exclude=None, real=None):
         # тем охотнее его подозревали
         # кого называли в чате, того и подозревают: слово в общем чате
         # работает как наговор (GDD 14, тема «подозрения»)
-        назван = h.mods.get("названы_в_чате", {}).get(other.id, -99)
+        назван = h.названы_в_чате.get(other.id, -99)
         if h.day - назван <= b["чат_подозрение_дней"]:
             w += b["чат_подозрение_вес"]
         w += max(0.0, 1.0 - other.days_of("еда") / 4.0) * victim.confidence(other.id) * 2.0
@@ -1309,7 +1309,7 @@ def зов(h, leader, target, отказали):
     target.panic = clamp(target.panic + b["паника_от_предупреждения"])
     # и дом наутро берётся за двери: не потому, что случилось, а потому,
     # что стало известно, чем тут теперь занимаются
-    h.mods["укрепление_порыв"] = h.day + 1
+    h.календарь.укрепление_порыв = h.day + 1
     # слух идёт дальше жертвы: вожак теперь тот, кто собирает людей
     for w in h.others(leader):
         if w.id == предупредил.id:
@@ -1392,7 +1392,7 @@ def пути_внутрь(h, crew, target, defenders, упор=0.0):
     # окно: со двора, с крыши или по балконам — и только если погода пускает.
     # В буран на карниз не выйдет никто, и на тридцатиградусном морозе тоже:
     # пальцы белеют раньше, чем поддастся рама
-    if h.mods.get("режим") != "буран" and h.outside > b["окно_мороз"]:
+    if h.режим != "буран" and h.outside > b["окно_мороз"]:
         верх = max(f.floor for f in h.flats.values())
         откуда = ("низ" if flat.floor <= 1 else
                   "крыша" if flat.floor >= верх else "балкон")
@@ -1635,13 +1635,13 @@ def run_siege(h, leader, target):
     crew_ids = {p.id for p in crew}
     # состав читает обвязка покрытия: пока она звала recruit сама, зов
     # выполнялся дважды
-    h.mods["состав_налёта"] = [p.id for p in crew]
+    h.сутки.состав_налёта = [p.id for p in crew]
     # предательство: на дверь идут те, с кем ещё вчера держались вместе
     traitors = [p for p in crew if target.id in p.allies]
     for p in traitors:
         p.allies.discard(target.id)
         target.allies.discard(p.id)
-        h.mods.setdefault("разрывы", {})[tuple(sorted((p.id, target.id)))] = h.day
+        h.разрывы[tuple(sorted((p.id, target.id)))] = h.day
         h.bump("предательств")
         h.bump("союзов_распалось")
         h.journal.line(f"{p.short} {vb(p.sex, 'пришёл')} к двери {target.form('gen')}, "

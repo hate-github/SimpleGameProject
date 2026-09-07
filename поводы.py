@@ -34,7 +34,7 @@ def siege(h, leader, target):
     п = h.stats.get("предупреждений", 0); д = h.stats.get("дежурный_поднял_дом", 0)
     r = _siege(h, leader, target)
     ИСХОД[r] += 1
-    СОСТАВ[min(4, len(h.mods.get("состав_налёта", [])))] += 1
+    СОСТАВ[min(4, len(h.сутки.состав_налёта))] += 1
     if h.stats.get("предупреждений", 0) > п: ПРЕД[r] += 1
     if h.stats.get("дежурный_поднял_дом", 0) > д: ДЕЖ[r] += 1
     return r

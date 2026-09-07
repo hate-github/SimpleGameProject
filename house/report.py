@@ -53,7 +53,7 @@ class Journal:
         if h.network <= 0:
             infra.append("без связи")
         tail = (" · " + ", ".join(infra)) if infra else ""
-        режим = h.mods.get("режим", "метель")
+        режим = h.режим
         self.w()
         self.w(f"══ ДЕНЬ {h.day} · {режим} · {weather}{tail} "
                + "═" * max(0, 40 - len(tail) - (len(режим) - 6)))
@@ -72,7 +72,7 @@ class Journal:
         """
         if self.verbosity < 1:
             return
-        сводка = h.mods.pop("сводка", {})
+        сводка, h.ожидает.сводка = h.ожидает.сводка, {}
         for pid in sorted(сводка):
             p = h.people.get(pid)
             if not p or not p.здесь():

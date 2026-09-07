@@ -37,9 +37,9 @@ def execute(h, npc, key, target):
     if key == "кладовая" and target is not None:
         ХОД[target.вид] += 1
         ПО_ДНЯМ[h.day]["кладовая"] += 1
-    было = h.mods.get("заказ_" + npc.id)
+    было = h.заказы.get(npc.id)
     r = _ex(h, npc, key, target)
-    стало = h.mods.get("заказ_" + npc.id)
+    стало = h.заказы.get(npc.id)
     if key == "заказать" and стало and стало is not было:
         ЗАКАЗ[стало["что"]].append((h.day, стало["цена"], h.power_on))
     return r
