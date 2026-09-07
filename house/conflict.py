@@ -10,6 +10,7 @@ from . import social, household
 from .character import своя_мерка
 from .model import Ребёнок, Тело, Память, Приговор, Оружие, Режим, Ночь
 from .hooks import наблюдаемо
+from .decision import монета, по_правилу
 
 
 # ---------------------------------------------------------------- вспомогательное
@@ -1564,7 +1565,9 @@ def кричать(h, target, crew, b):
     хочу += target.t01("общительность") * 1.5
     хочу -= target.t01("храбрость") * b["крик_гордость"]
     хочу -= b["крик_решимость"]
-    return хочу > 0
+    # правило сказало своё — последнее слово за жильцом (decision.py): NPC
+    # отвечает по правилу, игрок — как захочет
+    return по_правилу(h, target, "кричать", "кричать", "молчать", хочу)
 
 
 @наблюдаемо("defenders")
@@ -1694,7 +1697,7 @@ def run_siege(h, leader, target):
         уйти = (b["крик_вожак_уходит"]
                 * (1.4 - leader.t01("храбрость"))
                 / max(0.5, len(crew)))
-        if h.rng.chance(clamp(уйти, 0.0, 0.9)):
+        if монета(h, leader, "уйти на крик", "уйти", "остаться", clamp(уйти, 0.0, 0.9)):
             h.journal.line("На крик в подъезде зажёгся свет. Постояли и ушли.", 2)
             for p in crew:
                 social.adjust(target, p.id, hate=20, trust=-2.0)
@@ -1761,7 +1764,7 @@ def run_siege(h, leader, target):
     страшно = max((target.боится(p.id) for p in crew), default=0.0)
     готов_платить = clamp(0.45 / aggr(h) * (1.0 + страшно * b["страх_вес_откупа"]), 0.0, 0.95)
     if (pay_ok and (fear > 0.5 or target.t01("храбрость") < 0.45 or страшно > 0.35)
-            and h.rng.chance(готов_платить)):
+            and монета(h, target, "откупиться", "откупиться", "не платить", готов_платить)):
         moved = вынести_на_всех(h, target, crew, b["откуп_доля"])
         h.journal.line(f"{target.short} {'откупилась: отдала' if target.sex == 'ж' else 'откупился: отдал'} {_fmt(moved)}. Ушли.", 2)
         for p in crew:
@@ -1776,7 +1779,8 @@ def run_siege(h, leader, target):
         h.bump("исход_откупился")
         return "откупился"
 
-    if h.rng.chance(clamp(talk * 0.55 / aggr(h), 0.0, 0.6)):
+    if монета(h, target, "говорить через дверь", "говорить", "молчать",
+              clamp(talk * 0.55 / aggr(h), 0.0, 0.6)):
         h.journal.line(f"{target.short} {vb(target.sex, 'говорил')} с ними через дверь. Постояли и разошлись.", 2)
         for p in crew:
             social.adjust(p, target.id, hate=-6)
@@ -1824,7 +1828,7 @@ def run_siege(h, leader, target):
         уйти += max((target.боится(p.id) for p in crew), default=0.0) * b["страх_вес_побега"]
         if len(defenders) > 1:
             уйти *= 0.4                    # при своих не бегут
-        if h.rng.chance(clamp(уйти, 0.0, 0.9)):
+        if монета(h, target, "бежать через окно", "бежать", "остаться", clamp(уйти, 0.0, 0.9)):
             moved = вынести_на_всех(h, target, crew, b["налёт_доля_пустой_квартиры"])
             target.warmth = clamp(target.warmth - 25)
             h.journal.line(f"{target.short} {vb(target.sex, 'ушёл')} через окно на пожарную лестницу, "
@@ -1837,7 +1841,8 @@ def run_siege(h, leader, target):
             h.bump("исход_сбежал")
             return "сбежал"
         # засада: тот, кто ждёт за дверью с топором, встречает первого вошедшего
-        if not держит and target.weapon != Оружие.НЕТ and target.t01("храбрость") > 0.55 and h.rng.chance(b["засада_шанс"]):
+        if (not держит and target.weapon != Оружие.НЕТ and target.t01("храбрость") > 0.55
+                and монета(h, target, "ждать за дверью", "ждать", "не ждать", b["засада_шанс"])):
             первый = h.rng.pick(crew)
             первый.injuries.append(h.rng.pick(["ушиб", "порез"]))
             первый.health = clamp(первый.health - h.rng.uni(10, 22))
@@ -1880,8 +1885,10 @@ def run_siege(h, leader, target):
         h.journal.line(f"Дверь кв.{target.apt} вынесли.", 2)
     # GDD 16, «Прорыв»: сдаться, отбиваться или бежать. Бежать было поздно —
     # это решалось, пока дверь ещё держали
-    surrender = (def_power < attack_power * b["сдаться_превосходство"]
-                 or target.t01("храбрость") < b["сдаться_трусость"])
+    # правило смотрит на силы и храбрость, последнее слово за жильцом
+    по_силам = (def_power < attack_power * b["сдаться_превосходство"]
+                or target.t01("храбрость") < b["сдаться_трусость"])
+    surrender = по_правилу(h, target, "сдаться", "сдаться", "драться", 1.0 if по_силам else 0.0)
 
     if surrender:
         moved = вынести_на_всех(h, target, crew, 0.75)
@@ -1901,7 +1908,7 @@ def run_siege(h, leader, target):
         решимость = (leader.t01("вспыльчивость") + leader.hate.get(target.id, 0) / 100.0
                      - leader.t01("лояльность") * 1.5)
         if (решимость > b["добить_решимость"] and not target.dependents
-                and h.rng.chance(b["добить_шанс"])):
+                and монета(h, leader, "добить", "добить", "оставить", b["добить_шанс"])):
             leader.bump("убийств")
             h.bump("убийств")
             h.bump("убийств_безоружных")
@@ -1919,7 +1926,8 @@ def run_siege(h, leader, target):
         # если шли за квартирой — её и забирают. Хозяина меняют местами
         # с вожаком: тот перебирается в чужие стены, а бывшему остаётся дыра,
         # из которой пришли (GDD 16, «сдаться — потеря запасов»)
-        if хочу_его_квартиру(h, leader, target) > 0 and h.rng.chance(b["занять_после_налёта"]):
+        if (хочу_его_квартиру(h, leader, target) > 0
+                and монета(h, leader, "занять квартиру", "занять", "уйти", b["занять_после_налёта"])):
             занять_силой(h, leader, target)
             _house_learns(h, target, crew)
             h.bump("исход_занял")
@@ -1927,8 +1935,11 @@ def run_siege(h, leader, target):
         # изгнание — если вожак злой (GDD 16: «сдаться — потеря запасов,
         # возможно, изгнание»). Раньше эта ветка стояла за условием
         # «ни у кого из защитников нет даже ножа» и не случалась ни разу
+        # монета до проверки иждивенцев — так и было: порядок бросков есть поведение
         if ((leader.trait("вспыльчивость") >= 7 or leader.hate.get(target.id, 0) > 70)
-                and h.rng.chance(b["изгнание_после_налёта"]) and not target.dependents):
+                and монета(h, leader, "выставить на мороз", "выставить", "оставить",
+                           b["изгнание_после_налёта"])
+                and not target.dependents):
             # выставили из собственных стен на мороз. Тяжелее этого в доме
             # только смерть, и это не прощается никогда
             for p in crew:
