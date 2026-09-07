@@ -14,8 +14,9 @@
 """
 import io, sys, collections, statistics as st
 sys.stdout.reconfigure(encoding="utf-8")
-from house import actions, social
 from house.engine import Simulation
+from house.hooks import Хуки
+from house.street import МЕСТА
 
 ВЫХОДОВ = collections.Counter()          # место -> сколько раз ходили
 ТРАВМ = collections.Counter()            # место -> сколько раз вернулись с травмой
@@ -36,15 +37,20 @@ from house.engine import Simulation
 ЖИВЫЕ_ПО_ДНЯМ = {}
 ТИХО = []        # (тихая ли смерть, сколько человек узнало, сколько было живых)
 
-_outing = actions._outing
+ЗЕРНО = [0]
+_ДО = {}
+ЧИСТИЛ = {}                               # (зерно, кто) -> день последней прочистки
+САМ_ДОГАДАЛСЯ = collections.Counter()     # (зерно, кто) -> прочисток без угара и без подсказки
 
 
-def outing(h, npc, dur, м):
-    было_т = h.stats.get("травм_на_вылазке", 0)
-    было_в = h.stats.get("встреч_на_вылазке", 0)
-    r = _outing(h, npc, dur, м)
-    т = h.stats.get("травм_на_вылазке", 0) - было_т
-    в = h.stats.get("встреч_на_вылазке", 0) - было_в
+def перед_выходом(h, npc, dur, м, спутник=None):
+    _ДО["т"] = h.stats.get("травм_на_вылазке", 0)
+    _ДО["в"] = h.stats.get("встреч_на_вылазке", 0)
+
+
+def после_выхода(h, npc, dur, м, спутник=None, итог=None):
+    т = h.stats.get("травм_на_вылазке", 0) - _ДО["т"]
+    в = h.stats.get("встреч_на_вылазке", 0) - _ДО["в"]
     ВЫХОДОВ[м.имя] += 1
     ТРАВМ[м.имя] += т
     ВСТРЕЧ[м.имя] += в
@@ -56,53 +62,32 @@ def outing(h, npc, dur, м):
     if м.магазин:
         ПО_ДНЯМ[h.day]["в_магазин"] += 1
         ПО_ДНЯМ[h.day]["травм_в_магазин"] += т
-    return r
 
 
-actions._outing = outing
-
-_ex = actions.execute
-
-
-def execute(h, npc, key, target):
+def перед_делом(h, npc, key, target):
     if key == "вытяжка":
-        npc.stats["_чистил"] = h.day
+        ЧИСТИЛ[(ЗЕРНО[0], npc.id)] = h.day
         # почистил, ни разу не угорев и ни от кого не услышав, — то есть догадался сам
         if not npc.stats.get("угорал") and npc.слышал_про_угар < 0:
-            npc.stats["_сам"] = npc.stats.get("_сам", 0) + 1
-    return _ex(h, npc, key, target)
+            САМ_ДОГАДАЛСЯ[(ЗЕРНО[0], npc.id)] += 1
 
 
-actions.execute = execute
-
-_узнал = social.узнал_о_смерти
-ЗЕРНО = [0]
-
-
-def узнал_о_смерти(h, кто, умерший):
-    r = _узнал(h, кто, умерший)
-    if r:
+def узнал(h, кто, умерший, итог=None):
+    if итог:
         ЗАДЕРЖКА[(ЗЕРНО[0], умерший.id)].append(h.day - (умерший.died_day or h.day))
-    return r
 
 
-social.узнал_о_смерти = узнал_о_смерти
-
-_day = Simulation.one_day
-
-
-def one_day(self):
-    r = _day(self)
-    h = self.h
+def конец_дня(h):
     СНЕГ[h.day].append(getattr(h, "снег", 0.0))
     ЖИВЫХ[h.day] += len(h.alive())
     ЖИВЫЕ_ПО_ДНЯМ[h.day] = len(h.alive())
     for p in h.alive():
         ВЕНТ[h.day].append(getattr(h.where(p), "вентиляция", 1.0))
-    return r
 
 
-Simulation.one_day = one_day
+ХУКИ = Хуки(on_outing=[перед_выходом], after_outing=[после_выхода], on_execute=[перед_делом],
+            after_узнал_о_смерти=[узнал], on_day=[конец_дня])
+
 
 def не_громкая(p):
     """Смерть, которой никто не мог услышать: не драка, не выстрел, не осада."""
@@ -122,7 +107,7 @@ for arg in sys.argv[1:]:
 for seed in range(1, N + 1):
     ЗЕРНО[0] = seed
     h = Simulation(seed=seed, days=30, verbosity=0, stream=io.StringIO(),
-                   overrides=ПОДМЕНА or None).run()
+                   overrides=ПОДМЕНА or None, hooks=ХУКИ).run()
     ВЫЖИЛО.append(len([p for p in h.people.values() if p.alive and not p.exiled]))
     for p in h.people.values():
         if p.ушёл:
@@ -148,10 +133,10 @@ for seed in range(1, N + 1):
               "узнали_про_пункт"):
         С[k] += h.stats.get(k, 0)
     for p in h.people.values():
-        САМ[p.trait("сообразительность")].append(p.stats.get("_сам", 0))
+        САМ[p.trait("сообразительность")].append(САМ_ДОГАДАЛСЯ.get((seed, p.id), 0))
         if p.stats.get("угорал"):
             ПРИЗНАК.append((p.trait("сообразительность"),
-                            p.stats.get("_чистил", -99) >= max(p.угар_признак, 0),
+                            ЧИСТИЛ.get((seed, p.id), -99) >= max(p.угар_признак, 0),
                             (p.cause or "").startswith("угорел")))
         if (p.cause or "").startswith("угорел"):
             УГАР_ДЕНЬ.append(p.died_day)
@@ -173,7 +158,7 @@ print(строка if строка.strip() else "   снега в модели �
 print()
 print("2. ТРАВМА И ВСТРЕЧА ПО МЕСТАМ")
 print(f"   {'место':<22}{'выходов':>9}{'травм':>8}{'доля':>7}{'встреч':>8}{'доля':>7}{'часы':>7}")
-for м in actions.МЕСТА:
+for м in МЕСТА:
     и = м.имя
     n = ВЫХОДОВ[и]
     ч = st.median(ЧАСЫ[и]) if ЧАСЫ[и] else 0.0
