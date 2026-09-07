@@ -279,7 +279,7 @@ def выгнать(h, npc, гость):
 def occupy_flat(h, person):
     """Человек вернулся в свою квартиру: забирает то, что в ней осталось."""
     flat = h.flats.get(person.apt)
-    if flat and not (flat.body and flat.body.get("порций", 0) > 0):
+    if flat and not (flat.body and flat.body.порций > 0):
         for res, v in list(flat.stock.items()):
             if v:
                 person.stock[res] = person.stock.get(res, 0.0) + v

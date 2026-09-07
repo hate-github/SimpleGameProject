@@ -5,7 +5,7 @@
 оркестрацией дня; это единственное место, где данные становятся состоянием
 (задача 8 добавит сюда назначение `Решающего` каждому жильцу).
 """
-from .model import NPC, Flat, Кладовая, FIREARMS
+from .model import NPC, Flat, Кладовая, Ребёнок, FIREARMS
 
 
 def build_house(h, npcs_data):
@@ -54,12 +54,10 @@ def build_house(h, npcs_data):
             # падежи ребёнок носит с собой все четыре: он переходит из рук
             # в руки (conflict._orphan), и на новом месте «ушла с Ваней»
             # должно читаться так же, как читалось у матери
-            p.дети.append({"имя": p.dependent_name or "ребёнок",
-                           "вин": p.dependent_acc or p.dependent_name or "ребёнка",
-                           "род": p.dependent_gen or p.dependent_name or "ребёнка",
-                           "твор": p.dependent_ins or p.dependent_name or "ребёнком",
-                           "сытость": 85.0, "тепло": 80.0, "здоровье": 100.0,
-                           "болен": None})
+            p.дети.append(Ребёнок(имя=p.dependent_name or "ребёнок",
+                                  вин=p.dependent_acc or p.dependent_name or "ребёнка",
+                                  род=p.dependent_gen or p.dependent_name or "ребёнка",
+                                  твор=p.dependent_ins or p.dependent_name or "ребёнком"))
         h.people[p.id] = p
     # стартовые отношения
     for d in npcs_data["жильцы"]:

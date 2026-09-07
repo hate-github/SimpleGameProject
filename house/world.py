@@ -252,7 +252,7 @@ def условие_верно(h, условие):
     if вид == "мало_живых":
         return len(h.alive()) <= условие.get("сколько", 3)
     if вид == "есть_тело":
-        return any(f.body and f.body.get("порций", 0) > 0 for f in h.пустые())
+        return any(f.body and f.body.порций > 0 for f in h.пустые())
     if вид == "режим":
         return h.режим == условие.get("какой", "буран")
     if вид == "отключено":
@@ -620,14 +620,14 @@ def запах_по_стояку(h):
     b = h.B
     for flat in sorted(h.flats.values(), key=lambda f: f.apt):
         тело = flat.body
-        if not тело or тело.get("запах") or h.day - тело["день"] < b["запах_дней"]:
+        if not тело or тело.запах or h.day - тело.день < b["запах_дней"]:
             continue
         мёртвый = next((p for p in h.people.values()
-                        if not p.alive and p.apt == flat.apt and p.died_day == тело["день"]), None)
+                        if not p.alive and p.apt == flat.apt and p.died_day == тело.день), None)
         не_знают = [p for p in h.alive()
                     if мёртвый is not None and мёртвый.id not in p.знает_о_смерти
                     and abs(h.where(p).floor - flat.floor) <= 1]
-        тело["запах"] = h.day
+        тело.запах = h.day
         if не_знают:
             h.journal.line(f"По стояку от кв.{flat.apt} который день тянет "
                            f"сладковатым. Вслух пока никто не сказал, чем именно.", 1)

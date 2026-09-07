@@ -8,6 +8,7 @@ GDD 17: бой намеренно простой и смертельный; чи
 from .util import clamp, vb
 from . import social, household
 from .character import своя_мерка
+from .model import Ребёнок, Тело
 
 
 # ---------------------------------------------------------------- вспомогательное
@@ -843,8 +844,8 @@ def on_death(h, dead, killer=None, quiet=False, оружие=None, свидет�
     # иначе запас в подвале выпадает из игры вместе с хозяином
     flat.ключи |= dead.ключи_кладовых
     dead.ключи_кладовых = set()
-    flat.body = {"кто": dead.short, "вин": dead.form("acc"), "падеж": dead.form("gen"), "день": h.day,
-                 "порций": h.B["тело_порций"], "тронуто": False}
+    flat.body = Тело(кто=dead.short, вин=dead.form("acc"), падеж=dead.form("gen"), день=h.day,
+                     порций=h.B["тело_порций"])
     dead.stock = {}
 
 
@@ -865,11 +866,11 @@ def смерть_ребёнка(h, кто, р):
         кто.dependent_acc = ""
     h.bump("смертей_детей")
     кто.bump("потерял_ребёнка")
-    причина = "от болезни" if р["болен"] else ("от голода" if р["сытость"] <= р["тепло"]
+    причина = "от болезни" if р.болен else ("от голода" if р.сытость <= р.тепло
                                                else "от холода")
-    h.journal.line(f"† {р['имя']} умер {причина}. {кто.short} "
+    h.journal.line(f"† {р.имя} умер {причина}. {кто.short} "
                    f"{'сидела' if кто.sex == 'ж' else 'сидел'} рядом до утра.", 2)
-    h.note(f"{р['имя']} умер {причина} ({кто.form('gen')})")
+    h.note(f"{р.имя} умер {причина} ({кто.form('gen')})")
     кто.mood = clamp(кто.mood - b["ребёнок_смерть_настроение"])
     social.add_panic(кто, b["ребёнок_смерть_паника"])
     кто.нормальность_пол = max(0.0, кто.нормальность_пол - b["ребёнок_смерть_пол"])
@@ -899,8 +900,8 @@ def вернуть_детей(h):
     b = h.B
     for мать in list(h.alive()):
         for р in list(мать.дети):
-            хозяин = h.живой(р.get("у")) if р.get("у") else None
-            р["у"] = None
+            хозяин = h.живой(р.у) if р.у else None
+            р.у = None
             if хозяин is None:
                 continue
             # не отдать чужого ребёнка — решение, а не следствие приговора.
@@ -925,16 +926,16 @@ def вернуть_детей(h):
                     мать.dependent_acc = ""
                 хозяин.dependents += 1
                 хозяин.дети.append(р)
-                хозяин.dependent_name = р["имя"]
-                хозяин.dependent_acc = р["вин"]
-                хозяин.dependent_gen = р.get("род") or р["имя"]
-                хозяин.dependent_ins = р.get("твор") or р["имя"]
+                хозяин.dependent_name = р.имя
+                хозяин.dependent_acc = р.вин
+                хозяин.dependent_gen = р.род or р.имя
+                хозяин.dependent_ins = р.твор or р.имя
                 h.bump("детей_не_вернули")
                 h.journal.line(f"{хозяин.short} не {vb(хозяин.sex, 'отдал')} "
-                               f"{р['вин']} утром: {vb(хозяин.sex, 'сказал')}, "
+                               f"{р.вин} утром: {vb(хозяин.sex, 'сказал')}, "
                                f"что {мать.short} его не выходит.", 2)
                 h.note(f"{хозяин.short} оставил{'а' if хозяин.sex == 'ж' else ''} "
-                       f"{р['вин']} у себя")
+                       f"{р.вин} у себя")
                 social.adjust(мать, хозяин.id, hate=45, trust=-4.0)
                 social.обидели(h, мать, хозяин, b["обида_за_ребёнка"])
                 мать.mood = clamp(мать.mood - 20)
@@ -947,7 +948,7 @@ def вернуть_детей(h):
             else:
                 h.bump("детей_вернули")
                 h.journal.line(f"Утром {мать.short} {vb(мать.sex, 'забрал')} "
-                               f"{р['вин']} обратно.", 1)
+                               f"{р.вин} обратно.", 1)
                 social.сблизились(h, мать, хозяин, b["близость_за_ночёвку"])
                 social.adjust(мать, хозяин.id, trust=b["доверие_за_ночёвку"])
 
@@ -958,11 +959,11 @@ def _orphan(h, dead):
     Ребёнок переходит вместе со своей шкалой: он тот же самый, промёрзший
     и голодный ровно настолько, насколько был при матери.
     """
-    дети = dead.дети or [{"имя": dead.dependent_name or "ребёнок",
-                          "вин": dead.dependent_acc or dead.dependent_name or "ребёнка",
-                          "род": dead.dependent_gen or dead.dependent_name or "ребёнка",
-                          "твор": dead.dependent_ins or dead.dependent_name or "ребёнком",
-                          "сытость": 60.0, "тепло": 55.0, "здоровье": 80.0, "болен": None}]
+    дети = dead.дети or [Ребёнок(имя=dead.dependent_name or "ребёнок",
+                                 вин=dead.dependent_acc or dead.dependent_name or "ребёнка",
+                                 род=dead.dependent_gen or dead.dependent_name or "ребёнка",
+                                 твор=dead.dependent_ins or dead.dependent_name or "ребёнком",
+                                 сытость=60.0, тепло=55.0, здоровье=80.0)]
     dead.дети = []
     dead.dependents = 0
     for р in дети:
@@ -976,21 +977,21 @@ def _orphan(h, dead):
             taker = h.rng.weighted(candidates)
             taker.dependents += 1
             taker.дети.append(р)
-            taker.dependent_name = р["имя"]
+            taker.dependent_name = р.имя
             taker.mood = clamp(taker.mood + 6)
             # все четыре формы, а не две: без родительного и творительного
             # у нового родителя выходило «просидела рядом с Ваня»
-            taker.dependent_acc = р["вин"]
-            taker.dependent_gen = р.get("род") or р["имя"]
-            taker.dependent_ins = р.get("твор") or р["имя"]
-            h.journal.line(f"{р['имя']} остался один. {taker.short} "
+            taker.dependent_acc = р.вин
+            taker.dependent_gen = р.род or р.имя
+            taker.dependent_ins = р.твор or р.имя
+            h.journal.line(f"{р.имя} остался один. {taker.short} "
                            f"{vb(taker.sex, 'забрал')} его к себе.", 2)
-            h.note(f"{taker.short} {vb(taker.sex, 'взял')} {р['вин']}")
+            h.note(f"{taker.short} {vb(taker.sex, 'взял')} {р.вин}")
             for p in h.alive():
                 social.adjust(p, taker.id, trust=1.0)
         else:
-            h.journal.line(f"{р['имя']} остался один. Никто не взял.", 2)
-            h.note(f"{р['имя']} остался один — никто не взял")
+            h.journal.line(f"{р.имя} остался один. Никто не взял.", 2)
+            h.note(f"{р.имя} остался один — никто не взял")
             social.house_shock(h, panic=10, mood=-14)
             h.bump("детей_брошено")
 
@@ -1608,8 +1609,8 @@ def defenders_of(h, target, crew_ids, предупреждён=False, подня
             will -= h.B["невыход_помнят"]
         # и то, о чём эти двое условились ещё до всякой осады: перезимовать
         # вдвоём. Замысел не даёт ни еды, ни тепла — он даёт вот эту минуту
-        if (p.замысел is not None and p.замысел["вид"] == "вместе"
-                and p.замысел.get("друг") == target.id):
+        if (p.замысел is not None and p.замысел.вид == "вместе"
+                and p.замысел.друг == target.id):
             will += h.B["замысел_вместе_защита"]
         порог = 6.5
         if предупреждён:
