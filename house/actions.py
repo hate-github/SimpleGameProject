@@ -10,6 +10,7 @@ import functools
 from .util import clamp, norm, vb, gform
 from .model import вещи, spend, Оружие, Режим
 from .hooks import наблюдаемо
+from .decision import монета, по_правилу
 # таблицы по ключу действия собираются в catalog.py из записей Действие;
 # имена остаются и здесь, потому что проверка покрытия и линейки читают их
 # как actions.COST, actions.НОРМА
@@ -2395,7 +2396,7 @@ def _исполнить_позвать(h, npc, target, spent):
     said = None
     if м is None or t is None or not t.здесь():
         pass                       # пока сговаривались, идти стало некуда
-    elif пойдёт_вдвоём(h, npc, t, м, b) > 0:
+    elif по_правилу(h, t, "пойти вдвоём", "пойти", "отказать", пойдёт_вдвоём(h, npc, t, м, b)):
         dur = min(h.rng.uni(b["вылазка_часы_мин"], b["вылазка_часы_макс"])
                   * м.часы * погода_часы(h), npc.time_left, t.time_left)
         npc.time_left -= dur
@@ -2426,7 +2427,7 @@ def _исполнить_отдать_на_ночь(h, npc, target, spent):
     said = None
     if р is None or р.у or t is None or not t.здесь():
         pass
-    elif возьмёт_ребёнка(h, npc, t, р, b) > 0:
+    elif по_правилу(h, t, "взять ребёнка на ночь", "взять", "отказать", возьмёт_ребёнка(h, npc, t, р, b)):
         р.у = t.id
         # и кормит его тот, к кому отнесли: те же 0.6 рта, что он ест дома
         need = b["ребёнок_рот"]
@@ -2948,8 +2949,12 @@ def _ask(h, npc, target):
     долг = target.дал.get(npc.id, 0.0)
     res = most_needed(npc)
     has = target.stock.get(res, 0)
-    через_дверь = not h.rng.chance(откроет_дверь(h, target, npc, b))
-    give = даст_ли(h, target, npc, res, через_дверь, b)
+    # два решения хозяина (decision.py): открыть ли — монета по его склонности,
+    # дать ли — по правилу даст_ли; за игрока-хозяина оба задаются ему
+    через_дверь = not монета(h, target, "открыть дверь", "открыть", "через дверь",
+                             откроет_дверь(h, target, npc, b))
+    даст = по_правилу(h, target, "дать из своего", "дать", "отказать",
+                      даст_ли(h, target, npc, res, через_дверь, b))
     # сам факт просьбы: «просят — значит, скоро будут отбирать» (GDD 14).
     # И третье следствие оттуда же, которого не было: у чужого человека просить
     # стыдно, и доверие к просящему падает тем сильнее, чем меньше его было
@@ -2981,7 +2986,7 @@ def _ask(h, npc, target):
 
     rec = npc.ask_record(target.id)
     rec["последняя"] = h.day
-    if has >= 2 and give > 0:
+    if has >= 2 and даст:
         target.stock[res] = has - 1
         npc.stock[res] = npc.stock.get(res, 0) + 1
         social.adjust(npc, target.id, trust=b["доверие_за_помощь"], hate=-15)
