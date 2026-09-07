@@ -1893,6 +1893,7 @@ def _исполнить_быт(h, npc, target, spent):
     текст = (текст.replace("{ребёнок}", npc.dependent_name or "ребёнок")
              .replace("{ребёнок_род}", npc.dependent_gen or npc.dependent_name or "ребёнка")
              .replace("{ребёнок_вин}", npc.dependent_acc or npc.dependent_name or "ребёнка"))
+    h.hooks.зов("on_реплика", h, текст)
     return f"{npc.short} {gform(текст, npc.sex)}"
 
 

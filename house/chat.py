@@ -88,6 +88,7 @@ def daily_chat(h, lines):
         text = text.replace("{кто}", who.short).replace("{кв}", str(who.apt))
         if not rng.chance(0.55 + 0.04 * p.trait("общительность")):
             continue
+        h.hooks.зов("on_реплика", h, text)
         h.journal.chat(p.short, text)
         сказанное.add(шаблон)
         said += 1
