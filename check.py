@@ -419,6 +419,32 @@ def проверить_решающего(w):
     return bad
 
 
+ЛИНЕЙКИ = (("замер.py", ["--прогонов", "1"]), ("поводы.py", ["1"]), ("своё.py", ["1"]),
+           ("снаружи.py", ["1"]), ("живость.py", ["1"]), ("вдвоём.py", ["1"]))
+
+
+def проверить_линейки(w):
+    """Линейки запускаются. Не про цифры — про то, что скрипт жив.
+
+    Три из шести молча лежали месяцами: они подменяли функции домена, смена
+    сигнатуры их ломала, а check.py их не трогал. Теперь они на хуках, и здесь
+    каждая проживает одно зерно. Это долго, поэтому только по --линейки
+    и в режиме надёжной выборки.
+    """
+    bad = []
+    for имя, args in ЛИНЕЙКИ:
+        p = subprocess.run([sys.executable, имя] + args, capture_output=True, cwd=ROOT,
+                           env=dict(os.environ, PYTHONIOENCODING="utf-8"), timeout=600)
+        if p.returncode != 0:
+            хвост = p.stderr.decode("utf-8", "replace").strip().splitlines()
+            w(f"  {имя}: упала — {хвост[-1] if хвост else 'без вывода'}")
+            bad.append(f"линейка {имя} не запускается")
+        else:
+            строк = len(p.stdout.decode("utf-8", "replace").splitlines())
+            w(f"  {имя}: одно зерно прожито, {строк} строк вывода")
+    return bad
+
+
 def main():
     try:
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -429,6 +455,8 @@ def main():
     ap.add_argument("--дней", type=int, default=30)
     ap.add_argument("--золотой", action="store_true", help="перезаписать эталон")
     ap.add_argument("--подробно", action="store_true", help="полный отчёт о покрытии")
+    ap.add_argument("--линейки", action="store_true",
+                    help="прогнать каждую линейку на одном зерне (в режиме --прогонов 120 — всегда)")
     args = ap.parse_args()
 
     беды = []
@@ -456,6 +484,10 @@ def main():
     print()
     print("6. ШОВ РЕШЕНИЯ (скрипт и человек вместо softmax)")
     беды += проверить_решающего(w)
+    if args.линейки or args.прогонов >= НАДЁЖНАЯ_ВЫБОРКА:
+        print()
+        print("7. ЛИНЕЙКИ (одно зерно каждая)")
+        беды += проверить_линейки(w)
 
     print()
     print("─" * 60)
