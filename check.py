@@ -97,19 +97,17 @@ def снимок(h):
     несколько дней, а здесь видно в тот же день. Не снимаются: rng (это лента,
     а не состояние), B (ручки), journal (текст дня снимается отдельно),
     реплики_быт — это данные из lines.json, а не состояние, — и hooks:
-    наблюдатели смотрят на дом, а не составляют его. h.mods остался
-    линейкам и снимается как есть.
+    наблюдатели смотрят на дом, а не составляют его.
     """
     люди = {pid: {k: v for k, v in vars(p).items() if k != "_h"}
             for pid, p in h.people.items()}
     квартиры = {apt: vars(f) for apt, f in h.flats.items()}
     кладовые = {kid: vars(k) for kid, k in h.кладовые.items()}
     мир = {k: v for k, v in vars(h).items()
-           if k not in ("rng", "B", "journal", "people", "flats", "кладовые", "mods",
+           if k not in ("rng", "B", "journal", "people", "flats", "кладовые",
                         "реплики_быт", "hooks")}
-    mods = dict(h.mods)
     return repr(_канон({"люди": люди, "квартиры": квартиры, "кладовые": кладовые,
-                        "мир": мир, "mods": mods}))
+                        "мир": мир}))
 
 
 def _хэш(text):

@@ -1123,8 +1123,6 @@ class House:
     приговор_нужен: Optional[Приговор] = None                 # кого дом должен судить
     # данные, а не состояние
     реплики_быт: List[Any] = field(default_factory=list)            # реплики быта из lines.json
-    # только для линеек и внешних наблюдателей (своё.py: «дико», «_пусто»); домен сюда не пишет
-    mods: Dict[str, Any] = field(default_factory=dict)
 
     # вывод
     journal: Any = None
