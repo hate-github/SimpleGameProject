@@ -26,8 +26,10 @@
 `--золотой` и записью в ПЛАН.md о том, почему эталон изменился.
 """
 import argparse
+import ast
 import dataclasses
 import enum
+import glob
 import hashlib
 import io
 import json
@@ -234,6 +236,80 @@ def проверить_ручки(w):
         bad.append(f"отсутствующих ключей услуг: {len(косвенные)}")
     if not bad:
         w(f"  все {len(B) - len(заголовки)} ручек живые, лишних чтений нет")
+    return bad
+
+
+# кто вправе читать статистику дома: мир, который знает всё, и наблюдатели
+ЗНАЮТ_ВСЁ = {"world.py", "report.py", "checks.py", "runner.py"}
+
+
+def _это_h_stats(node):
+    return (isinstance(node, ast.Attribute) and node.attr == "stats"
+            and isinstance(node.value, ast.Name) and node.value.id == "h")
+
+
+def проверить_чтение_статистики(w):
+    """Решения не читают статистику дома (план поведения, задача 9).
+
+    `h.stats` — диагностика: счётчики для отчёта и линеек. Пока ночной вор
+    боялся по `h.stats["убийств"]`, а подброс оглядывался на `h.stats["краж"]`,
+    диагностика управляла симуляцией, и человек знал то, чего знать не мог.
+    В модулях домена чтение `h.stats` допустимо только как бухгалтерия —
+    внутри записи в тот же ключ (`h.stats["x"] = h.stats.get("x", 0) + …`)
+    или `setdefault`. Мир и наблюдатели (ЗНАЮТ_ВСЁ) читают что хотят.
+    Новое чтение — красный check.py с файлом и строкой; список исключений пуст.
+    """
+    bad = []
+    чисто, бухгалтерия = 0, 0
+    for path in sorted(glob.glob(os.path.join(ROOT, "house", "*.py"))):
+        имя = os.path.basename(path)
+        if имя in ЗНАЮТ_ВСЁ:
+            continue
+        src = open(path, encoding="utf-8").read()
+        tree = ast.parse(src)
+        родитель = {}
+        for node in ast.walk(tree):
+            for child in ast.iter_child_nodes(node):
+                родитель[child] = node
+        строки = src.splitlines()
+        нарушений = 0
+        for node in ast.walk(tree):
+            if not (_это_h_stats(node) and isinstance(node.ctx, ast.Load)):
+                continue
+            p = родитель.get(node)
+            # запись: h.stats[...] = …, h.stats[...] += …, h.stats.setdefault(...)
+            if isinstance(p, ast.Subscript) and isinstance(p.ctx, ast.Store):
+                continue
+            if (isinstance(p, ast.Attribute) and p.attr == "setdefault"
+                    and isinstance(родитель.get(p), ast.Call)):
+                бухгалтерия += 1
+                continue
+            # чтение с ключом: h.stats.get(k, …) или h.stats[k]
+            ключ = None
+            if isinstance(p, ast.Attribute) and p.attr == "get":
+                вызов = родитель.get(p)
+                if isinstance(вызов, ast.Call) and вызов.args:
+                    ключ = ast.dump(вызов.args[0])
+            elif isinstance(p, ast.Subscript):
+                ключ = ast.dump(p.slice)
+            # бухгалтерия — если это чтение стоит внутри записи в тот же ключ
+            up = p
+            while up is not None and not isinstance(up, ast.Assign):
+                up = родитель.get(up)
+            if (ключ is not None and isinstance(up, ast.Assign) and len(up.targets) == 1
+                    and isinstance(up.targets[0], ast.Subscript)
+                    and _это_h_stats(up.targets[0].value)
+                    and ast.dump(up.targets[0].slice) == ключ):
+                бухгалтерия += 1
+                continue
+            нарушений += 1
+            w(f"  {имя}:{node.lineno}: решение читает h.stats — {строки[node.lineno - 1].strip()[:80]}")
+        if нарушений:
+            bad.append(f"{имя}: {нарушений} чтений h.stats в решениях")
+        else:
+            чисто += 1
+    if not bad:
+        w(f"  решения не читают h.stats: {чисто} модулей чисты, бухгалтерских записей {бухгалтерия}")
     return bad
 
 
@@ -465,8 +541,9 @@ def main():
     print("1. ДАННЫЕ")
     беды += проверить_данные(w)
     print()
-    print("2. РУЧКИ")
+    print("2. РУЧКИ И СТАТИСТИКА")
     беды += проверить_ручки(w)
+    беды += проверить_чтение_статистики(w)
     print()
     print(f"3. ИНВАРИАНТЫ, БАЛАНС И ПОКРЫТИЕ ({args.прогонов} прогонов)")
     b, cov, runs = проверить_прогоны(w, args.прогонов, args.дней)
