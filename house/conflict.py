@@ -245,7 +245,7 @@ def theft_chance(h, thief, target, известно=True):
     if target.away and not [g for g in h.household(target)[1:] if not g.away]:
         p += b["кража_хозяин_ушёл"]      # ушёл, и дома никого не оставил
     if известно:
-        if target.tonight == Ночь.ДЕЖУРИТЬ:
+        if target.tonight == Ночь.ДЕЖУРИТЬ:  # правда: исполнение: известно=True только ночью, когда кража уже идёт
             p += b["кража_дежурство"]
     else:
         привычка = target.ночей_дежурства / max(1.0, float(h.day))
@@ -552,7 +552,7 @@ def suspect(h, victim, exclude=None, real=None):
         назван = h.названы_в_чате.get(other.id, -99)
         if h.day - назван <= b["чат_подозрение_дней"]:
             w += b["чат_подозрение_вес"]
-        w += max(0.0, 1.0 - other.days_of("еда") / 4.0) * victim.confidence(other.id) * 2.0
+        w += max(0.0, 1.0 - other.days_of("еда") / 4.0) * victim.confidence(other.id) * 2.0  # правда: фаза 1: believed_days — там уже уверенность
         if any(m.вид == "слышал" and m.кто == other.id and m.день == h.day for m in victim.memory):
             w += 1.5
         w = max(0.05, w)
@@ -1316,7 +1316,7 @@ def зов(h, leader, target, отказали):
     h.note(f"{предупредил.short} предупредил {target.form('acc')}")
     social.adjust(target, предупредил.id, trust=b["доверие_за_предупреждение"], hate=-15)
     social.adjust(предупредил, target.id, trust=0.5)
-    target.panic = clamp(target.panic + b["паника_от_предупреждения"])
+    target.panic = clamp(target.panic + b["паника_от_предупреждения"])  # правда: исполнение: предупреждение состоялось
     # и дом наутро берётся за двери: не потому, что случилось, а потому,
     # что стало известно, чем тут теперь занимаются
     h.календарь.укрепление_порыв = h.day + 1
