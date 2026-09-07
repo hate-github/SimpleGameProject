@@ -13,6 +13,7 @@
 import collections
 
 from .util import clamp, vb
+from .hooks import наблюдаемо
 from .model import spend, FIREARMS, WEAPONS, ВидКладовой, Режим
 from . import social, conflict, world
 
@@ -526,6 +527,7 @@ def выбрать_место(h, npc, часов=None, без_магазина=F
     return лучшее
 
 
+@наблюдаемо("outing")
 def _outing(h, npc, dur, м, спутник=None):
     """Вылазка (GDD 20): единственный источник новых ресурсов.
 
