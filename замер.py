@@ -19,8 +19,8 @@ import io
 import statistics as st
 import sys
 
-from house import actions, conflict
 from house.engine import Simulation
+from house.hooks import Хуки
 
 # поступки, до которых в обычной жизни не доходят (по actions.НОРМА >= 1.0)
 КРАЙНИЕ_ДНЁМ = ("разбор", "дверь", "отнять", "кража_днём", "тело")
@@ -39,62 +39,35 @@ class Наблюдатель:
         self.режим_дня = {}    # (зерно, день) -> погода
         self.действия = collections.Counter()   # (погода, действие) -> сколько раз
         self.зерно = None
+        # наблюдатели для Simulation(hooks=...): дом зовёт их сам, подмен нет
+        self.хуки = Хуки(on_execute=[self._исполняет], on_steal=[self._кража],
+                         on_убить_соседа=[self._нож], on_siege=[self._осада],
+                         on_day=[self._снимок])
 
-    # --- установка ---
-    def __enter__(self):
-        self._execute = actions.execute
-        self._steal = conflict.steal
-        self._kill = conflict.убить_соседа
-        self._siege = conflict.run_siege
-        self._day = Simulation.one_day
+    # --- наблюдатели ---
+    def _исполняет(self, h, npc, key, target):
+        if key in КРАЙНИЕ_ДНЁМ:
+            self._крайний(h, npc)
+        if key == "вылазка":
+            self.вылазки.add((self.зерно, h.day))
+        self.действия[(h.режим, key)] += 1
 
-        def execute(h, npc, key, target):
-            if key in КРАЙНИЕ_ДНЁМ:
-                self._крайний(h, npc)
-            if key == "вылазка":
-                self.вылазки.add((self.зерно, h.day))
-            self.действия[(h.режим, key)] += 1
-            return self._execute(h, npc, key, target)
+    def _кража(self, h, thief, target):
+        self.кражи.append({
+            "зерно": self.зерно, "день": h.day, "кто": thief.id,
+            "еда_дней": thief.days_of("еда"),
+            "топливо_дней": thief.days_of("топливо"),
+            "ненависть": thief.hate.get(target.id, 0.0),
+            "отчаяние": thief.desperation(),
+            "нормальность": thief.normalcy,
+        })
+        self._крайний(h, thief)
 
-        def steal(h, thief, target):
-            self.кражи.append({
-                "зерно": self.зерно, "день": h.day, "кто": thief.id,
-                "еда_дней": thief.days_of("еда"),
-                "топливо_дней": thief.days_of("топливо"),
-                "ненависть": thief.hate.get(target.id, 0.0),
-                "отчаяние": thief.desperation(),
-                "нормальность": thief.normalcy,
-            })
-            self._крайний(h, thief)
-            return self._steal(h, thief, target)
+    def _нож(self, h, killer, victim):
+        self._крайний(h, killer)
 
-        def убить_соседа(h, killer, victim):
-            self._крайний(h, killer)
-            return self._kill(h, killer, victim)
-
-        def run_siege(h, leader, target):
-            self._крайний(h, leader)
-            return self._siege(h, leader, target)
-
-        def one_day(sim):
-            r = self._day(sim)
-            self._снимок(sim.h)
-            return r
-
-        actions.execute = execute
-        conflict.steal = steal
-        conflict.убить_соседа = убить_соседа
-        conflict.run_siege = run_siege
-        Simulation.one_day = one_day
-        return self
-
-    def __exit__(self, *exc):
-        actions.execute = self._execute
-        conflict.steal = self._steal
-        conflict.убить_соседа = self._kill
-        conflict.run_siege = self._siege
-        Simulation.one_day = self._day
-        return False
+    def _осада(self, h, leader, target):
+        self._крайний(h, leader)
 
     # --- сбор ---
     def _крайний(self, h, npc):
@@ -164,17 +137,17 @@ def main():
 
     зёрна = range(args.от, args.от + args.прогонов)
     итоги = []
-    with Наблюдатель() as н:
-        for s in зёрна:
-            н.зерно = s
-            sim = Simulation(seed=s, days=args.дней, verbosity=0, stream=io.StringIO())
-            h = sim.run()
-            живые = [p for p in h.people.values() if p.alive and not p.exiled]
-            итоги.append({
-                "зерно": s, "выжило": len(живые), "stats": dict(h.stats),
-                "судьбы": {p.id: (p.died_day, p.cause) for p in h.people.values()},
-                "дней": h.day,
-            })
+    н = Наблюдатель()
+    for s in зёрна:
+        н.зерно = s
+        sim = Simulation(seed=s, days=args.дней, verbosity=0, stream=io.StringIO(), hooks=н.хуки)
+        h = sim.run()
+        живые = [p for p in h.people.values() if p.alive and not p.exiled]
+        итоги.append({
+            "зерно": s, "выжило": len(живые), "stats": dict(h.stats),
+            "судьбы": {p.id: (p.died_day, p.cause) for p in h.people.values()},
+            "дней": h.day,
+        })
 
     n = len(итоги)
     print(f"ЗАМЕР: {n} прогонов по {args.дней} дней")
