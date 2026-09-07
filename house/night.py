@@ -332,7 +332,7 @@ def consider_raid(h, npc):
         if t.living_with:
             continue
         hate = npc.hate.get(t.id, 0.0)
-        aware = npc.aware.get(t.id, 0.0)
+        aware = npc.сведения_о(t.id).aware
         if hate < b["налёт_порог_ненависти"] and aware < b["налёт_порог_осведомлённости"]:
             continue
         want = npc.loot_value(t.id) * (0.5 + npc.t01("жадность"))
@@ -360,7 +360,7 @@ def consider_raid(h, npc):
         # страшный: тот, кто на его глазах стрелял, зарубил соседа или
         # вышел на площадку со стволом. Сила забывается, страх помнится
         fear += max(npc.боится(p.id) for p in h.household(t)) * b["страх_вес_налёта"]
-        if t.weapon in FIREARMS and npc.aware.get(t.id, 0) > 30:
+        if t.weapon in FIREARMS and npc.сведения_о(t.id).aware > 30:
             fear += 2.2
         # и то, каким его КАЖУТ: слабость видна и она приглашает. Не правда
         # мира — по правде мира у осаждающего нет способа узнать, сколько

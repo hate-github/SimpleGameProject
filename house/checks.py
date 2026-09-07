@@ -55,7 +55,8 @@ def invariants(h):
         for who, v in p.trust.items():
             if not (-1e-9 <= v <= 10 + 1e-9):
                 say(f"{p.short}: доверие к {who} = {v:.2f}, а должно быть 0..10")
-        for scale, name in ((p.hate, "ненависть"), (p.aware, "осведомлённость"),
+        for scale, name in ((p.hate, "ненависть"),
+                            ({k: s.aware for k, s in p.сведения.items()}, "осведомлённость"),
                             (p.страх, "страх")):
             for who, v in scale.items():
                 if not (-1e-9 <= v <= 100 + 1e-9):

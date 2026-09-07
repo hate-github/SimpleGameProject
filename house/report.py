@@ -104,7 +104,7 @@ class Journal:
             здесь = {o.id for o in h.others(p)}
             top_hate = max(((k, v) for k, v in p.hate.items() if v > 25 and k in здесь),
                            key=lambda kv: kv[1], default=None)
-            top_aware = max(((k, v) for k, v in p.aware.items() if v > 45 and k in здесь),
+            top_aware = max(((k, s.aware) for k, s in p.сведения.items() if s.aware > 45 and k in здесь),
                             key=lambda kv: kv[1], default=None)
             marks = []
             if top_hate:
@@ -242,7 +242,7 @@ def final_report(h, days, seed, w=None):
             if a_id == b_id:
                 row += f"{'·':>16}"
             else:
-                row += f"{a.trust.get(b_id,3):>5.1f}/{int(a.hate.get(b_id,0)):>3}/{int(a.aware.get(b_id,0)):>3}"
+                row += f"{a.trust.get(b_id,3):>5.1f}/{int(a.hate.get(b_id,0)):>3}/{int(a.сведения_о(b_id).aware):>3}"
         w(row)
     w("")
     w("Кого в доме боятся (страх 0-100, четвёртая шкала GDD 12.3):")

@@ -249,6 +249,17 @@ class Взгляд:
 
 
 @dataclass
+class Сведения:
+    """Что человек знает о соседе (GDD 13): оценка его запасов по ресурсам
+    и осведомлённость — насколько он вообще в курсе его дел, 0..100.
+    Не то, каким сосед кажется (Взгляд), а то, что о нём известно: слухи,
+    дым из окна, просьбы, подсмотренное.
+    """
+    est: Dict[str, float] = field(default_factory=dict)   # ресурс -> сколько, по-моему, у него
+    aware: float = 0.0
+
+
+@dataclass
 class Flat:
     """Квартира — вещь, а не приложение к жильцу (GDD 12, 15).
 
@@ -461,7 +472,8 @@ class NPC:
     sick: Optional[str] = None
 
     # --- отношение к каждому другому жильцу (GDD 12.3) ---
-    aware: Dict[str, float] = field(default_factory=dict)
+    # что я о нём знаю: оценка запасов и осведомлённость (Сведения)
+    сведения: Dict[str, Сведения] = field(default_factory=dict)
     hate: Dict[str, float] = field(default_factory=dict)
     trust: Dict[str, float] = field(default_factory=dict)
     # четвёртая шкала: насколько человек опасается вот этого соседа (GDD 12.3).
@@ -493,7 +505,6 @@ class NPC:
     # выставили на мороз из собственных стен. Такое поступками не гасится,
     # и мстят за него любым способом — из засады, наговором, ночью
     не_прощу: set = field(default_factory=set)
-    est: Dict[str, Dict[str, float]] = field(default_factory=dict)
     # каким сосед КАЖЕТСЯ: сыт ли, цел ли, не мёрзнет ли. Осведомлённость до
     # сих пор была про чужой шкаф — сколько у него банок, — а про самого
     # человека не знал никто: код читал `t.sick` и `t.health` прямо из правды
@@ -858,7 +869,7 @@ class NPC:
         охотник обходил весь подъезд, предлагая мену за патроны, которых
         ни у кого и не бывало, и получал четыре отказа подряд каждый день.
         """
-        return self.est.get(other_id, {}).get(res, ДОГАДКА.get(res, 2.0))
+        return self.сведения_о(other_id).est.get(res, ДОГАДКА.get(res, 2.0))
 
     def обида(self, other_id: str) -> float:
         """Насколько между нами не улажено: 0 — ничего не было, 100 — всё."""
@@ -933,6 +944,11 @@ class NPC:
         кажусь = clamp(1.0 - худшее / 55.0, 0.0, 1.0)
         return clamp(кажусь * (1.2 - self.t01("храбрость") * 0.4), 0.0, 1.0)
 
+    def сведения_о(self, other_id: str):
+        """Что он знает о соседе (Сведения); о незнакомом — ничего, пустая запись."""
+        св = self.сведения.get(other_id)
+        return св if св is not None else Сведения()
+
     def видит(self, other_id: str):
         """Каким он видит соседа (Взгляд) — или None, если ещё не разглядел.
 
@@ -972,7 +988,7 @@ class NPC:
 
     def confidence(self, other_id: str) -> float:
         """0..1 — насколько он уверен в сведениях. Это и есть осведомлённость."""
-        return self.aware.get(other_id, 0.0) / 100.0
+        return self.сведения_о(other_id).aware / 100.0
 
     def боится(self, other_id: str) -> float:
         """0..1 — насколько он опасается этого человека (GDD 12.3, 17).
@@ -998,7 +1014,7 @@ class NPC:
 
     def loot_value(self, other_id: str) -> float:
         """Насколько лакомой выглядит чужая квартира: сведения на уверенность."""
-        e = self.est.get(other_id, {})
+        e = self.сведения_о(other_id).est
         raw = e.get("еда", 2.0) * 1.0 + e.get("топливо", 2.0) * 0.7 + e.get("лекарства", 0.0) * 1.1
         return raw * (0.35 + 0.65 * self.confidence(other_id))
 

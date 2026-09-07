@@ -9,7 +9,7 @@
 """
 from .util import clamp, norm, vb
 from .catalog import НОРМА
-from .model import Обещание, Ложь, Память, Оружие, Ночь, Режим, Взгляд
+from .model import Обещание, Ложь, Память, Оружие, Ночь, Режим, Взгляд, Сведения
 from .hooks import наблюдаемо
 
 # Что именно выдаёт тот или иной сигнал (GDD 13).
@@ -368,7 +368,7 @@ def встретились(h, a, b_npc, точность=None):
 
 def note_signal(a, target_id, res, hint_value, weight):
     """Сдвинуть оценку чужих запасов в сторону нового сигнала."""
-    e = a.est.setdefault(target_id, {})
+    e = a.сведения.setdefault(target_id, Сведения()).est
     cur = e.get(res, 2.0)
     e[res] = max(0.0, cur * (1.0 - weight) + hint_value * weight)
 
@@ -421,7 +421,7 @@ def gossip(h, a, b_npc):
         if third.id == b_npc.id:
             continue
         # рассказываю то, в чём уверен сам
-        if a.aware.get(third.id, 0) > b_npc.aware.get(third.id, 0) + 12:
+        if a.сведения_о(third.id).aware > b_npc.сведения_о(third.id).aware + 12:
             adjust(b_npc, third.id, aware=bal["осведомлённость_за_слух"])
             for res in ("еда", "топливо", "лекарства"):
                 # у пересказа есть потолок: разговоры не могут перевесить личный
@@ -429,7 +429,7 @@ def gossip(h, a, b_npc):
                 note_signal(b_npc, third.id, res,
                             min(a.believed(third.id, res), потолок), вес_для_b * 0.6)
         # и наоборот
-        if b_npc.aware.get(third.id, 0) > a.aware.get(third.id, 0) + 12:
+        if b_npc.сведения_о(third.id).aware > a.сведения_о(third.id).aware + 12:
             adjust(a, third.id, aware=bal["осведомлённость_за_слух"])
             for res in ("еда", "топливо", "лекарства"):
                 note_signal(a, third.id, res,
@@ -803,10 +803,11 @@ def adjust(a, b_npc_id, trust=0.0, hate=0.0, aware=0.0, страх=0.0):
             hate *= max(0.12, 1.0 - cur / 115.0)
         a.hate[b_npc_id] = clamp(cur + hate)
     if aware:
-        cur = a.aware.get(b_npc_id, 0.0)
+        св = a.сведения.setdefault(b_npc_id, Сведения())
+        cur = св.aware
         if aware > 0:
             aware *= max(0.08, 1.0 - cur / 105.0)
-        a.aware[b_npc_id] = clamp(cur + aware)
+        св.aware = clamp(cur + aware)
     if страх:
         # страх набирается так же трудно, как осведомлённость: второй раз
         # увидеть тот же топор — уже не то же самое, что первый
@@ -1382,8 +1383,8 @@ def daily_decay(h):
     b = h.B
     к = b["оценка_спад_в_день"]
     for p in h.alive():
-        for k in list(p.aware):
-            p.aware[k] = clamp(p.aware[k] - b["осведомлённость_спад_в_день"])
+        for св in p.сведения.values():
+            св.aware = clamp(св.aware - b["осведомлённость_спад_в_день"])
         # у злопамятного злость оседает медленнее — это его пунктик, а не черта
         спад = b["ненависть_спад_в_день"] * clamp(1.0 + p.пунктик("ненависть_спад"), 0.0, 3.0)
         for k in list(p.hate):
@@ -1407,7 +1408,7 @@ def daily_decay(h):
         # без свежих сигналов оценка чужих запасов ползёт к «не знаю».
         # Пока этого не было, вчерашний дым из окна помнился до конца метели
         from .model import ДОГАДКА
-        for оценка in p.est.values():
+        for оценка in (св.est for св in p.сведения.values()):
             for res in list(оценка):
                 нейтраль = ДОГАДКА.get(res, b["оценка_нейтральная"])
                 оценка[res] += (нейтраль - оценка[res]) * к

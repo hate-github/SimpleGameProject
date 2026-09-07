@@ -5,7 +5,7 @@
 оркестрацией дня; это единственное место, где данные становятся состоянием
 (задача 8 добавит сюда назначение `Решающего` каждому жильцу).
 """
-from .model import NPC, Flat, Кладовая, Ребёнок, Оружие, ВидКладовой, FIREARMS
+from .model import NPC, Flat, Кладовая, Ребёнок, Сведения, Оружие, ВидКладовой, FIREARMS
 from .decision import РЕШАЮЩИЕ
 
 
@@ -80,8 +80,9 @@ def build_house(h, npcs_data):
             p.trust[other.id] = 3.0
             p.hate[other.id] = 0.0
             p.страх[other.id] = 0.0
-            p.aware[other.id] = 15.0 + (10.0 if other.floor == p.floor else 0.0)
-            p.est[other.id] = {"еда": 3.0, "топливо": 3.0, "лекарства": 0.5, "материалы": 1.0}
+            p.сведения[other.id] = Сведения(
+                est={"еда": 3.0, "топливо": 3.0, "лекарства": 0.5, "материалы": 1.0},
+                aware=15.0 + (10.0 if other.floor == p.floor else 0.0))
         for k, v in d.get("доверие_старт", {}).items():
             p.trust[k] = float(v)
             # до метели эти двое уже были знакомы, и близость начинается
@@ -92,4 +93,4 @@ def build_house(h, npcs_data):
         for k, v in d.get("ненависть_старт", {}).items():
             p.hate[k] = float(v)
         for k, v in d.get("осведомлённость_старт", {}).items():
-            p.aware[k] = float(v)
+            p.сведения[k].aware = float(v)
