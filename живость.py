@@ -70,11 +70,11 @@ def конец_дня(h):
     if h.day in (7, 14, 21, 28):
         for a in h.alive():
             for c in h.others(a):
-                v = a.вид.get(c.id)
-                if v:
-                    ОШИБКА.append((abs(v.get("сыт", 80) - c.satiety)
-                                   + abs(v.get("цел", 100) - c.health)
-                                   + abs(v.get("тепло", 80) - c.warmth)) / 3.0)
+                v = a.видит(c.id)
+                if v is not None:
+                    ОШИБКА.append((abs(v.сытость - c.satiety)
+                                   + abs(v.целость - c.health)
+                                   + abs(v.теплота - c.warmth)) / 3.0)
 
 
 ХУКИ = Хуки(after_gather=[собраны], on_execute=[перед_делом], on_day=[конец_дня])
