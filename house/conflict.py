@@ -245,7 +245,7 @@ def theft_chance(h, thief, target, известно=True):
         if target.tonight == "дежурить":
             p += b["кража_дежурство"]
     else:
-        привычка = target.stats.get("ночей_дежурства", 0) / max(1.0, float(h.day))
+        привычка = target.ночей_дежурства / max(1.0, float(h.day))
         p += b["кража_дежурство"] * clamp(привычка, 0.0, 1.0)
     p += (stealth(thief) - 0.5) * 0.7
     return clamp(p, 0.05, 0.93)
@@ -281,7 +281,7 @@ def steal(h, thief, target):
         # хозяин обнаружит пропажу утром (GDD 4.4 — сводка дня)
         if moved:
             h.ожидает.пропажи.append((thief.id, target.id))
-            target.stats["обокрали"] = target.stats.get("обокрали", 0) + 1
+            target.обокрали += 1
         return ("успех", moved)
 
     # поймали
@@ -292,7 +292,7 @@ def steal(h, thief, target):
         social.adjust(target, thief.id, trust=-4.0, hate=b["ненависть_за_кражу"], aware=20)
         target.memory.append(f"д{h.day}:поймал_вора:{thief.id}")
         social.register_incident(h, "кража", f"{target.short} {vb(target.sex, 'застал')} {thief.form('acc')} у себя в квартире.")
-        thief.stats["поймали"] = thief.stats.get("поймали", 0) + 1
+        thief.поймали += 1
         if house_verdict(h, thief, target):
             return ("изгнан", {})
         # GDD 17: угроза оружием часто ценнее выстрела. Хозяин со стволом
@@ -410,7 +410,7 @@ def уйти_из_дома(h, person):
     h.journal.secret(f"{person.short} " + (vb(person.sex, "дошёл") + " до школы №7" if дошёл
                                            else vb(person.sex, "замёрз") + " на объездной, не дойдя"))
     h.bump("дошли_до_пункта" if дошёл else "замёрзли_по_дороге")
-    person.stats["дошёл"] = 1 if дошёл else 0
+    person.дошёл = bool(дошёл)
 
 
 def release_flat(h, person, чья_смерть=True):
@@ -431,11 +431,11 @@ def release_flat(h, person, чья_смерть=True):
 
 def reveal_taboo(h, eater, witness=None):
     """Дом узнал. Дальше человек в этом доме не жилец — так или иначе."""
-    if eater.stats.get("раскрыт"):
+    if eater.раскрыт:
         # уже знают; но пока он продолжает, дом снова и снова возвращается к вопросу
         _verdict_taboo(h, eater)
         return
-    eater.stats["раскрыт"] = 1
+    eater.раскрыт = True
     b = h.B
     if witness:
         h.journal.line(f"{witness.short} {vb(witness.sex, 'увидел')}, что у {eater.form('gen')} "
@@ -497,7 +497,7 @@ def house_verdict(h, thief, victim):
     выгнать человека на мороз должно быть решением людей, которые могут
     и не согласиться. Автоматика остаётся на дом, в котором собирать некого.
     """
-    caught = thief.stats.get("поймали", 0)
+    caught = thief.поймали
     if caught < 2:
         return False
     if len([p for p in h.others(thief) if p.health > 35]) >= h.B["собрание_минимум"]:
@@ -534,7 +534,7 @@ def suspect(h, victim, exclude=None, real=None):
         w = 1.0
         w += victim.hate.get(other.id, 0.0) / 20.0
         w += (5.0 - victim.trust.get(other.id, 3.0)) * 0.4
-        w += other.stats.get("поймали", 0) * 2.5       # репутация вора: того,
+        w += other.поймали * 2.5       # репутация вора: того,
         # кого уже ловили. Раньше здесь стояло число удавшихся краж — то есть
         # ровно то, чего дом про человека не знает: чем чище он работал,
         # тем охотнее его подозревали
@@ -1029,12 +1029,12 @@ def обобрать_и_уйти(h, гость, хозяин):
     # получилось: он знает эту квартиру и берёт всё, что унесёт
     moved = take_from(h, хозяин, гость, greed=b["обобрать_доля"], limit=b["обобрать_предел"])
     # и дрова, которые сносил к этой печке сам, — их он считает своими
-    дрова = min(гость.stats.get("снёс_дров", 0.0), хозяин.stock.get("топливо", 0.0))
+    дрова = min(гость.снёс_дров, хозяин.stock.get("топливо", 0.0))
     if дрова > 0:
         хозяин.stock["топливо"] -= дрова
         гость.stock["топливо"] = гость.stock.get("топливо", 0.0) + дрова
         moved["топливо"] = moved.get("топливо", 0.0) + дрова
-    гость.stats["снёс_дров"] = 0.0
+    гость.снёс_дров = 0.0
     гость.living_with = None
     хозяин.guests.discard(гость.id)
     household.occupy_flat(h, гость)
@@ -1056,7 +1056,7 @@ def обобрать_и_уйти(h, гость, хозяин):
     social.judge(h, гость, ТЕГИ_ОБОБРАТЬ, hate=b["суд_обобрать_злость"],
                  trust=-b["суд_обобрать_доверие"], witnesses=h.others(гость),
                  участники=[хозяин])
-    гость.stats["под_подозрением"] = 1
+    гость.под_подозрением = 1
     приговор_дома(h, гость, "обобрал", "то, что он вынес у того, кто его пустил")
     return True
 
@@ -1124,7 +1124,7 @@ def убить_соседа(h, killer, victim):
         # с ними в одном подъезде и однажды ночью уже вставал с ножом
         social.видел_убийство(h, w, killer, killer.weapon)
     if узнали:
-        killer.stats["под_подозрением"] = 1
+        killer.под_подозрением = 1
         h.journal.line(f"{victim.short} {vb(victim.sex, 'умер')} ночью, а рядом был "
                        f"только {killer.short}. Дом это сложил.", 2)
         social.register_incident(h, "убийство", None)

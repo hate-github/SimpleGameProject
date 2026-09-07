@@ -586,7 +586,7 @@ def угар(h):
                 p.health = clamp(p.health - h.rng.uni(b["угар_здоровье_мин"],
                                                       b["угар_здоровье_макс"]))
                 p.rest = clamp(p.rest - b["угар_сон"])
-                p.stats["угар_признак"] = h.day
+                p.угар_признак = h.day
                 p.bump("угорал")
             h.bump("угарных_признаков")
             кто = " и ".join(p.short for p in спали)

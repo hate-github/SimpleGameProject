@@ -68,7 +68,7 @@ def execute(h, npc, key, target):
     if key == "вытяжка":
         npc.stats["_чистил"] = h.day
         # почистил, ни разу не угорев и ни от кого не услышав, — то есть догадался сам
-        if not npc.stats.get("угорал") and not npc.stats.get("слышал_про_угар"):
+        if not npc.stats.get("угорал") and npc.слышал_про_угар < 0:
             npc.stats["_сам"] = npc.stats.get("_сам", 0) + 1
     return _ex(h, npc, key, target)
 
@@ -151,7 +151,7 @@ for seed in range(1, N + 1):
         САМ[p.trait("сообразительность")].append(p.stats.get("_сам", 0))
         if p.stats.get("угорал"):
             ПРИЗНАК.append((p.trait("сообразительность"),
-                            p.stats.get("_чистил", -99) >= p.stats.get("угар_признак", 0),
+                            p.stats.get("_чистил", -99) >= max(p.угар_признак, 0),
                             (p.cause or "").startswith("угорел")))
         if (p.cause or "").startswith("угорел"):
             УГАР_ДЕНЬ.append(p.died_day)

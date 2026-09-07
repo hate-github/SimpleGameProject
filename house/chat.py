@@ -46,7 +46,7 @@ def daily_chat(h, lines):
             key = "просьба"
         elif p.panic > 45:
             key = "паника"
-        elif h.day - p.stats.get("день_беседы", -99) >= b["чат_одиночество_дней"]:
+        elif h.day - p.день_беседы >= b["чат_одиночество_дней"]:
             # тоска в чате — про одиночество, а не про шкалу настроения:
             # к тому дню, когда настроение падает, связи уже нет. «Напишите
             # хоть кто-нибудь» пишет тот, с кем второй день никто не заговорил.
@@ -83,7 +83,7 @@ def daily_chat(h, lines):
                 (o, max(0.05, 1.0 + p.hate.get(o.id, 0.0) / 15.0
                         + (5.0 - p.trust.get(o.id, 3.0)) * 0.5
                         + p.confidence(o.id) * 1.5
-                        + o.stats.get("поймали", 0) * 2.0))
+                        + o.поймали * 2.0))
                 for o in others])
         text = text.replace("{кто}", who.short).replace("{кв}", str(who.apt))
         if not rng.chance(0.55 + 0.04 * p.trait("общительность")):
@@ -120,4 +120,4 @@ def daily_chat(h, lines):
             for o in слышат:
                 o.mood = clamp(o.mood + b["чат_настроение"] * 0.5)
                 social.adjust(o, p.id, trust=b["чат_доверие"] * 0.5)
-        p.stats["день_разговора"] = h.day
+        p.день_разговора = h.day
