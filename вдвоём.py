@@ -16,8 +16,9 @@
 import io, sys, collections, statistics as st
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
-from house import actions, conflict
+from house import actions
 from house.engine import Simulation
+from house.hooks import Хуки
 
 ЗЕРНО = [0]
 
@@ -47,55 +48,32 @@ from house.engine import Simulation
 ДОБРАЯ_ВОЛЯ = {"разговор", "поделиться", "вернуть", "лечить", "позвать"}
 РАСЧЁТ = {"наблюдение", "кража_днём", "отнять", "подкараулить", "подбросить"}
 
-_gather = actions.gather
-_execute = actions.execute
-_outing = actions._outing
-
 ХОДИЛИ_ВМЕСТЕ = set()                 # (зерно, кто, кто) — были общие вылазки
 ДОВЕРИЕ = []                          # (зерно, кто, о_ком, доверие, близость)
 
 
-def outing(h, npc, dur, м, спутник=None):
+def выход(h, npc, dur, м, спутник=None):
     if спутник is not None:
         ХОДИЛИ_ВМЕСТЕ.add((ЗЕРНО[0], npc.id, спутник.id))
         ХОДИЛИ_ВМЕСТЕ.add((ЗЕРНО[0], спутник.id, npc.id))
-    return _outing(h, npc, dur, м, спутник)
 
 
-actions._outing = outing
+def замысел_взят(h, npc, з):
+    if з.вид == "вместе":
+        ПАРЫ_ЗАМЫСЛА[ЗЕРНО[0]].add(tuple(sorted((npc.id, з.друг))))
 
-import house.замысел as замысел_м
-_выбрать = замысел_м.выбрать
-
-
-def выбрать(h, npc):
-    было = npc.замысел
-    r = _выбрать(h, npc)
-    з = npc.замысел
-    if з is not None and з is not было and з["вид"] == "вместе":
-        ПАРЫ_ЗАМЫСЛА[ЗЕРНО[0]].add(tuple(sorted((npc.id, з["друг"]))))
-    return r
-
-
-замысел_м.выбрать = выбрать
 
 ВЫХОД = []                            # (близость к жертве, вышел ли) по каждому соседу
-_defenders = conflict.defenders_of
 
 
-def defenders_of(h, target, crew_ids, предупреждён=False, поднял=None, крик=False):
-    d = _defenders(h, target, crew_ids, предупреждён, поднял, крик)
-    вышли = {p.id for p in d}
+def защитники(h, target, crew_ids, предупреждён=False, поднял=None, крик=False, итог=None):
+    вышли = {p.id for p in итог}
     for p in h.others(target):
         if p.id not in crew_ids:
             ВЫХОД.append((p.свой(target.id), p.id in вышли, крик))
-    return d
 
 
-conflict.defenders_of = defenders_of
-
-
-def execute(h, npc, key, target):
+def перед_делом(h, npc, key, target):
     ХОДЫ[key] += 1
     if key == "отнять" and target is not None and getattr(target, "id", None):
         ЖЕРТВЫ.append(target.каким_кажусь())
@@ -115,7 +93,6 @@ def execute(h, npc, key, target):
         if target is not None and getattr(target, "id", None) and target.id != npc.id:
             вид = "добрая воля" if key in ДОБРАЯ_ВОЛЯ else "расчёт"
             КОНТАКТЫ[вид].append((npc.свой(target.id), богатство(h, target)))
-    return _execute(h, npc, key, target)
 
 
 def богатство(h, t):
@@ -136,23 +113,17 @@ def поправимо(h, npc):
     return f(h, npc, h.B) if f else None
 
 
-actions.execute = execute
-
-_day = Simulation.one_day
-
-
 ЭТА_ЖИЗНЬ = []
 
 
-def one_day(self):
-    r = _day(self)
-    for p in self.h.alive():
-        СОН_ПО_ДНЯМ[self.h.day].append(p.rest)
+def конец_дня(h):
+    for p in h.alive():
+        СОН_ПО_ДНЯМ[h.day].append(p.rest)
         ЭТА_ЖИЗНЬ.append(p.rest)
-    return r
 
 
-Simulation.one_day = one_day
+ХУКИ = Хуки(on_outing=[выход], on_замысел=[замысел_взят], after_defenders=[защитники],
+            on_execute=[перед_делом], on_day=[конец_дня])
 
 N = 40
 ПОДМЕНА = {}
@@ -166,7 +137,7 @@ for arg in sys.argv[1:]:
 for seed in range(1, N + 1):
     ЗЕРНО[0] = seed
     sim = Simulation(seed=seed, days=30, verbosity=0, stream=io.StringIO(),
-                     overrides=ПОДМЕНА or None)
+                     overrides=ПОДМЕНА or None, hooks=ХУКИ)
     ЭТА_ЖИЗНЬ.clear()
     ДЕТИ.append(sum(len(p.дети) for p in sim.h.people.values()))
     h = sim.run()
