@@ -14,6 +14,7 @@ from typing import Dict, List, Optional, Any
 
 from .util import clamp, norm
 from .hooks import Хуки
+from .decision import Софтмакс
 
 # Ресурсы (GDD 12.1: «Запасы: еда, вода, топливо в днях»)
 RESOURCES = ["еда", "вода", "топливо", "лекарства", "материалы", "патроны", "деньги"]
@@ -556,6 +557,9 @@ class NPC:
     # ссылка на дом: нужна, чтобы npc.shelter означал «стены, в которых он сейчас».
     # repr=False обязателен — иначе печать жильца утащит за собой весь дом
     _h: Any = field(default=None, repr=False, compare=False)
+    # кто выбирает за него из оценённых вариантов (decision.py): NPC — мягкий
+    # выбор, игрок — человек, проверка — скрипт. Не состояние: в снимок не входит
+    решающий: Any = field(default_factory=Софтмакс, repr=False, compare=False)
 
     # ---------- в каких он стенах ----------
     @property

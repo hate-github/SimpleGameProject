@@ -11,6 +11,7 @@ import os
 
 from .checks import _разделы as checks_разделы
 from .model import WEAPONS
+from .decision import РЕШАЮЩИЕ
 from .catalog import COST, ПУНКТИК_КЛЮЧИ, ВЕСА_КЛЮЧИ, ЦЕННОСТИ
 from .street import КЛАДОВЫЕ_ВИДЫ
 from . import world
@@ -115,6 +116,9 @@ def validate_data(balance, npcs, events, lines=None):
                 bad.append(f"{d['id']}: черта {t} = {v}, а должна быть 0..10")
         if d.get("оружие", "нет") not in WEAPONS:
             bad.append(f"{d['id']}: неизвестное оружие «{d.get('оружие')}»")
+        if d.get("решает", "softmax") not in РЕШАЮЩИЕ:
+            bad.append(f"{d['id']}: неизвестный решающий «{d.get('решает')}» "
+                       f"(есть: {', '.join(sorted(РЕШАЮЩИЕ))})")
         пол = d.get("нормальность_пол", 0.1)
         if not (0.0 <= пол <= 0.9):
             bad.append(f"{d['id']}: нормальность_пол = {пол}, а должен быть 0..0.9")

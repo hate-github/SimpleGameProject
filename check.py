@@ -99,7 +99,7 @@ def снимок(h):
     реплики_быт — это данные из lines.json, а не состояние, — и hooks:
     наблюдатели смотрят на дом, а не составляют его.
     """
-    люди = {pid: {k: v for k, v in vars(p).items() if k != "_h"}
+    люди = {pid: {k: v for k, v in vars(p).items() if k not in ("_h", "решающий")}
             for pid, p in h.people.items()}
     квартиры = {apt: vars(f) for apt, f in h.flats.items()}
     кладовые = {kid: vars(k) for kid, k in h.кладовые.items()}
