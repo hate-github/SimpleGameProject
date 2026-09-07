@@ -1562,9 +1562,9 @@ def choose_and_do(h, npc):
     opts = [(o, s) for o, s in opts if s > h.B["порог_действия"]]
     if not opts:
         return False
-    temp = h.B["температура_выбора"] + (npc.panic / 100.0) * h.B["температура_выбора_паника"]
-    temp += (1.0 - npc.rest / 100.0) * 0.4
-    key_target = h.rng.softmax_pick(opts, temp)
+    # выбор — за решающим жильца (decision.py): NPC берёт мягко по оценкам,
+    # игрок и скрипт — по-своему. Температура мягкого выбора живёт там же
+    key_target = npc.решающий.день(h, npc, opts)
     key, target = key_target
     execute(h, npc, key, target)
     return True
