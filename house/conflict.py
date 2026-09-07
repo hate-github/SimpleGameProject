@@ -336,6 +336,10 @@ def exile(h, person, by=None, reason="воровство"):
     person.cause = f"{vb(person.sex, 'изгнан')} из дома ({reason})"
     person.died_day = h.day
     h.bump("изгнаний")
+    # выставили на глазах у всех: об этом знает каждый, кто в доме
+    for w in h.alive():
+        if w.id != person.id:
+            w.знает_изгнаний += 1
     who = f"{by.short} и остальные" if by else "соседи"
     h.journal.line(f"{who} вывели {person.form('acc')} на улицу и закрыли дверь подъезда.", 2)
     h.note(f"{person.short} {vb(person.sex, 'изгнан')} ({reason})")
