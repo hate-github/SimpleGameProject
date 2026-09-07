@@ -9,6 +9,7 @@ import functools
 
 from .util import clamp, norm, vb, gform
 from .model import вещи, spend, Оружие, Режим
+from .hooks import наблюдаемо
 # таблицы по ключу действия собираются в catalog.py из записей Действие;
 # имена остаются и здесь, потому что проверка покрытия и линейки читают их
 # как actions.COST, actions.НОРМА
@@ -1403,6 +1404,7 @@ def _себя(корзина, h, npc, b, des, tired, плохо):
         - max(плохо, des) * b["быт_отступает"])
 
 
+@наблюдаемо("gather")
 def gather(h, npc):
     """Собрать все доступные действия с оценками. Оценка примерно 0..10."""
     b = h.B
@@ -2789,6 +2791,7 @@ if _без_исполнителя or _без_записи:
 del _без_исполнителя, _без_записи
 
 
+@наблюдаемо("execute")
 def execute(h, npc, key, target):
     b = h.B
     spent = hours(key, npc, b)
