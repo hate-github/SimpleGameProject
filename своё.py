@@ -10,8 +10,9 @@
 """
 import io, sys, collections, statistics as st
 sys.stdout.reconfigure(encoding="utf-8")
-from house import actions
 from house.engine import Simulation
+from house.hooks import Хуки
+from house.street import МЕСТА, чужое_место
 
 ПО_ДНЯМ = collections.defaultdict(collections.Counter)
 ВСЕГО = collections.Counter()
@@ -23,59 +24,62 @@ from house.engine import Simulation
 С = collections.Counter()
 ВЫЖИЛО = []
 
-_outing = actions._outing
-def outing(h, npc, dur, м):
+ЭТА = {}                     # за одну жизнь: день первой вылазки в чужое, когда опустела кладовая
+_ЗАКАЗ_БЫЛ = {}
+
+
+def выход(h, npc, dur, м, спутник=None):
     ПО_ДНЯМ[h.day][м.имя] += 1
     ВСЕГО[м.имя] += 1
-    if actions.чужое_место(м) and "дико" not in h.mods:
-        h.mods["дико"] = h.day
-    return _outing(h, npc, dur, м)
-actions._outing = outing
+    if чужое_место(м) and "дико" not in ЭТА:
+        ЭТА["дико"] = h.day
 
-_ex = actions.execute
-def execute(h, npc, key, target):
+
+def перед_делом(h, npc, key, target):
     if key == "кладовая" and target is not None:
         ХОД[target.вид] += 1
         ПО_ДНЯМ[h.day]["кладовая"] += 1
-    было = h.заказы.get(npc.id)
-    r = _ex(h, npc, key, target)
-    стало = h.заказы.get(npc.id)
-    if key == "заказать" and стало and стало is not было:
-        ЗАКАЗ[стало["что"]].append((h.day, стало["цена"], h.power_on))
-    return r
-actions.execute = execute
+    _ЗАКАЗ_БЫЛ[npc.id] = h.заказы.get(npc.id)
 
-_day = Simulation.one_day
-def one_day(self):
-    r = _day(self); h = self.h
+
+def после_дела(h, npc, key, target, итог=None):
+    стало = h.заказы.get(npc.id)
+    if key == "заказать" and стало and стало is not _ЗАКАЗ_БЫЛ.get(npc.id):
+        ЗАКАЗ[стало.что].append((h.day, стало.цена, h.power_on))
+
+
+def конец_дня(h):
     for k, v in h.кладовые.items():
-        if v.пусто() and k not in h.mods.setdefault("_пусто", {}):
-            h.mods["_пусто"][k] = h.day
-    return r
-Simulation.one_day = one_day
+        if v.пусто() and k not in ЭТА.setdefault("_пусто", {}):
+            ЭТА["_пусто"][k] = h.day
+
+
+ХУКИ = Хуки(on_outing=[выход], on_execute=[перед_делом], after_execute=[после_дела],
+            on_day=[конец_дня])
 
 N = int(sys.argv[1]) if len(sys.argv) > 1 else 40
 for seed in range(1, N + 1):
-    h = Simulation(seed=seed, days=30, verbosity=0, stream=io.StringIO()).run()
-    ДИКО.append(h.mods.get("дико", 99))
+    ЭТА.clear()
+    h = Simulation(seed=seed, days=30, verbosity=0, stream=io.StringIO(), hooks=ХУКИ).run()
+    ДИКО.append(ЭТА.get("дико", 99))
     ВСКРЫТИЕ.append(h.stats.get("первое_вскрытие", 99))
     ВЫЖИЛО.append(len([p for p in h.people.values() if p.alive and not p.exiled]))
     for k, v in h.кладовые.items():
-        ПУСТА[k].append(h.mods.get("_пусто", {}).get(k, 99))
+        ПУСТА[k].append(ЭТА.get("_пусто", {}).get(k, 99))
     for k in ("вскрытых_кладовых", "вскрытий_раскрыто", "вылазок_в_чужое",
               "ключей_от_кладовых_отнято", "ключей_от_кладовых_найдено",
               "ключей_от_кладовых_по_наследству", "ходок_в_кладовую",
               "происшествий_вскрытие", "тулупов_из_кладовой"):
         С[k] += h.stats.get(k, 0)
 
-имена = [м.имя for м in actions.МЕСТА]
+имена = [м.имя for м in МЕСТА]
 print(f"═══ {N} жизней ═══")
 print("1. КУДА ХОДЯТ")
 print(f"{'день':>4} " + " ".join(f"{и[:14]:>15}" for и in имена) + f"{'кладовая':>10}{'дикое':>8}")
 for д in range(1, 11):
     c = ПО_ДНЯМ[д]
     вылазок = sum(c[и] for и in имена)
-    дик = sum(c[м.имя] for м in actions.МЕСТА if actions.чужое_место(м))
+    дик = sum(c[м.имя] for м in МЕСТА if чужое_место(м))
     print(f"{д:>4} " + " ".join(f"{c.get(и,0):>15}" for и in имена)
           + f"{c.get('кладовая',0):>10}{100*дик/max(1,вылазок):>7.0f}%")
 всего = sum(ВСЕГО.values())
