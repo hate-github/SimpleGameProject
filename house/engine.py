@@ -7,6 +7,7 @@
 """
 from .util import Rng
 from .model import House
+from .hooks import Хуки
 from .schema import load_json, validate_data
 from . import (world, social, actions, conflict, report, meeting, замысел, chat, assembly,
                psyche, household, services, discoveries, night, physiology, child)
@@ -14,11 +15,14 @@ from . import (world, social, actions, conflict, report, meeting, замысел
 
 class Simulation:
     def __init__(self, seed=1, days=30, verbosity=1, secrets=False, stream=None,
-                 overrides=None):
+                 overrides=None, hooks=None):
         """overrides — {ключ: значение} поверх balance.json.
 
         Нужно, чтобы сравнивать две настройки одной ручки, не правя файл:
         без этого A/B по параметру технически невозможен.
+
+        hooks — наблюдатели (`hooks.Хуки`), общие на сколько угодно жизней:
+        линейка подписывается один раз и гоняет зёрна, дом зовёт её сам.
         """
         self.seed = seed
         self.days = days
@@ -35,25 +39,25 @@ class Simulation:
         except FileNotFoundError:
             self.lines = {}
         validate_data(self.balance, self.npcs_data, self.events, self.lines)
-        self.h = House(rng=Rng(seed), B=self.balance)
+        self.h = House(rng=Rng(seed), B=self.balance,
+                       hooks=hooks if hooks is not None else Хуки())
         self.h.реплики_быт = self.lines.get("быт", [])
         self.h.journal = report.Journal(verbosity=verbosity, secrets=secrets, stream=stream)
         assembly.build_house(self.h, self.npcs_data)
 
     # ------------------------------------------------------------ цикл
-    def run(self, on_day=None):
-        """on_day(h) — наблюдатель, которого зовут в конце каждого дня.
+    def run(self):
+        """Прожить все дни. В конце каждого зовёт наблюдателей `h.hooks.on_day`.
 
-        Нужен check.py, чтобы снимать отпечаток дома по дням, не подменяя
-        `one_day`, как это делают линейки. Сам ничего не меняет и ничего
-        не тянет из rng: с on_day=None прогон тот же до последнего слова.
+        Так check.py снимает отпечаток дома по дням, а линейки — свои мерки,
+        и никто не подменяет `one_day`. Наблюдатель ничего не меняет и ничего
+        не тянет из rng: с пустым списком прогон тот же до последнего слова.
         """
         h = self.h
         world.build_calendar(h, self.events, self.days)
         for _ in range(self.days):
             self.one_day()
-            if on_day is not None:
-                on_day(h)
+            h.hooks.зов("on_day", h)
             if not h.alive():
                 h.journal.line("В подъезде не осталось никого.", 2)
                 h.journal.flush_day(h)

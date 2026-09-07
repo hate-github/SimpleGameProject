@@ -13,6 +13,7 @@ from enum import StrEnum
 from typing import Dict, List, Optional, Any
 
 from .util import clamp, norm
+from .hooks import Хуки
 
 # Ресурсы (GDD 12.1: «Запасы: еда, вода, топливо в днях»)
 RESOURCES = ["еда", "вода", "топливо", "лекарства", "материалы", "патроны", "деньги"]
@@ -1074,6 +1075,8 @@ class House:
     people: Dict[str, NPC] = field(default_factory=dict)
     flats: Dict[int, Flat] = field(default_factory=dict)
     кладовые: Dict[str, Any] = field(default_factory=dict)
+    # наблюдатели (hooks.py): линейки и check.py. Не состояние — в снимок не входят
+    hooks: Хуки = field(default_factory=Хуки)
 
     # погода и инфраструктура
     outside: float = -8.0

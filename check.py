@@ -95,8 +95,9 @@ def снимок(h):
     и календарь — временные модификаторы и очереди на утро. Они снимаются
     нарочно: то, что забыли туда записать, всплыло бы в поведении через
     несколько дней, а здесь видно в тот же день. Не снимаются: rng (это лента,
-    а не состояние), B (ручки), journal (текст дня снимается отдельно)
-    и реплики_быт — это данные из lines.json, а не состояние. h.mods остался
+    а не состояние), B (ручки), journal (текст дня снимается отдельно),
+    реплики_быт — это данные из lines.json, а не состояние, — и hooks:
+    наблюдатели смотрят на дом, а не составляют его. h.mods остался
     линейкам и снимается как есть.
     """
     люди = {pid: {k: v for k, v in vars(p).items() if k != "_h"}
@@ -104,7 +105,8 @@ def снимок(h):
     квартиры = {apt: vars(f) for apt, f in h.flats.items()}
     кладовые = {kid: vars(k) for kid, k in h.кладовые.items()}
     мир = {k: v for k, v in vars(h).items()
-           if k not in ("rng", "B", "journal", "people", "flats", "кладовые", "mods", "реплики_быт")}
+           if k not in ("rng", "B", "journal", "people", "flats", "кладовые", "mods",
+                        "реплики_быт", "hooks")}
     mods = dict(h.mods)
     return repr(_канон({"люди": люди, "квартиры": квартиры, "кладовые": кладовые,
                         "мир": мир, "mods": mods}))
@@ -133,7 +135,9 @@ def отпечатки(seed, days=ДНЕЙ_ЭТАЛОНА):
         дни.append(_хэш(текст[хвост[0]:]) + "-" + _хэш(снимок(h)))
         хвост[0] = len(текст)
 
-    Simulation(seed=seed, days=days, verbosity=2, secrets=True, stream=buf).run(on_day=день)
+    sim = Simulation(seed=seed, days=days, verbosity=2, secrets=True, stream=buf)
+    sim.h.hooks.on_day.append(день)
+    sim.run()
     # то, что журнал дописал после последнего дня («не осталось никого»)
     остаток = buf.getvalue()[хвост[0]:]
     return {"итог": _хэш("\n".join(дни) + остаток), "дни": дни}
