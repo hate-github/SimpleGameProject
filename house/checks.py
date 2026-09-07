@@ -15,6 +15,7 @@ import re
 from collections import Counter
 
 from .model import Оружие
+from .hooks import Хуки
 
 # «движок» считается наравне с банками по той же причине, по какой считается
 # оружие: он один на весь дом, он ходит из рук в руки и он расходуется, когда
@@ -243,9 +244,13 @@ class Coverage:
     его никак иначе не заметить: исключения он не бросает.
 
     Пользоваться так:
-        with Coverage() as cov:
-            ...прогоны...
+        cov = Coverage()
+        runs = many(зёрна, hooks=cov.хуки)      # или Simulation(..., hooks=cov.хуки)
         cov.report()
+
+    Ничего не подменяет: дом сам зовёт наблюдателей (hooks.py) там, где
+    варианты собраны, действие исполняется, осада началась и кончилась
+    и прозвучала реплика.
     """
 
     def __init__(self):
@@ -254,62 +259,38 @@ class Coverage:
         self.siege = Counter()
         self.night = Counter()
         self.реплики = Counter()
+        self.хуки = Хуки(after_gather=[self._предложено], on_execute=[self._выполнено],
+                         on_siege=[self._осада_началась], after_siege=[self._осада_кончилась],
+                         on_реплика=[self._реплика])
 
-    def __enter__(self):
-        from . import actions, conflict, report
-        self._actions, self._conflict, self._report = actions, conflict, report
-        self._gather, self._execute = actions.gather, actions.execute
-        self._siege = conflict.run_siege
-        self._gform, self._chat = actions.gform, report.Journal.chat
+    # --- наблюдатели ---
+    def _предложено(self, h, npc, итог):
+        for (key, _t), _s in итог:
+            self.offered[key] += 1
 
-        def gather(h, npc):
-            opts = self._gather(h, npc)
-            for (key, _t), _s in opts:
-                self.offered[key] += 1
-            return opts
+    def _выполнено(self, h, npc, key, target):
+        self.done[key] += 1
 
-        def execute(h, npc, key, target):
-            self.done[key] += 1
-            return self._execute(h, npc, key, target)
+    def _осада_началась(self, h, leader, target):
+        self.siege["осад"] += 1
+        self._жива = target.alive
 
-        def run_siege(h, leader, target):
-            # состав читается ПОСЛЕ осады, из того, что она сама записала.
-            # Пока обвязка звала recruit сама, вербовка выполнялась дважды —
-            # безобидно, пока она была чистым фильтром, и уже нет, когда у зова
-            # появились последствия: осведомлённость, паника и утечка к жертве
-            self.siege["осад"] += 1
-            жива = target.alive
-            r = self._siege(h, leader, target)
-            self.siege["состав всего"] += len(h.сутки.состав_налёта)
-            self.siege["исход: " + r] += 1
-            if жива and not target.alive:
-                self.siege["цель погибла"] += 1
-            return r
+    def _осада_кончилась(self, h, leader, target, итог):
+        # состав читается ПОСЛЕ осады, из того, что она сама записала.
+        # Пока обвязка звала recruit сама, вербовка выполнялась дважды —
+        # безобидно, пока она была чистым фильтром, и уже нет, когда у зова
+        # появились последствия: осведомлённость, паника и утечка к жертве
+        self.siege["состав всего"] += len(h.сутки.состав_налёта)
+        self.siege["исход: " + итог] += 1
+        if self._жива and not target.alive:
+            self.siege["цель погибла"] += 1
 
-        # реплика, которая ни разу не прозвучала, — такой же мёртвый текст,
-        # как ветка, которую ни разу не предложили. Условия у реплик умеют
-        # не выполняться никогда: чат живёт до десятого дня, а паника доходит
-        # до порога позже — и целая тема молча выпадает из игры
-        def gform(text, sex):
-            self.реплики[text] += 1
-            return self._gform(text, sex)
-
-        def chat(journal, who, text):
-            self.реплики[text] += 1
-            return self._chat(journal, who, text)
-
-        actions.gather, actions.execute = gather, execute
-        actions.gform = gform
-        report.Journal.chat = chat
-        conflict.run_siege = run_siege
-        return self
-
-    def __exit__(self, *exc):
-        self._actions.gather, self._actions.execute = self._gather, self._execute
-        self._actions.gform = self._gform
-        self._report.Journal.chat = self._chat
-        self._conflict.run_siege = self._siege
-        return False
+    # реплика, которая ни разу не прозвучала, — такой же мёртвый текст,
+    # как ветка, которую ни разу не предложили. Условия у реплик умеют
+    # не выполняться никогда: чат живёт до десятого дня, а паника доходит
+    # до порога позже — и целая тема молча выпадает из игры
+    def _реплика(self, h, текст):
+        self.реплики[текст] += 1
 
     def немые_реплики(self, lines):
         """Реплики из lines.json, которые ни разу не прозвучали.

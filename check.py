@@ -242,8 +242,8 @@ def проверить_ручки(w):
 def проверить_прогоны(w, прогонов, дней):
     from house import checks
     from house.runner import many
-    with checks.Coverage() as cov:
-        runs = many(range(1, прогонов + 1), days=дней, jobs=1)
+    cov = checks.Coverage()
+    runs = many(range(1, прогонов + 1), days=дней, hooks=cov.хуки)
     bad = []
     нарушений = [v for r in runs for v in r["нарушения"]]
     if нарушений:

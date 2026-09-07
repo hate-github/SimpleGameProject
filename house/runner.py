@@ -17,12 +17,12 @@ from collections import Counter
 
 
 def run_one(arg):
-    """(зерно, дней, {ручка: значение}) -> сводка одной жизни."""
-    seed, days, overrides = arg
+    """(зерно, дней, {ручка: значение}, наблюдатели) -> сводка одной жизни."""
+    seed, days, overrides, hooks = arg
     from .engine import Simulation
     from . import checks
     sim = Simulation(seed=seed, days=days, verbosity=0, secrets=False,
-                     stream=io.StringIO(), overrides=overrides)
+                     stream=io.StringIO(), overrides=overrides, hooks=hooks)
     start = checks.snapshot(sim.h)
     h = sim.run()
     alive = [p for p in h.people.values() if p.здесь()]
@@ -55,10 +55,17 @@ def без_рода(cause):
     return cause
 
 
-def many(seeds, days=30, overrides=None, jobs=None):
-    """Прогнать список зёрен. По умолчанию — на всех ядрах минус два."""
-    args = [(s, days, overrides) for s in seeds]
+def many(seeds, days=30, overrides=None, jobs=None, hooks=None):
+    """Прогнать список зёрен. По умолчанию — на всех ядрах минус два.
+
+    hooks — наблюдатели (`hooks.Хуки`) на все жизни сразу. Они копят своё
+    в памяти этого процесса, поэтому с ними считаем в один поток: в воркере
+    наблюдатель отработал бы и пропал вместе с ним.
+    """
+    args = [(s, days, overrides, hooks) for s in seeds]
     jobs = jobs if jobs is not None else max(1, min(8, (os.cpu_count() or 2) - 2))
+    if hooks is not None:
+        jobs = 1
     # На Windows дочерний процесс заново импортирует __main__ по файлу. Если запуск
     # идёт из `python -c` или из stdin, файла нет и spawn падает — тогда считаем
     # в один поток, молча и правильно, вместо стены трейсбеков
