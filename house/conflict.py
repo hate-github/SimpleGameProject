@@ -9,6 +9,7 @@ from .util import clamp, vb
 from . import social, household
 from .character import своя_мерка
 from .model import Ребёнок, Тело, Память, Приговор, Оружие, Режим, Ночь
+from .hooks import наблюдаемо
 
 
 # ---------------------------------------------------------------- вспомогательное
@@ -252,6 +253,7 @@ def theft_chance(h, thief, target, известно=True):
     return clamp(p, 0.05, 0.93)
 
 
+@наблюдаемо("steal")
 def steal(h, thief, target):
     """Ночная кража (GDD 12.5). Тихий вариант отъёма."""
     b = h.B
@@ -1062,6 +1064,7 @@ def обобрать_и_уйти(h, гость, хозяин):
     return True
 
 
+@наблюдаемо("убить_соседа")
 def убить_соседа(h, killer, victim):
     """Ночь в общей квартире. Возвращает True, если получилось."""
     b = h.B
@@ -1564,6 +1567,7 @@ def кричать(h, target, crew, b):
     return хочу > 0
 
 
+@наблюдаемо("defenders")
 def defenders_of(h, target, crew_ids, предупреждён=False, поднял=None, крик=False):
     """Кто придёт на помощь (союзники и просто порядочные).
 
@@ -1627,6 +1631,7 @@ def defenders_of(h, target, crew_ids, предупреждён=False, подня
     return d
 
 
+@наблюдаемо("siege")
 def run_siege(h, leader, target):
     """Осада по стадиям (GDD 16). Возвращает исход строкой."""
     b = h.B
