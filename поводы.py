@@ -14,47 +14,54 @@
 """
 import io, sys, collections, inspect, statistics as st
 sys.stdout.reconfigure(encoding="utf-8")
-from house import social, conflict, actions
 from house.engine import Simulation
+from house.hooks import Хуки
 
 ИСТ = collections.Counter(); ПАРЫ = collections.defaultdict(float)
 ИСХОД = collections.Counter(); ПРЕД = collections.Counter(); ДЕЖ = collections.Counter()
 СОСТАВ = collections.Counter(); С = collections.Counter()
 ОРУЖИЕ = collections.Counter(); ЖИЗНЕЙ_С_ОРУЖИЕМ = 0
 
-_adjust = social.adjust
+def _кто_позвал():
+    """Имя функции домена, позвавшей social.adjust: над наблюдателем в стеке — зов и сам adjust."""
+    for f in inspect.stack(0)[1:]:
+        if f.function not in ("adjust", "зов"):
+            return f.function
+    return "?"
+
+
 def adjust(a, b_id, trust=0.0, hate=0.0, aware=0.0, страх=0.0):
     if hate > 0 and (a.living_with == b_id or b_id in a.guests):
-        ИСТ[inspect.stack()[1].function] += hate
-    return _adjust(a, b_id, trust=trust, hate=hate, aware=aware, страх=страх)
-social.adjust = adjust
+        ИСТ[_кто_позвал()] += hate
 
-_siege = conflict.run_siege
-def siege(h, leader, target):
-    п = h.stats.get("предупреждений", 0); д = h.stats.get("дежурный_поднял_дом", 0)
-    r = _siege(h, leader, target)
-    ИСХОД[r] += 1
+
+_ДО = {}
+def осада_началась(h, leader, target):
+    _ДО["п"] = h.stats.get("предупреждений", 0); _ДО["д"] = h.stats.get("дежурный_поднял_дом", 0)
+
+
+def осада_кончилась(h, leader, target, итог):
+    ИСХОД[итог] += 1
     СОСТАВ[min(4, len(h.сутки.состав_налёта))] += 1
-    if h.stats.get("предупреждений", 0) > п: ПРЕД[r] += 1
-    if h.stats.get("дежурный_поднял_дом", 0) > д: ДЕЖ[r] += 1
-    return r
-conflict.run_siege = siege
+    if h.stats.get("предупреждений", 0) > _ДО["п"]: ПРЕД[итог] += 1
+    if h.stats.get("дежурный_поднял_дом", 0) > _ДО["д"]: ДЕЖ[итог] += 1
 
-_day = Simulation.one_day
-def one_day(self):
-    r = _day(self); h = self.h
+
+def конец_дня(h):
     for p in h.alive():
         if p.living_with:
             host = h.get(p.living_with)
             if host and host.alive:
                 k = (h.seed_, p.id, host.id)
                 ПАРЫ[k] = max(ПАРЫ[k], p.hate.get(host.id,0), host.hate.get(p.id,0))
-    return r
-Simulation.one_day = one_day
+
+
+ХУКИ = Хуки(on_adjust=[adjust], on_siege=[осада_началась], after_siege=[осада_кончилась],
+            on_day=[конец_дня])
 
 N = int(sys.argv[1]) if len(sys.argv)>1 else 60
 for seed in range(1, N+1):
-    s = Simulation(seed=seed, days=30, verbosity=0, stream=io.StringIO()); s.h.seed_=seed
+    s = Simulation(seed=seed, days=30, verbosity=0, stream=io.StringIO(), hooks=ХУКИ); s.h.seed_=seed
     h = s.run()
     if h.stats.get("оружие_сменило_руки"): ЖИЗНЕЙ_С_ОРУЖИЕМ += 1
     for k in ("оружие_сменило_руки","оружия_отнято","оружия_вынесено","оружия_найдено",
