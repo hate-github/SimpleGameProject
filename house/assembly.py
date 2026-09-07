@@ -5,7 +5,7 @@
 оркестрацией дня; это единственное место, где данные становятся состоянием
 (задача 8 добавит сюда назначение `Решающего` каждому жильцу).
 """
-from .model import NPC, Flat, Кладовая, Ребёнок, FIREARMS
+from .model import NPC, Flat, Кладовая, Ребёнок, Оружие, ВидКладовой, FIREARMS
 
 
 def build_house(h, npcs_data):
@@ -24,9 +24,9 @@ def build_house(h, npcs_data):
     # погреба и гаражи — то же самое, только за порогом квартиры
     for k in npcs_data.get("кладовые", []):
         h.кладовые[k["id"]] = Кладовая(
-            id=k["id"], вид=k["вид"], apt=k["кв"],
+            id=k["id"], вид=ВидКладовой(k["вид"]), apt=k["кв"],
             stock=dict(k.get("запасы", {})),
-            оружие=list(k.get("оружие", [])),
+            оружие=[Оружие(w) for w in k.get("оружие", [])],
             тулуп=bool(k.get("тулуп", False)))
     for d in npcs_data["жильцы"]:
         p = NPC(
@@ -37,7 +37,7 @@ def build_house(h, npcs_data):
             gen=d.get("коротко_род", ""), dat=d.get("коротко_дат", ""),
             acc=d.get("коротко_вин", ""), ins=d.get("коротко_твор", ""),
             traits=dict(d["черты"]), stock=dict(d["запасы"]),
-            weapon=d.get("оружие", "нет"), одежда=int(d.get("одежда", 0)),
+            weapon=Оружие(d.get("оружие", "нет")), одежда=int(d.get("одежда", 0)),
             счёт=float(d.get("счёт", 0.0)),
             dependents=d.get("иждивенцы", 0), dependent_name=d.get("иждивенец_имя", ""),
             dependent_acc=d.get("иждивенец_вин", ""),
@@ -65,7 +65,7 @@ def build_house(h, npcs_data):
         # оружие, с которым человек вошёл в метель, ему привычно: оно
         # у него годами. Охотнику привычно любое огнестрельное — это его
         # ремесло, а не эта конкретная винтовка
-        if p.weapon and p.weapon != "нет":
+        if p.weapon and p.weapon != Оружие.НЕТ:
             p.рука[p.weapon] = 1.0
         if "охотник" in p.skills:
             for w in sorted(FIREARMS):

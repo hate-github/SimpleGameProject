@@ -27,6 +27,7 @@
 """
 import argparse
 import dataclasses
+import enum
 import hashlib
 import io
 import json
@@ -66,6 +67,8 @@ def _канон(x):
     Числа с плавающей точкой округляются до шестого знака. Ссылка на жильца
     или кладовую сворачивается в его id: сам он снимается отдельно.
     """
+    if isinstance(x, enum.Enum):
+        return x.value                  # StrEnum — та же строка, что и была в снимке
     if isinstance(x, bool) or x is None or isinstance(x, (int, str)):
         return x
     if isinstance(x, float):

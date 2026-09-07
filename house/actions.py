@@ -8,7 +8,7 @@
 import functools
 
 from .util import clamp, norm, vb, gform
-from .model import вещи, spend
+from .model import вещи, spend, Оружие, Режим
 # таблицы по ключу действия собираются в catalog.py из записей Действие;
 # имена остаются и здесь, потому что проверка покрытия и линейки читают их
 # как actions.COST, actions.НОРМА
@@ -1756,7 +1756,7 @@ def _исполнить_топить(h, npc, target, spent):
     b = h.B
     said = None
     # в буран тепло вылетает в щели, и та же печка съедает больше
-    расход = b["буран_топливо"] if h.режим == "буран" else 1.0
+    расход = b["буран_топливо"] if h.режим == Режим.БУРАН else 1.0
     if npc.stock.get("топливо", 0) >= 1:
         spend(h, npc, "топливо", расход)
         said = f"{npc.short} {vb(npc.sex, 'затопил')} буржуйку"
@@ -1881,7 +1881,7 @@ def _исполнить_быт(h, npc, target, spent):
     текст, делает = (h.rng.pick(свежие) if свежие
                      else ("занимал{ся|ась} своими делами", None))
     сказано.add(текст)
-    if делает == "уход_за_оружием" and npc.weapon != "нет":
+    if делает == "уход_за_оружием" and npc.weapon != Оружие.НЕТ:
         from .model import СВОЙСКОЕ
         было = npc.рука.get(npc.weapon, СВОЙСКОЕ.get(npc.weapon, 0.0))
         npc.рука[npc.weapon] = clamp(было + b["рука_за_уход"], 0.0, 1.0)

@@ -8,7 +8,7 @@ GDD 17: бой намеренно простой и смертельный; чи
 from .util import clamp, vb
 from . import social, household
 from .character import своя_мерка
-from .model import Ребёнок, Тело, Память, Приговор
+from .model import Ребёнок, Тело, Память, Приговор, Оружие, Режим, Ночь
 
 
 # ---------------------------------------------------------------- вспомогательное
@@ -41,7 +41,7 @@ def вооружиться(h, npc, чем, куда_старое=None, вслу�
     старое = npc.weapon
     if WEAPONS.get(чем, 0.0) <= WEAPONS.get(старое, 0.0):
         return None
-    npc.weapon = чем
+    npc.weapon = Оружие(чем)
     if старое and старое != "нет":
         flat = куда_старое if куда_старое is not None else h.flats[npc.apt]
         flat.оружие.append(старое)
@@ -82,9 +82,9 @@ def подобрать_оружие(h, npc, flat, вслух=True):
 
 def сложить_оружие(h, person, flat):
     """Выбывший оставляет оружие в стенах: у него оно больше не в руках."""
-    if person.weapon and person.weapon != "нет":
+    if person.weapon and person.weapon != Оружие.НЕТ:
         flat.оружие.append(person.weapon)
-        person.weapon = "нет"
+        person.weapon = Оружие.НЕТ
 
 
 def отнять_оружие(h, victim, taker, шанс):
@@ -95,14 +95,14 @@ def отнять_оружие(h, victim, taker, шанс):
     а завтра тот же человек придёт снова.
     """
     from .model import WEAPONS
-    if victim.weapon == "нет" or not victim.alive:
+    if victim.weapon == Оружие.НЕТ or not victim.alive:
         return None
     if WEAPONS.get(victim.weapon, 0.0) <= WEAPONS.get(taker.weapon, 0.0):
         return None
     if not h.rng.chance(шанс):
         return None
     чем = victim.weapon
-    victim.weapon = "нет"
+    victim.weapon = Оружие.НЕТ
     if вооружиться(h, taker, чем) is None:
         victim.weapon = чем
         return None
@@ -122,10 +122,10 @@ def унести_оружие(h, victim, taker, шанс):
     в чужой прихожей никто не оставит.
     """
     from .model import WEAPONS, ОРУЖИЕ_ВИН
-    if victim.weapon == "нет" or not h.rng.chance(шанс):
+    if victim.weapon == Оружие.НЕТ or not h.rng.chance(шанс):
         return None
     чем = victim.weapon
-    victim.weapon = "нет"
+    victim.weapon = Оружие.НЕТ
     h.bump("оружия_вынесено")
     if WEAPONS.get(чем, 0.0) > WEAPONS.get(taker.weapon, 0.0):
         вооружиться(h, taker, чем, вслух=False)
@@ -243,7 +243,7 @@ def theft_chance(h, thief, target, известно=True):
     if target.away and not [g for g in h.household(target)[1:] if not g.away]:
         p += b["кража_хозяин_ушёл"]      # ушёл, и дома никого не оставил
     if известно:
-        if target.tonight == "дежурить":
+        if target.tonight == Ночь.ДЕЖУРИТЬ:
             p += b["кража_дежурство"]
     else:
         привычка = target.ночей_дежурства / max(1.0, float(h.day))
@@ -287,7 +287,7 @@ def steal(h, thief, target):
 
     # поймали
     social.emit(h, target, 4, "ссора", night=True)
-    caught_seen = h.rng.chance(0.7 + 0.2 * (1 if target.tonight == "дежурить" else 0))
+    caught_seen = h.rng.chance(0.7 + 0.2 * (1 if target.tonight == Ночь.ДЕЖУРИТЬ else 0))
     h.bump("краж_сорвано")
     if caught_seen:
         social.adjust(target, thief.id, trust=-4.0, hate=b["ненависть_за_кражу"], aware=20)
@@ -400,9 +400,9 @@ def уйти_из_дома(h, person):
     person.stock = {}
     # оружие он забирает с собой: в такую дорогу без ножа не выходят.
     # Учитывается отдельным счётчиком, иначе оружие «исчезает» из баланса
-    if person.weapon and person.weapon != "нет":
+    if person.weapon and person.weapon != Оружие.НЕТ:
         h.stats["оружия_унесено"] = h.stats.get("оружия_унесено", 0) + 1
-        person.weapon = "нет"
+        person.weapon = Оружие.НЕТ
     # а ключ от погреба остаётся на гвозде: ему он больше ни к чему
     flat.ключи |= person.ключи_кладовых
     person.ключи_кладовых = set()
@@ -712,7 +712,7 @@ def засада(h, кто, жертва):
     ненависть = кто.hate.get(жертва.id, 0.0)
     насмерть = (ненависть >= b["засада_насмерть_злость"]
                 and сила > жертва.power() * b["засада_насмерть_превосходство"]
-                and кто.weapon != "нет"
+                and кто.weapon != Оружие.НЕТ
                 and h.rng.chance(b["засада_насмерть_шанс"]))
     if насмерть:
         # не «убил», а «бросился»: дальше решает бой, и на площадке он может
@@ -1072,7 +1072,7 @@ def убить_соседа(h, killer, victim):
     if killer.weapon in ("нож", "топор"):
         шанс += 0.10
     шанс -= victim.power() * 0.05
-    шанс -= 0.12 if victim.tonight == "дежурить" else 0.0
+    шанс -= 0.12 if victim.tonight == Ночь.ДЕЖУРИТЬ else 0.0
     if not h.rng.chance(clamp(шанс, 0.30, 0.95)):
         # проснулся
         social.emit(h, killer, 5, "ссора", night=True)
@@ -1393,7 +1393,7 @@ def пути_внутрь(h, crew, target, defenders, упор=0.0):
     # окно: со двора, с крыши или по балконам — и только если погода пускает.
     # В буран на карниз не выйдет никто, и на тридцатиградусном морозе тоже:
     # пальцы белеют раньше, чем поддастся рама
-    if h.режим != "буран" and h.outside > b["окно_мороз"]:
+    if h.режим != Режим.БУРАН and h.outside > b["окно_мороз"]:
         верх = max(f.floor for f in h.flats.values())
         откуда = ("низ" if flat.floor <= 1 else
                   "крыша" if flat.floor >= верх else "балкон")
@@ -1509,7 +1509,7 @@ def дежурный_услышал(h, crew, target):
     """
     b = h.B
     дежурные = [p for p in h.alive()
-                if p.tonight == "дежурить" and p.id not in {c.id for c in crew}
+                if p.tonight == Ночь.ДЕЖУРИТЬ and p.id not in {c.id for c in crew}
                 and p.id != target.id]
     if not дежурные:
         return None
@@ -1707,7 +1707,7 @@ def run_siege(h, leader, target):
     # за ним: страшно, но руки запоминают
     from .model import СВОЙСКОЕ
     for p in crew + defenders:
-        if p.weapon and p.weapon != "нет":
+        if p.weapon and p.weapon != Оружие.НЕТ:
             было = p.рука.get(p.weapon, СВОЙСКОЕ.get(p.weapon, 0.0))
             p.рука[p.weapon] = clamp(было + h.B["рука_за_бой"], 0.0, 1.0)
     outnumbered = attack_power > def_power * 1.25
@@ -1832,7 +1832,7 @@ def run_siege(h, leader, target):
             h.bump("исход_сбежал")
             return "сбежал"
         # засада: тот, кто ждёт за дверью с топором, встречает первого вошедшего
-        if not держит and target.weapon != "нет" and target.t01("храбрость") > 0.55 and h.rng.chance(b["засада_шанс"]):
+        if not держит and target.weapon != Оружие.НЕТ and target.t01("храбрость") > 0.55 and h.rng.chance(b["засада_шанс"]):
             первый = h.rng.pick(crew)
             первый.injuries.append(h.rng.pick(["ушиб", "порез"]))
             первый.health = clamp(первый.health - h.rng.uni(10, 22))

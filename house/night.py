@@ -8,7 +8,7 @@
 рядом с решением, а не в оркестраторе и не среди драк.
 """
 from .util import clamp, norm
-from .model import вещи, FIREARMS
+from .model import вещи, FIREARMS, Ночь
 from . import social, conflict, meeting, world, character, actions
 
 
@@ -29,7 +29,7 @@ def ночь(h):
             continue
         t = consider_raid(h, p)
         if t:
-            p.tonight = "налёт"
+            p.tonight = Ночь.НАЛЁТ
             conflict.run_siege(h, p, t)
             h.календарь.последний_налёт = h.day
             raid_done = True
@@ -37,7 +37,7 @@ def ночь(h):
     # ночь в общей квартире. До краж: тот, кто на это решился, уже не пойдёт
     # никуда лезть, а дом наутро будет считать совсем другое
     for p in h.rng.shuffled(h.alive()):
-        if p.tonight != "убить_соседа" or not p.здесь():
+        if p.tonight != Ночь.УБИТЬ_СОСЕДА or not p.здесь():
             continue
         c = targets.get(p.id)
         if c and c.здесь() and h.под_одной_крышей(p, c):
@@ -46,7 +46,7 @@ def ночь(h):
     # обобрать и уйти. После ножа и до краж: тот, кто на это решился,
     # этой ночью больше никуда не пойдёт, а дом наутро считает другое
     for p in h.rng.shuffled(h.alive()):
-        if p.tonight != "обобрать" or not p.здесь():
+        if p.tonight != Ночь.ОБОБРАТЬ or not p.здесь():
             continue
         c = targets.get(p.id)
         if c and c.здесь() and p.living_with == c.id:
@@ -55,7 +55,7 @@ def ночь(h):
     # кражи. Список составлен до осады, а осада могла кого-то из него убить
     # или выставить на мороз — поэтому проверяем обоих ещё раз
     for p in h.rng.shuffled(h.alive()):
-        if p.tonight != "кража" or not p.здесь():
+        if p.tonight != Ночь.КРАЖА or not p.здесь():
             continue
         t = targets.get(p.id)
         if t and t.здесь():
@@ -63,15 +63,15 @@ def ночь(h):
 
     # сон
     for p in h.alive():
-        if p.rest < 35 and p.tonight == "дежурить":
-            p.tonight = "спать"      # человек просто не выдерживает ещё одну ночь
-        if p.rest < 25 and p.tonight in ("кража", "дежурить"):
-            p.tonight = "спать"     # на ногах уже не стоит
-        if p.tonight == "дежурить":
+        if p.rest < 35 and p.tonight == Ночь.ДЕЖУРИТЬ:
+            p.tonight = Ночь.СПАТЬ      # человек просто не выдерживает ещё одну ночь
+        if p.rest < 25 and p.tonight in (Ночь.КРАЖА, Ночь.ДЕЖУРИТЬ):
+            p.tonight = Ночь.СПАТЬ     # на ногах уже не стоит
+        if p.tonight == Ночь.ДЕЖУРИТЬ:
             slept = 4.5
             p.ночей_дежурства += 1
             p.дежурил_ночь = h.day
-        elif p.tonight in ("кража", "налёт", "убить_соседа", "обобрать"):
+        elif p.tonight in (Ночь.КРАЖА, Ночь.НАЛЁТ, Ночь.УБИТЬ_СОСЕДА, Ночь.ОБОБРАТЬ):
             slept = 5.5
         else:
             slept = 11.0 if p.rest < 35 else (9.5 if p.rest < 60 else 8.0)
@@ -90,7 +90,7 @@ def ночь(h):
 def решение(h, p):
     b = h.B
     tired = 1.0 - norm(p.rest, 20, 80)
-    opts = [(("спать", None), 2.5 + tired * 6.0)]
+    opts = [((Ночь.СПАТЬ, None), 2.5 + tired * 6.0)]
 
     gate = character.norm_gate
     wealth = p.stock.get("еда", 0) * 0.6 + p.stock.get("топливо", 0) * 0.3
@@ -107,7 +107,7 @@ def решение(h, p):
     # с ребёнком всю ночь на лестнице не просидишь: он просыпается,
     # мёрзнет и его надо держать при себе (GDD 12.6)
     if not p.dependents:
-        opts.append((("дежурить", None), watch * gate(p, "дежурить", b)))
+        opts.append(((Ночь.ДЕЖУРИТЬ, None), watch * gate(p, "дежурить", b)))
 
     # тот, с кем он делит комнату: ночью до него два метра и никакой двери
     соседи = ([h.get(p.living_with)] if p.living_with
@@ -118,7 +118,7 @@ def решение(h, p):
         ночью = (оценка_убийства(h, p, c)
                  + p.пунктик("убить_соседа")
                  + character.своя_мерка(p, "убить_соседа", b))
-        opts.append((("убить_соседа", c), ночью * gate(p, "убить_соседа", b)))
+        opts.append(((Ночь.УБИТЬ_СОСЕДА, c), ночью * gate(p, "убить_соседа", b)))
         # и то, что лежит между «съехать по-хорошему» и ножом: собрать
         # хозяйское и уйти к себе в ту же ночь. Только гостю — хозяину
         # уходить некуда, у него эта квартира и есть
@@ -126,7 +126,7 @@ def решение(h, p):
             обобрать = (оценка_обобрать(h, p, c)
                         + p.пунктик("обобрать")
                         + character.своя_мерка(p, "обобрать", b))
-            opts.append((("обобрать", c), обобрать * gate(p, "обобрать", b)))
+            opts.append(((Ночь.ОБОБРАТЬ, c), обобрать * gate(p, "обобрать", b)))
 
     for t in h.others(p):
         if not t.alive:
@@ -168,7 +168,7 @@ def решение(h, p):
         score -= p.поймали * 1.8 / A
         score -= h.stats.get("убийств", 0) * 0.9 / A
         score -= h.stats.get("изгнаний", 0) * 1.1 / A
-        opts.append((("кража", t), score * gate(p, "кража", b)))
+        opts.append(((Ночь.КРАЖА, t), score * gate(p, "кража", b)))
 
     # тот же порог, что и днём (actions.choose_and_do): от нечего делать
     # человек не идёт ночью к чужой двери. Пока порога здесь не было,
@@ -375,7 +375,7 @@ def consider_raid(h, npc):
         # на лестнице и поднимут весь подъезд. До сих пор дежурство не значило
         # для налётчика ровно ничего: 96 осад из 115 приходились на ночи,
         # когда кто-то дежурил
-        дежурят = sum(1 for o in h.others(npc) if o.tonight == "дежурить" and o.id != t.id)
+        дежурят = sum(1 for o in h.others(npc) if o.tonight == Ночь.ДЕЖУРИТЬ and o.id != t.id)
         if дежурят:
             fear += b["налёт_страх_дежурства"] * min(2, дежурят)
         # совесть

@@ -8,7 +8,7 @@
 здесь — это порядок rng.
 """
 from .util import clamp, vb
-from .model import СВОЙСКОЕ
+from .model import СВОЙСКОЕ, Оружие
 from . import social, conflict
 
 
@@ -27,7 +27,7 @@ def расход_и_тепло(h, p, infra):
     p.hydration = clamp(p.hydration - b["расход_жажды"])
 
     # к оружию привыкают тем, что носят его: каждый день понемногу
-    if p.weapon and p.weapon != "нет":
+    if p.weapon and p.weapon != Оружие.НЕТ:
         было = p.рука.get(p.weapon, СВОЙСКОЕ.get(p.weapon, 0.0))
         p.рука[p.weapon] = clamp(было + b["рука_за_день"], 0.0, 1.0)
 

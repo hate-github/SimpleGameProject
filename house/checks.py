@@ -14,6 +14,8 @@
 import re
 from collections import Counter
 
+from .model import Оружие
+
 # «движок» считается наравне с банками по той же причине, по какой считается
 # оружие: он один на весь дом, он ходит из рук в руки и он расходуется, когда
 # из него собирают генератор. Заводиться сам он не должен
@@ -210,7 +212,7 @@ def оружие_всего(h):
     ломает единственное правило, на котором эта механика стоит: почти всё,
     что есть в доме, было в доме с первого дня.
     """
-    в_руках = sum(1 for p in h.people.values() if p.weapon and p.weapon != "нет")
+    в_руках = sum(1 for p in h.people.values() if p.weapon and p.weapon != Оружие.НЕТ)
     return (в_руках + sum(len(f.оружие) for f in h.flats.values())
             + sum(len(k.оружие) for k in h.кладовые.values()))
 
