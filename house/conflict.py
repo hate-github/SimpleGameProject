@@ -346,7 +346,7 @@ def exile(h, person, by=None, reason="воровство"):
     # выставили на глазах у всех: об этом знает каждый, кто в доме
     for w in h.alive():
         if w.id != person.id:
-            w.знает_изгнаний += 1
+            w.memory.append(Память(h.day, Вид.ВИДЕЛ_ИЗГНАНИЕ, person.id))
     who = f"{by.short} и остальные" if by else "соседи"
     h.journal.line(f"{who} вывели {person.form('acc')} на улицу и закрыли дверь подъезда.", 2)
     h.note(f"{person.short} {vb(person.sex, 'изгнан')} ({reason})")
