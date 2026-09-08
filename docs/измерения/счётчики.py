@@ -28,9 +28,20 @@ from house.runner import many, сводка, метрика   # noqa: E402
 
 
 def main():
-    n = int(sys.argv[1]) if len(sys.argv) > 1 else 40
-    runs = many(range(1, n + 1))
-    print(f"СЧЁТЧИКИ: {n} прогонов по 30 дней, среднее за жизнь ± половина 95%-интервала")
+    # `40` — сколько зёрен; `ключ=значение` — подмена ручки баланса, как
+    # в живость.py: так сравнивают две настройки, не правя файл
+    n, подмена = 40, {}
+    for arg in sys.argv[1:]:
+        if "=" in arg:
+            k, v = arg.split("=", 1)
+            подмена[k] = float(v)
+        else:
+            n = int(arg)
+    runs = many(range(1, n + 1), overrides=подмена or None)
+    заголовок = f"СЧЁТЧИКИ: {n} прогонов по 30 дней, среднее за жизнь ± половина 95%-интервала"
+    if подмена:
+        заголовок += "; подмена: " + ", ".join(f"{k}={v:g}" for k, v in sorted(подмена.items()))
+    print(заголовок)
     m, d = сводка(r["выжило"] for r in runs)
     print(f"  {'выжило':<24} {m:7.2f} ± {d:.2f}")
     все = sorted({k for r in runs for k in r["stats"]})
