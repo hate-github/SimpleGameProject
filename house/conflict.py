@@ -304,7 +304,9 @@ def steal(h, thief, target):
         from .model import FIREARMS
         armed = target.weapon in FIREARMS and target.stock.get("патроны", 0) > 0
         scare = (0.62 + 0.03 * (10 - thief.trait("храбрость"))) / aggr(h)
-        if armed and h.rng.chance(scare):
+        # решает хозяин: выйти со стволом или не связываться (decision.py).
+        # Монета та же, что бросалась здесь раньше (план агента, фаза 5б)
+        if armed and монета(h, target, "выйти со стволом", "выйти", "не выходить", scare):
             h.journal.line(f"{target.short} {vb(target.sex, 'вышел') if target.sex != 'ж' else 'вышла'} "
                            f"со стволом. {thief.short} {vb(thief.sex, 'ушёл')} без разговоров.", 1)
             thief.panic = clamp(thief.panic + 18)
@@ -313,11 +315,16 @@ def steal(h, thief, target):
             # не потому, что раскаялся, а потому что видел ствол (GDD 17)
             social.увидел_оружие(h, thief, target)
             return ("отпугнули", {})
-        # вор в первую очередь бежит, а не дерётся — драка тут крайний случай
-        escaped = h.rng.chance(clamp(0.35 + stealth(thief) * 0.5 - target.t01("храбрость") * 0.3, 0.1, 0.9))
+        # вор в первую очередь бежит, а не дерётся — драка тут крайний случай.
+        # Решает вор, и монета та же (фаза 5б)
+        escaped = монета(h, thief, "бежать от хозяина", "бежать", "остаться",
+                         clamp(0.35 + stealth(thief) * 0.5 - target.t01("храбрость") * 0.3, 0.1, 0.9))
         if escaped:
             h.journal.line(f"{thief.short} {vb(thief.sex, 'вырвался')} и {vb(thief.sex, 'убежал')} по лестнице.", 1)
-        elif target.trait("вспыльчивость") >= 6 or target.power() > thief.power() * 1.3:
+        # а если не вырвался — хозяину решать, хватать его или дать уйти
+        elif по_правилу(h, target, "драться с вором", "драться", "отпустить",
+                        1.0 if (target.trait("вспыльчивость") >= 6
+                                or target.power() > thief.power() * 1.3) else 0.0):
             fight(h, [target], [thief], place=f"кв.{target.apt}", reason="вор в квартире")
         видели = [w for w in h.others(target) if w.id != thief.id and h.rng.chance(0.5)]
         social.judge(h, thief, "воровство", hate=12.0, trust=-1.2, witnesses=видели)
