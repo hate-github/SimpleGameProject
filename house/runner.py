@@ -41,6 +41,9 @@ def run_one(arg):
         "судьбы": {p.short: (p.died_day, без_рода((p.cause or "").split(" (")[0]))
                    for p in h.people.values()},
         "stats": {k: v for k, v in h.stats.items() if isinstance(v, (int, float))},
+        # поток событий для движка (model.ВидСобытия): сюда возвращается только
+        # счёт по видам — сами записи остаются в том процессе, где считались
+        "события": dict(Counter(str(e.вид) for e in h.события)),
         "богатство": h.scav_richness,
         "нарушения": checks.invariants(h) + checks.ledger(h, start),
     }

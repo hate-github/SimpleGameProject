@@ -155,6 +155,7 @@ def переехать(h, npc, host):
         npc.mood = clamp(npc.mood + 12)
         host.mood = clamp(host.mood + 6)
         h.bump("переездов")
+        h.событие("переезд", кто=npc, кому=host, где=host.apt)
         h.journal.line(f"{npc.short} {vb(npc.sex, 'перебрался')} к {host.form('dat')} "
                        f"в кв.{host.apt} — топят одну печку на двоих.", 2)
         h.note(f"{npc.short} {vb(npc.sex, 'переехал')} к {host.form('dat')}")

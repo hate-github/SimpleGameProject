@@ -280,6 +280,8 @@ def steal(h, thief, target):
         thief.memory.append(Память(h.day, Вид.УКРАЛ, target.id))
         thief.bump("краж")
         h.bump("краж")
+        h.событие("кража", кто=thief, кому=target, где=target.apt,
+                  сколько=sum(moved.values()) if moved else 0.0)
         thief.mood = clamp(thief.mood - 4 * thief.t01("лояльность"))
         h.journal.secret(f"ночью {thief.short} вынес из кв.{target.apt}: {_fmt(moved)}")
         # хозяин обнаружит пропажу утром (GDD 4.4 — сводка дня)
@@ -343,6 +345,7 @@ def exile(h, person, by=None, reason="воровство"):
     person.cause = f"{vb(person.sex, 'изгнан')} из дома ({reason})"
     person.died_day = h.day
     h.bump("изгнаний")
+    h.событие("изгнание", кто=by, кому=person, что=reason, где=person.apt)
     # выставили на глазах у всех: об этом знает каждый, кто в доме
     for w in h.alive():
         if w.id != person.id:
@@ -809,6 +812,7 @@ def умер(h, кто, причина, killer=None, оружие=None, свид
     кто.alive = False
     кто.cause = причина
     кто.died_day = h.day
+    h.событие("смерть", кто=кто, кому=killer, что=причина, где=кто.apt)
     if строка:
         h.journal.line(строка, 2)
     on_death(h, кто, killer=killer, оружие=оружие, свидетели=свидетели)
@@ -1120,6 +1124,8 @@ def убить_соседа(h, killer, victim):
     killer.bump("убийств")
     h.bump("убийств")
     h.bump("убийств_соседа")
+    h.событие("убийство", кто=killer, кому=victim, что="сосед по квартире",
+              где=victim.apt)
     killer.mood = clamp(killer.mood - b["убийство_настроение"])
     killer.panic = clamp(killer.panic + 10)
     if гость_был:
@@ -1694,6 +1700,7 @@ def run_siege(h, leader, target):
         social.judge(h, p, "предательство", hate=10.0, trust=-1.0)
     h.bump("налётов")
     leader.bump("налётов")
+    h.событие("налёт", кто=leader, кому=target, сколько=len(crew), где=target.apt)
     # с этой минуты между ними счёты, кем бы ни кончилась ночь у двери.
     # Тяжесть уточнится по исходу (см. конец функции): разошлись миром —
     # забудется за пару дней, вынесли квартиру — не забудется

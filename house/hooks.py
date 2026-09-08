@@ -51,6 +51,7 @@ class Хуки:
     on_узнал_о_смерти: Список = field(default_factory=list)   # (h, кто, умерший)
     after_узнал_о_смерти: Список = field(default_factory=list)   # (…, итог=True, если это была новость)
     on_замысел: Список = field(default_factory=list)          # (h, npc, замысел) — человек взялся за новый замысел
+    on_событие: Список = field(default_factory=list)          # (h, Событие) — крупное событие дома (model.ВидСобытия)
 
     def зов(self, имя, *args, **kw):
         for f in getattr(self, имя):

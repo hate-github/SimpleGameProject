@@ -30,7 +30,8 @@ def ночь(h):
         t = consider_raid(h, p)
         if t:
             p.tonight = Ночь.НАЛЁТ
-            conflict.run_siege(h, p, t)
+            исход = conflict.run_siege(h, p, t)
+            h.событие("исход", кто=p, кому=t, что=исход, где=t.apt)
             h.календарь.последний_налёт = h.day
             raid_done = True
 
