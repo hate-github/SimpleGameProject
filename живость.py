@@ -39,11 +39,13 @@ from house.hooks import Хуки
 
 
 def собраны(h, npc, итог):
-    прошли = sorted([s for _o, s in итог if s > h.B["порог_действия"]], reverse=True)
+    # `итог` — Корзина (actions.gather): варианты у неё в `.варианты`
+    варианты = итог.варианты
+    прошли = sorted([s for _o, s in варианты if s > h.B["порог_действия"]], reverse=True)
     ВАРИАНТОВ.append(len(прошли))
     if len(прошли) >= 2 and прошли[0] > 0:
         ОТРЫВ.append((прошли[0] - прошли[1]) / прошли[0])
-    ПОСЛЕДНИЕ[npc.id] = итог
+    ПОСЛЕДНИЕ[npc.id] = варианты
 
 
 def перед_делом(h, npc, key, target):

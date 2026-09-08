@@ -267,7 +267,8 @@ class Coverage:
 
     # --- наблюдатели ---
     def _предложено(self, h, npc, итог):
-        for (key, _t), _s in итог:
+        # `итог` — Корзина (actions.gather): варианты у неё в `.варианты`
+        for (key, _t), _s in итог.варианты:
             self.offered[key] += 1
 
     def _исполнено(self, h, npc, key, target, итог=None):
