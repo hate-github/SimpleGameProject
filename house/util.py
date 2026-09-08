@@ -6,7 +6,6 @@
 (GDD 21: «Распределение случайных событий фиксируется зерном жизни».)
 """
 import math
-import random
 import re
 import zlib
 
@@ -28,11 +27,45 @@ def norm(v, lo, hi):
 
 
 class Rng:
-    """Обёртка над random.Random — чтобы нигде в коде не было глобального рандома."""
+    """Свой поток случайности (PCG-XSH-RR): 64 бита состояния, 32 бита выхода.
+
+    Раньше здесь стоял `random.Random` — вихрь Мерсенна из стандартной
+    библиотеки Python. Он не воспроизводится побитово ни в GDScript, ни в C#,
+    а весь `data/эталон.json` держится ровно на том, что зерно даёт ту же
+    жизнь до последнего слова. Значит, при переносе симуляции в движок
+    единственная проверка, которая доказывает, что перенос ничего не сломал,
+    терялась бы в ту самую минуту, когда она нужна.
+
+    PCG32 — три строки арифметики по 64-битному состоянию; они пишутся
+    на любом языке за десять минут и дают тот же поток чисел. Здесь всё
+    считается на целых с явной маской, а не на float, — поэтому и результат
+    не зависит ни от разрядности, ни от порядка байт.
+    """
+
+    _МНОЖИТЕЛЬ = 6364136223846793005
+    _ПРИБАВКА = 1442695040888963407
+    _МАСКА = (1 << 64) - 1
 
     def __init__(self, seed):
         self.seed = seed
-        self.r = random.Random(seed)
+        # засев как в эталонной реализации PCG: провернуть, добавить зерно,
+        # провернуть ещё раз — чтобы соседние зёрна не давали похожие ленты
+        self._состояние = 0
+        self._бросок()
+        self._состояние = (self._состояние + (int(seed) & self._МАСКА)) & self._МАСКА
+        self._бросок()
+
+    def _бросок(self):
+        """Следующие 32 бита: сдвиг-исключающее-или, потом поворот."""
+        было = self._состояние
+        self._состояние = (было * self._МНОЖИТЕЛЬ + self._ПРИБАВКА) & self._МАСКА
+        сдвинутое = (((было >> 18) ^ было) >> 27) & 0xFFFFFFFF
+        поворот = было >> 59
+        return ((сдвинутое >> поворот) | (сдвинутое << ((-поворот) & 31))) & 0xFFFFFFFF
+
+    def random(self):
+        """0.0 ≤ x < 1.0 — тридцать два бита точности, ровно один бросок."""
+        return self._бросок() / 4294967296.0
 
     def branch(self, tag):
         """Отдельный поток случайности от того же зерна.
@@ -49,21 +82,29 @@ class Rng:
         return Rng(zlib.crc32(tag.encode("utf-8")) ^ (self.seed * 2654435761 & 0xFFFFFFFF))
 
     def chance(self, p):
-        return self.r.random() < p
+        return self.random() < p
 
     def uni(self, a, b):
-        return self.r.uniform(a, b)
+        return a + (b - a) * self.random()
 
     def rint(self, a, b):
-        return self.r.randint(a, b)
+        """a…b включительно. Остаток от деления, а не отбраковка: диапазоны
+        здесь короткие (дни, штуки), перекос меньше миллионной доли, зато
+        число бросков на вызов ровно одно — и лента переносится один в один."""
+        if b <= a:
+            return a
+        return a + self._бросок() % (b - a + 1)
 
     def pick(self, seq):
         seq = list(seq)
-        return self.r.choice(seq) if seq else None
+        return seq[self._бросок() % len(seq)] if seq else None
 
     def shuffled(self, seq):
+        """Тасовка Фишера — Йетса: тот же порядок в любом языке."""
         s = list(seq)
-        self.r.shuffle(s)
+        for i in range(len(s) - 1, 0, -1):
+            j = self._бросок() % (i + 1)
+            s[i], s[j] = s[j], s[i]
         return s
 
     def weighted(self, pairs):
@@ -72,7 +113,7 @@ class Rng:
         total = sum(w for _, w in pairs)
         if total <= 0:
             return pairs[0][0] if pairs else None
-        x = self.r.random() * total
+        x = self.random() * total
         acc = 0.0
         for o, w in pairs:
             acc += w
