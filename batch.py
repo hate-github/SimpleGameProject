@@ -40,8 +40,11 @@ def main():
 
     surv = Counter(r["выжило"] for r in runs)
     m, ci = сводка(r["выжило"] for r in runs)
-    print("Выжило человек из 6:")
-    for k in range(7):
+    # сколько человек в доме — из прогона, а не из подписи: дом заселяется
+    # данными, и подпись «из 6» пережила бы любое заселение
+    жильцов = len(runs[0]["судьбы"]) if runs else 0
+    print(f"Выжило человек из {жильцов}:")
+    for k in range(жильцов + 1):
         print(f"  {k}: {surv.get(k, 0):>3}  " + "█" * surv.get(k, 0))
     print(f"  в среднем {m:.2f} ± {ci:.2f}")
     # ушедший не выжил и не погиб: дом не знает, дошёл он или замёрз
@@ -53,7 +56,7 @@ def main():
     for r in runs:
         for name in r["имена"]:
             who[name] += 1
-    print("Кто доживает чаще (из 6 жильцов):")
+    print(f"Кто доживает чаще (из {жильцов} жильцов):")
     for name, c in who.most_common():
         print(f"  {name:<8} {100 * c / n:>5.0f}%")
     print()
