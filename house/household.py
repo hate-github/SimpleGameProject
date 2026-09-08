@@ -162,7 +162,7 @@ def переехать(h, npc, host):
         # И её начнут разбирать: вернуться потом может быть некуда
     else:
         social.adjust(npc, host.id, trust=-1.0, hate=10)
-        npc.ask_record(host.id)["отказ_переезд"] = h.day
+        npc.ask_record(host.id).отказ_переезд = h.day
         npc.mood = clamp(npc.mood - 8)
         h.journal.line(f"{npc.short} {vb(npc.sex, 'просил')} пустить к себе. {host.short} не {vb(host.sex, 'пустил')}.", 1)
 

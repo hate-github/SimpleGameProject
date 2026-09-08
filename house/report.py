@@ -224,8 +224,8 @@ def final_report(h, days, seed, w=None):
     w("Репутация щедрости (как её видит дом, 0 — «не даёт никогда», 1 — «даёт всегда»):")
     for p in sorted(h.people.values(), key=lambda x: x.apt):
         opinions = [o.generosity(p.id) for o in h.people.values()
-                    if o.id != p.id and o.asking.get(p.id, {}).get("дали", 0)
-                    + o.asking.get(p.id, {}).get("отказали", 0) > 0]
+                    if o.id != p.id and (o.asking.get(p.id) is not None)
+                    and o.asking[p.id].дали + o.asking[p.id].отказали > 0]
         if opinions:
             w(f"  {p.short:<8} {sum(opinions)/len(opinions):.2f}"
               f"   (о {'ней' if p.sex == 'ж' else 'нём'} судят "
