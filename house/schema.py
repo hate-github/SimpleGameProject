@@ -10,7 +10,7 @@ import json
 import os
 
 from .checks import _разделы as checks_разделы
-from .model import WEAPONS
+from .model import WEAPONS, RESOURCES
 from .decision import РЕШАЮЩИЕ
 from .catalog import COST, ПУНКТИК_КЛЮЧИ, ВЕСА_КЛЮЧИ, ЦЕННОСТИ
 from .street import КЛАДОВЫЕ_ВИДЫ
@@ -138,6 +138,18 @@ def validate_data(balance, npcs, events, lines=None):
                 if метка not in ЦЕННОСТИ:
                     bad.append(f"{d['id']}.ценности.{поле}: метку «{метка}» "
                                f"никто не ставит поступкам и никто не судит")
+        # то, что подъезд знал о нём до метели (assembly): опечатка в названии
+        # ресурса — знание, которого ни у кого не появится, и заметить это
+        # можно только по тому, что к его двери почему-то никто не ходит
+        слава = d.get("известен_дому") or {}
+        for ключ in слава:
+            if ключ not in ("осведомлённость", "запас"):
+                bad.append(f"{d['id']}.известен_дому: «{ключ}» никто не читает")
+        for res in (слава.get("запас") or {}):
+            if res not in RESOURCES:
+                bad.append(f"{d['id']}.известен_дому.запас: нет ресурса «{res}»")
+        if not 0.0 <= float(слава.get("осведомлённость", 0.0)) <= 100.0:
+            bad.append(f"{d['id']}.известен_дому: осведомлённость вне 0..100")
         # деньги: наличные лежат в запасах, счёт — отдельно (GDD 18)
         if float(d.get("счёт", 0.0)) < 0 or float(d.get("запасы", {}).get("деньги", 0)) < 0:
             bad.append(f"{d['id']}: деньги в минусе")
