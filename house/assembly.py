@@ -44,6 +44,8 @@ def build_house(h, npcs_data):
             dependent_acc=d.get("иждивенец_вин", ""),
             dependent_gen=d.get("иждивенец_род", ""),
             dependent_ins=d.get("иждивенец_твор", ""),
+            подъём=float(d.get("подъём", 8.0)),
+            привычки=dict(d.get("привычки") or {}),
             нормальность_пол=float(d.get("нормальность_пол", 0.1)),
             нормальность_скорость=float(d.get("нормальность_скорость", 1.0)),
         )

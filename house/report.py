@@ -19,12 +19,17 @@ class Journal:
         self.secrets = secrets
         self.stream = stream or sys.stdout
         self.buf = []
+        # часы текущего хода: их ставит actions.choose_and_do и снимает после.
+        # Так время попадает на каждую строку дня — и на само действие,
+        # и на то, что оно за собой потянуло, — а утро, ночь и события дома
+        # остаются без часов, потому что они не чей-то ход
+        self.час = None
 
     # --- запись ---
     def line(self, text, importance=1, hidden=False):
         if hidden and not self.secrets:
             return
-        self.buf.append((importance, text))
+        self.buf.append((importance, f"{self.час} {text}" if self.час else text))
 
     def event(self, text, scripted=False):
         mark = "◆" if scripted else "◇"
