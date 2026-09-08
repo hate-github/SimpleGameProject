@@ -187,6 +187,8 @@ def заказать(h, npc, мастер, cold_pressure, fear, что=None):
     b = h.B
     said = None
     if что is None:
+        # вызов мимо сбора: дом ходом дня передаёт решённое (Корзина.детали)
+        h.bump("пересчётов_в_исполнении")
         что, _оц = что_заказать(h, npc, мастер, b, cold_pressure, fear)
     if что is None:
         return None                       # пока он шёл, надобность отпала
