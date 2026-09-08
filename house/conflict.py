@@ -8,7 +8,7 @@ GDD 17: бой намеренно простой и смертельный; чи
 from .util import clamp, vb
 from . import social, household
 from .character import своя_мерка
-from .model import Ребёнок, Тело, Память, Приговор, Оружие, Режим, Ночь
+from .model import Ребёнок, Тело, Память, Вид, Приговор, Оружие, Режим, Ночь
 from .hooks import наблюдаемо
 from .decision import монета, по_правилу
 
@@ -277,7 +277,7 @@ def steal(h, thief, target):
         if унёс:
             moved = dict(moved)
             moved[унёс] = 1
-        thief.memory.append(Память(h.day, "украл", target.id))
+        thief.memory.append(Память(h.day, Вид.УКРАЛ, target.id))
         thief.bump("краж")
         h.bump("краж")
         thief.mood = clamp(thief.mood - 4 * thief.t01("лояльность"))
@@ -294,7 +294,7 @@ def steal(h, thief, target):
     h.bump("краж_сорвано")
     if caught_seen:
         social.adjust(target, thief.id, trust=-4.0, hate=b["ненависть_за_кражу"], aware=20)
-        target.memory.append(Память(h.day, "поймал_вора", thief.id))
+        target.memory.append(Память(h.day, Вид.ПОЙМАЛ_ВОРА, thief.id))
         social.register_incident(h, "кража", f"{target.short} {vb(target.sex, 'застал')} {thief.form('acc')} у себя в квартире.")
         thief.поймали += 1
         if house_verdict(h, thief, target):
@@ -537,7 +537,7 @@ def notice_theft(h, victim, thief_id=None):
     b = h.B
     victim.panic = clamp(victim.panic + b["паника_от_кражи_у_себя"])
     victim.mood = clamp(victim.mood - 12)
-    victim.memory.append(Память(h.day, "пропажа", victim.id))   # теперь он знает: крадут
+    victim.memory.append(Память(h.day, Вид.ПРОПАЖА, victim.id))   # теперь он знает: крадут
     social.register_incident(h, "кража", f"{victim.label()} {vb(victim.sex, 'обнаружил')}, что запасы стали меньше.")
     suspect(h, victim, exclude=None, real=thief_id)
 
@@ -564,7 +564,7 @@ def suspect(h, victim, exclude=None, real=None):
         # она к «как у меня». Раньше здесь стояли его настоящие дни еды,
         # умноженные на мою уверенность (план агента, фаза 1е)
         w += max(0.0, 1.0 - social.believed_days(victim, other, "еда") / 4.0) * 2.0
-        if any(m.вид == "слышал" and m.кто == other.id and m.день == h.day for m in victim.memory):
+        if any(m.вид == Вид.СЛЫШАЛ and m.кто == other.id and m.день == h.day for m in victim.memory):
             w += 1.5
         w = max(0.05, w)
         pool.append((other, w))

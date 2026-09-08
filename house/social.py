@@ -9,7 +9,7 @@
 """
 from .util import clamp, norm, vb
 from .catalog import НОРМА
-from .model import Обещание, Ложь, Память, Оружие, Ночь, Режим, Взгляд, Сведения
+from .model import Обещание, Ложь, Память, Вид, Оружие, Ночь, Режим, Взгляд, Сведения
 from .hooks import наблюдаемо
 from .decision import монета
 
@@ -252,7 +252,7 @@ def smell(h, src, hot=False):
         adjust(other, src.id, aware=b["запах_осведомлённость"])
         cur = other.believed(src.id, "еда")
         note_signal(other, src.id, "еда", min(cur + 1.8, 7.0), 0.5)
-        other.memory.append(Память(h.day, "учуял", src.id))
+        other.memory.append(Память(h.day, Вид.УЧУЯЛ, src.id))
         # голодный человек, которому пахнет чужим ужином, злится по-настоящему
         hunger = clamp((55 - other.satiety) / 55.0, 0.0, 1.0)
         if hunger > 0.1:
@@ -304,13 +304,13 @@ def _hear(h, listener, src, kind, level, дом=None):
         if h.rng.chance(listener.t01("сообразительность") * b["догадка_про_воду"]):
             note_signal(listener, src.id, "вода",
                         min(listener.believed(src.id, "вода") + 1.4, 5.0), 0.35)
-            listener.memory.append(Память(h.day, "догадался", src.id, "вода"))
+            listener.memory.append(Память(h.day, Вид.ДОГАДАЛСЯ, src.id, "вода"))
     if res:
         cur = listener.believed(src.id, res)
         # звук говорит «у него это есть», но не «у него этого гора»:
         # без потолка оценка растёт от каждого чиха и весь дом идёт грабить
         note_signal(listener, src.id, res, min(cur + hint, 6.0), 0.35)
-    listener.memory.append(Память(h.day, "слышал", src.id, kind))
+    listener.memory.append(Память(h.day, Вид.СЛЫШАЛ, src.id, kind))
 
 
 def разглядел(h, watcher, target, точность=1.0):
@@ -406,7 +406,7 @@ def observe(h, watcher, target):
     # с чем сосед откроет дверь, — и главный источник страха до первой крови
     if target.weapon != Оружие.НЕТ and h.rng.chance(b["страх_видно_оружие"]):
         увидел_оружие(h, watcher, target)
-    watcher.memory.append(Память(h.day, "смотрел", target.id))
+    watcher.memory.append(Память(h.day, Вид.СМОТРЕЛ, target.id))
 
 
 def gossip(h, a, b_npc):
@@ -641,7 +641,7 @@ def проверить_ложь(h, кто, кому, тема, что=None):
         adjust(кому, кто.id, hate=b["ненависть_за_ложь"],
                trust=b["доверие_за_ложь"], aware=15)
         кому.не_верю[кто.id] = кому.не_верю.get(кто.id, 0.0) + 1.0
-        кому.memory.append(Память(h.day, "поймал_на_лжи", кто.id))
+        кому.memory.append(Память(h.day, Вид.ПОЙМАЛ_НА_ЛЖИ, кто.id))
         h.bump("вранья_раскрыто")
         register_incident(h, "ложь", None)
         предмет = предмет_вранья(h, тема, что)

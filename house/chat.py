@@ -7,7 +7,7 @@
 """
 from .util import clamp
 from . import social, world
-from .model import Память
+from .model import Память, Вид
 
 
 def daily_chat(h, lines):
@@ -118,7 +118,7 @@ def daily_chat(h, lines):
                 # эта реплика идёт после любого происшествия, не только кражи
                 if p.знает_о_кражах():
                     for o in слышат:
-                        o.memory.append(Память(h.day, "слышал_о_воре", who.id))
+                        o.memory.append(Память(h.day, Вид.СЛЫШАЛ_О_ВОРЕ, who.id))
                 h.bump("обвинений_в_чате")
         elif key == "тоска":
             for o in слышат:
