@@ -2918,9 +2918,13 @@ def _исполнить_отнять(h, npc, target, spent):
     npc.bump("отъёмов")
     h.bump("отъёмов")
     social.нарушил(h, npc, victim, "не_делать", victim.id)
-    # смысл разбоя в том, что слабый не сопротивляется
+    # смысл разбоя в том, что слабый не сопротивляется. Решает жертва
+    # (decision.py): слабый отдаёт по правилу, остальные — монетой, как
+    # и было (план агента, фаза 5з)
     scared = victim.t01("храбрость") * 3.0 + victim.power() * 1.2 < npc.power() * 2.6
-    if scared or h.rng.chance(0.75):
+    отдал = (по_правилу(h, victim, "отдать на лестнице", "отдать", "упереться", 1.0) if scared
+             else монета(h, victim, "отдать на лестнице", "отдать", "упереться", 0.75))
+    if отдал:
         moved = conflict.take_carried(h, victim, npc, limit=b["отъём_максимум"])
         h.journal.line(f"{npc.short} {vb(npc.sex, 'зажал')} {victim.form('acc')} на лестнице "
                        f"и {vb(npc.sex, 'забрал')} {conflict._fmt(moved)}.", 2)

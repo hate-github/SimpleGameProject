@@ -1844,7 +1844,10 @@ def run_siege(h, leader, target):
         shooter = armed[0]
         scare = b["угроза_оружием_отпугивает"] * (1.0 - sum(p.t01("храбрость") for p in crew) / len(crew) * 0.6)
         scare /= aggr(h)
-        if h.rng.chance(clamp(scare, 0.05, 0.95)):
+        # уйти от ствола или лезть дальше — решает вожак, он привёл людей
+        # (decision.py); монета та же (план агента, фаза 5з)
+        if монета(h, leader, "уйти от ствола", "уйти", "лезть дальше",
+                  clamp(scare, 0.05, 0.95)):
             h.journal.line(f"{shooter.short} {'вышла' if shooter.sex == 'ж' else 'вышел'} на площадку со стволом. Разошлись без слова.", 2)
             social.увидел_оружие(h, None, shooter, свидетели=crew)
             for p in crew:
