@@ -31,8 +31,8 @@ class Хуки:
     # выбор и исполнение дня (actions)
     on_gather: Список = field(default_factory=list)           # (h, npc)
     after_gather: Список = field(default_factory=list)        # (h, npc, итог=варианты) — до порога и выбора
-    on_execute: Список = field(default_factory=list)          # (h, npc, key, target)
-    after_execute: Список = field(default_factory=list)       # (h, npc, key, target, итог=None)
+    on_execute: Список = field(default_factory=list)          # (h, npc, key, target, детали=None)
+    after_execute: Список = field(default_factory=list)       # (h, npc, key, target, итог=None, детали=None)
     on_реплика: Список = field(default_factory=list)          # (h, текст) — реплика быта или чата, до подстановки рода
     # улица (street)
     on_outing: Список = field(default_factory=list)           # (h, npc, dur, м, спутник=None)

@@ -45,7 +45,7 @@ class Наблюдатель:
                          on_day=[self._снимок])
 
     # --- наблюдатели ---
-    def _исполняет(self, h, npc, key, target):
+    def _исполняет(self, h, npc, key, target, детали=None):
         if key in КРАЙНИЕ_ДНЁМ:
             self._крайний(h, npc)
         if key == "вылазка":

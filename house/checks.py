@@ -271,7 +271,7 @@ class Coverage:
         for (key, _t), _s in итог.варианты:
             self.offered[key] += 1
 
-    def _исполнено(self, h, npc, key, target, итог=None):
+    def _исполнено(self, h, npc, key, target, итог=None, детали=None):
         # исход сравнивается по значению, чтобы не тянуть actions в checks
         (self.done if итог == "сделано" else self.сорвано)[key] += 1
 

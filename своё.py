@@ -35,14 +35,14 @@ def выход(h, npc, dur, м, спутник=None):
         ЭТА["дико"] = h.day
 
 
-def перед_делом(h, npc, key, target):
+def перед_делом(h, npc, key, target, детали=None):
     if key == "кладовая" and target is not None:
         ХОД[target.вид] += 1
         ПО_ДНЯМ[h.day]["кладовая"] += 1
     _ЗАКАЗ_БЫЛ[npc.id] = h.заказы.get(npc.id)
 
 
-def после_дела(h, npc, key, target, итог=None):
+def после_дела(h, npc, key, target, итог=None, детали=None):
     стало = h.заказы.get(npc.id)
     if key == "заказать" and стало and стало is not _ЗАКАЗ_БЫЛ.get(npc.id):
         ЗАКАЗ[стало.что].append((h.day, стало.цена, h.power_on))

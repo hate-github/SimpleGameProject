@@ -73,7 +73,7 @@ def защитники(h, target, crew_ids, предупреждён=False, по
             ВЫХОД.append((p.свой(target.id), p.id in вышли, крик))
 
 
-def перед_делом(h, npc, key, target):
+def перед_делом(h, npc, key, target, детали=None):
     ХОДЫ[key] += 1
     if key == "отнять" and target is not None and getattr(target, "id", None):
         ЖЕРТВЫ.append(target.каким_кажусь())

@@ -48,7 +48,7 @@ def собраны(h, npc, итог):
     ПОСЛЕДНИЕ[npc.id] = варианты
 
 
-def перед_делом(h, npc, key, target):
+def перед_делом(h, npc, key, target, детали=None):
     opts = ПОСЛЕДНИЕ.get(npc.id)
     if opts:
         лучший = max(opts, key=lambda x: x[1])[0][0]
