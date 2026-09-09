@@ -62,16 +62,29 @@ public class Журнал : IЖурнал
         buf.Add((заметность, час is not null ? $"{час} {текст}" : текст));
     }
 
-    public void @event(string текст, bool scripted = false)
+    /// <remarks>
+    /// Виртуальны по той же причине, что и <c>line</c>: журнал, который
+    /// печатает день по ходу, обязан их перехватить. Пока они были обычными,
+    /// живой журнал доставал их от базового, они уходили в буфер, а буфер
+    /// его <c>flush_day</c> чистил не печатая — и играющий не видел
+    /// ни события дня, ни чата соседей. В прототипе это так и есть
+    /// (`docs/ПОСЛЕ_ПЕРЕЕЗДА.md`, правка 1); наследнику дана возможность
+    /// не повторять этого, а поведение самого журнала не изменилось
+    /// ни на знак.
+    /// </remarks>
+    public virtual void @event(string текст, bool scripted = false)
         => buf.Add((2, $"{(scripted ? "◆" : "◇")} {текст}"));
 
-    public void secret(string текст)
+    /// <inheritdoc cref="@event"/>
+    public virtual void secret(string текст)
     {
         if (secrets)
             buf.Add((1, $"    ⌁ {текст}"));
     }
 
-    public void chat(string кто, string текст) => buf.Add((1, $"  [чат] {кто}: {текст}"));
+    /// <inheritdoc cref="@event"/>
+    public virtual void chat(string кто, string текст)
+        => buf.Add((1, $"  [чат] {кто}: {текст}"));
 
     // --- вывод ---
     public void w(string s = "") => поток.Write(s + "\n");

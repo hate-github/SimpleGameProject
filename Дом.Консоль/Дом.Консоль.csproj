@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Дом.Ядро\Дом.Ядро.csproj" />
+    <ProjectReference Include="..\Дом.Экран\Дом.Экран.csproj" />
   </ItemGroup>
 
 </Project>

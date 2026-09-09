@@ -1,0 +1,29 @@
+; Проект Godot 4 для «Опять здесь».
+;
+; Держит только то, что принадлежит движку: окно, главную сцену и имя
+; сборки. Баланс, жильцы, события и реплики остаются в `data/*.json`
+; и читаются ядром напрямую — в `.tres` их не переводить, это убьёт
+; двустороннюю проверку ручек (навык godot-boundary).
+
+config_version=5
+
+[application]
+
+config/name="Опять здесь"
+config/description="Пятнадцать соседей, метель и тридцать дней."
+run/main_scene="res://Дом.tscn"
+config/features=PackedStringArray("4.4", "C#", "Forward Plus")
+
+[dotnet]
+
+project/assembly_name="Дом.Годот"
+
+[display]
+
+window/size/viewport_width=1280
+window/size/viewport_height=800
+window/stretch/mode="canvas_items"
+
+[rendering]
+
+renderer/rendering_method="mobile"

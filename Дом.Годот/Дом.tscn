@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://dom15sosedey"]
+
+[ext_resource type="Script" path="res://ДомУзел.cs" id="1_дом"]
+
+[node name="Дом" type="Node"]
+script = ExtResource("1_дом")

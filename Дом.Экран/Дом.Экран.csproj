@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Слой вида: то, что показывают игроку, — данными, а не текстом.
+       Ни одной ссылки на Godot, и это принципиально: экран Godot строится
+       из этих же записей, но и консоль строится из них, а значит слой
+       проверяется прогоном без движка (навык godot-boundary).
+
+       Зависит только от ядра — вниз.
+
+       Назван «Экран», а не «Вид», как его зовёт навык, по причине из этого
+       же кода: «вид» здесь уже занят доменом и значит «разновидность» —
+       `model.Вид` (откуда человек это знает), `ВидСобытия`, `ВидКладовой`.
+       Пространство имён `Дом.Вид` затеняло тип `Вид` и ломало сборку
+       на `Вид.СМОТРЕЛ`. Слово, у которого в проекте уже есть смысл,
+       второго смысла не получает. -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>Дом.Экран</RootNamespace>
+    <AssemblyName>Дом.Экран</AssemblyName>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Дом.Ядро\Дом.Ядро.csproj" />
+  </ItemGroup>
+
+</Project>
