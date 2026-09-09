@@ -11,7 +11,7 @@
 from .util import clamp, vb
 from .catalog import ТЕГИ
 from . import social
-from .decision import по_правилу
+from .decision import Вопрос, по_правилу
 
 
 # ---------------------------------------------------------------- утро и ночь под одной крышей
@@ -140,7 +140,7 @@ def пустит_к_себе(h, host, гость, b):
 
 def переехать(h, npc, host):
     b = h.B
-    if (по_правилу(h, host, "пустить к себе", "пустить", "отказать", пустит_к_себе(h, host, npc, b))
+    if (по_правилу(h, host, Вопрос.ПУСТИТЬ_К_СЕБЕ, "пустить", "отказать", пустит_к_себе(h, host, npc, b))
             and len(host.guests) < b["переезд_максимум_гостей"]):
         npc.living_with = host.id
         npc.переехал_день = h.day

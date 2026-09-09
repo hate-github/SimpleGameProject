@@ -8,7 +8,7 @@
 """
 from .util import clamp, vb
 from .model import spend, Заказ
-from .decision import по_правилу
+from .decision import Вопрос, по_правилу
 from .character import norm_gate
 from . import social
 
@@ -229,7 +229,7 @@ def заказать(h, npc, мастер, cold_pressure, fear, что=None):
     if h.мастер_занят.get(мастер.id):
         said = (f"{мастер.short} и рад бы, да {vb(мастер.sex, 'занят')}: "
                 f"работа уже делается не {npc.form('dat')}")
-    elif по_правилу(h, мастер, "взяться за заказ", "взяться", "отказать",
+    elif по_правилу(h, мастер, Вопрос.ВЗЯТЬСЯ_ЗА_ЗАКАЗ, "взяться", "отказать",
                     возьмётся_за_заказ(h, мастер, npc, цена, b)):
         срок = b["печь_срок"] - (1 if "слесарь" in мастер.skills else 0)
         # доски откладывают сразу и в сторону — в угол у мастера. Пока
