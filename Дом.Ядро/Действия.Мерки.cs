@@ -12,19 +12,34 @@ public static partial class Действия
     public static int used_day(House h, NPC npc, string key)
         => h.сутки.сделано.Взять((npc.id, key), 0);
 
-    public static int used_pair(House h, NPC npc, NPC target, string key)
-        => h.сутки.контакты.Взять((npc.id, target.id, key), 0);
+    /// <summary>
+    /// Имя цели для счёта «я и он за сегодня». Не только жилец: у квартиры
+    /// и кладовки тоже есть `id`, и в прототипе пара считается и с ними —
+    /// иначе один человек вскрывает один и тот же погреб каждый ход.
+    /// У места вылазки `id` нет, и пары с ним не бывает.
+    /// </summary>
+    public static string? ид(object? цель) => цель switch
+    {
+        NPC p     => p.id,
+        Flat f    => f.id,
+        Кладовая к => к.id,
+        _         => null,
+    };
+
+    public static int used_pair(House h, NPC npc, object target, string key)
+        => h.сутки.контакты.Взять((npc.id, ид(target) ?? "", key), 0);
 
     /// <summary>Отметить, что действие сегодня уже делалось. Без этого один
     /// человек за день двадцать раз просит еды у соседа.</summary>
-    public static void mark(House h, NPC npc, string key, NPC? target = null)
+    public static void mark(House h, NPC npc, string key, object? target = null)
     {
         var d = h.сутки.сделано;
         d[(npc.id, key)] = d.Взять((npc.id, key), 0) + 1;
-        if (target is not null && !string.IsNullOrEmpty(target.id))
+        string? id = ид(target);
+        if (!string.IsNullOrEmpty(id))
         {
             var c = h.сутки.контакты;
-            c[(npc.id, target.id, key)] = c.Взять((npc.id, target.id, key), 0) + 1;
+            c[(npc.id, id!, key)] = c.Взять((npc.id, id!, key), 0) + 1;
         }
     }
 

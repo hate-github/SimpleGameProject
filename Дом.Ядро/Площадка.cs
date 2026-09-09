@@ -7,7 +7,7 @@
 
 namespace Дом.Ядро;
 
-public static class Площадка
+public static partial class Площадка
 {
     /// <summary>
     /// Тот, про кого дом уже всё узнал и ещё не решил. Момент проходит: если

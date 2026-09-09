@@ -13,6 +13,11 @@ namespace Дом.Ядро;
 
 public interface IЖурнал
 {
+    /// <summary>Время текущего хода: `choose_and_do` ставит его на личные
+    /// часы жильца, и с ним печатается весь ход, включая то, что он
+    /// за собой потянул. null — вне хода.</summary>
+    string? час { get; set; }
+
     /// <summary>Строка дня. `заметность` — то же, что в прототипе:
     /// 0 показывать только подробно, 1 обычно, 2 наравне со смертью.</summary>
     void line(string текст, int заметность = 0);
@@ -31,6 +36,8 @@ public interface IЖурнал
 /// <summary>Журнал, который ничего не пишет.</summary>
 public sealed class ЗаглушкаЖурнала : IЖурнал
 {
+    public string? час { get; set; }
+
     public void line(string текст, int заметность = 0) { }
     public void secret(string текст) { }
     public void @event(string текст, bool scripted = false) { }
