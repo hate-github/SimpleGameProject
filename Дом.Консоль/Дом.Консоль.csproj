@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Прогон, проверки и игра в консоли. Зависит только от ядра — вниз.
+       Это же инструмент отладки на весь переезд: если сбой воспроизводится
+       здесь, значит он не в Godot. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>Дом.Консоль</RootNamespace>
+    <AssemblyName>Дом.Консоль</AssemblyName>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Дом.Ядро\Дом.Ядро.csproj" />
+  </ItemGroup>
+
+</Project>
