@@ -41,8 +41,23 @@ public partial class ВопросUI : PanelContainer
         _заголовок = new Label { AutowrapMode = TextServer.AutowrapMode.WordSmart };
         _столбец.AddChild(_заголовок);
 
-        _варианты = new VBoxContainer();
-        _столбец.AddChild(_варианты);
+        // Список прокручивается, а не растёт вниз без предела. Первый же
+        // запуск в Godot показал, зачем: тридцать вариантов выдавили журнал
+        // и план подъезда в полосу высотой в четыре строки — а решать,
+        // не видя, что случилось за день, нельзя
+        var окно = new ScrollContainer
+        {
+            HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled,
+            CustomMinimumSize = new Vector2(0, 300),
+            SizeFlagsVertical = Control.SizeFlags.ShrinkBegin,
+        };
+        _столбец.AddChild(окно);
+
+        _варианты = new VBoxContainer
+        {
+            SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
+        };
+        окно.AddChild(_варианты);
     }
 
     public void Показать(ВопросИгроку в, System.Action<int> ответить)
@@ -102,12 +117,22 @@ public partial class ВопросUI : PanelContainer
             узел.QueueFree();
     }
 
-    /// <summary>Клавишами тоже: цифра — вариант, «всё» на пробел.
-    /// Мышь для тридцати вариантов в день — это тридцать движений
-    /// туда и обратно.</summary>
+    /// <summary>
+    /// Клавишами тоже: цифра — вариант, «всё» на пробел. Мышь для тридцати
+    /// вариантов в день — это тридцать движений туда и обратно.
+    ///
+    /// Повтор (<c>Echo</c>) отбрасывается, и это не мелочь. Windows шлёт
+    /// зажатую клавишу десятками событий в секунду; пока они принимались,
+    /// зажатый на полсекунды «0» отвечал за игрока на дюжину вопросов
+    /// подряд — а первый же запуск в Godot прошёл все тридцать дней сам,
+    /// потому что клавиша оказалась нажата. Это ровно то, чего приёмка
+    /// этапа не должна допускать: «ни одного места, где игра решает
+    /// за игрока». Один вопрос — одно нажатие.
+    /// </summary>
     public override void _UnhandledInput(InputEvent e)
     {
-        if (!Visible || _текущий is null || e is not InputEventKey к || !к.Pressed)
+        if (!Visible || _текущий is null || e is not InputEventKey к
+            || !к.Pressed || к.Echo)
             return;
         if (к.Keycode == Key.Space)
         {
