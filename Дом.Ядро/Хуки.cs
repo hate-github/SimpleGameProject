@@ -29,6 +29,16 @@ public sealed class Хуки
     /// <summary>(h, текст) — реплика быта или чата, до подстановки рода.</summary>
     public List<Action<House, string>> on_реплика { get; } = new();
 
+    /// <summary>(a, b_id, trust, hate, aware, страх) — до затухания:
+    /// наблюдатель мерит намерение, а не остаток.</summary>
+    public List<Action<NPC, string, double, double, double, double>> on_adjust { get; } = new();
+
+    /// <summary>(h, кто, умерший).</summary>
+    public List<Action<House, NPC, NPC>> on_узнал_о_смерти { get; } = new();
+
+    /// <summary>(h, кто, умерший, итог) — итог: было ли это новостью.</summary>
+    public List<Action<House, NPC, NPC, bool>> after_узнал_о_смерти { get; } = new();
+
     internal void Зов_day(House h)
     {
         foreach (var f in on_day)
@@ -45,6 +55,25 @@ public sealed class Хуки
     {
         foreach (var f in on_реплика)
             f(h, текст);
+    }
+
+    internal void Зов_adjust(NPC a, string b_id, double trust, double hate,
+                             double aware, double страх)
+    {
+        foreach (var f in on_adjust)
+            f(a, b_id, trust, hate, aware, страх);
+    }
+
+    internal void Зов_узнал_о_смерти(House h, NPC кто, NPC умерший)
+    {
+        foreach (var f in on_узнал_о_смерти)
+            f(h, кто, умерший);
+    }
+
+    internal void Зов_после_узнал_о_смерти(House h, NPC кто, NPC умерший, bool итог)
+    {
+        foreach (var f in after_узнал_о_смерти)
+            f(h, кто, умерший, итог);
     }
 }
 

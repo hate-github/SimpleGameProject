@@ -18,6 +18,11 @@ public static class Конфликт
         => throw new NotImplementedException(
             $"conflict.умер переезжает на этапе 1д: {p.id} — {причина}");
 
+    /// <summary>Дом узнал, что человек ел человечину (GDD 11).</summary>
+    public static void reveal_taboo(House h, NPC кто, NPC? witness = null)
+        => throw new NotImplementedException(
+            $"conflict.reveal_taboo переезжает на этапе 1д: {кто.id}");
+
     /// <summary>Смерть ребёнка на руках (GDD 12.6).</summary>
     public static void смерть_ребёнка(House h, NPC p, Ребёнок р)
         => throw new NotImplementedException(

@@ -130,4 +130,98 @@ public static class Решающие
 
     public static readonly IReadOnlySet<string> ИМЕНА =
         new HashSet<string>(StringComparer.Ordinal) { СОФТМАКС, СКРИПТ, ЧЕЛОВЕК };
+
+    /// <summary>Завести решающего по имени из npcs.json.</summary>
+    public static Решающий Создать(string имя) => имя switch
+    {
+        СОФТМАКС => new Софтмакс(),
+        _ => throw new NotImplementedException(
+            $"решающий «{имя}» переезжает вместе с разбором решения (этап 1г)"),
+    };
+}
+
+/// <summary>
+/// Вопрос к жильцу с готовыми ответами и тем, как ответил бы NPC.
+///
+/// <c>варианты</c> — (ответ, вес), первый — «да» этой ситуации.
+/// <c>склонность</c> — с какой вероятностью NPC берёт первый ответ: монета,
+/// как и была. Если склонности нет, NPC отвечает <c>по_правилу</c>: правило
+/// уже решило за него, а человек волен решить иначе.
+/// </summary>
+public sealed class Ситуация
+{
+    public required Вопрос вопрос { get; init; }
+    public required List<(string ответ, double вес)> варианты { get; init; }
+    public double? склонность { get; init; }
+    public string? по_правилу { get; init; }
+}
+
+/// <summary>
+/// Шов решения (GDD 13): кто выбирает за жильца. Правила дома одни для всех —
+/// они собирают оценённые варианты, а выбирает из них `Решающий` жильца.
+///
+/// Пока перенесён только <c>ответ</c> — им пользуются монета и правило.
+/// <c>день</c>, <c>ночь</c> и <c>выбор</c> приезжают вместе с корзиной
+/// (этап 1г), <c>Скрипт</c> и <c>Человек</c> — вместе с разбором решения.
+/// </summary>
+public abstract class Решающий
+{
+    /// <summary>Спрашивает ли этот решающий, из чего сложилась оценка.
+    /// У мягкого выбора NPC объяснение не читает никто.</summary>
+    public virtual bool разбирает => false;
+
+    /// <summary>Ответ на ситуацию: у своей двери в осаду, у чужой — с просьбой.</summary>
+    public abstract string? ответ(House h, NPC npc, Ситуация с);
+}
+
+/// <summary>NPC: обычно лучшее, иногда второе или третье. Страх делает выбор
+/// безрассуднее.</summary>
+public sealed class Софтмакс : Решающий
+{
+    public override string? ответ(House h, NPC npc, Ситуация с)
+    {
+        if (с.склонность is not null)
+            return h.rng.Chance(с.склонность.Value) ? с.варианты[0].ответ : с.варианты[1].ответ;
+        return с.по_правилу;
+    }
+}
+
+public static class Решение
+{
+    /// <summary>
+    /// Ответ жильца там, где NPC бросал монету: <paramref name="шанс"/> —
+    /// его склонность к «да». Для NPC это ровно прежний <c>rng.chance</c>,
+    /// человеку показывают оба ответа с весами.
+    /// </summary>
+    public static bool монета(House h, NPC кто, Вопрос вопрос, string да, string нет,
+                              double шанс)
+    {
+        var с = new Ситуация
+        {
+            вопрос = вопрос,
+            варианты = new() { (да, шанс), (нет, 1.0 - шанс) },
+            склонность = шанс,
+        };
+        return string.Equals(Кто(кто).ответ(h, кто, с), да, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Ответ жильца там, где решало правило: <paramref name="мерка"/> больше
+    /// нуля — «да». NPC следует правилу без броска, человек волен решить иначе.
+    /// </summary>
+    public static bool по_правилу(House h, NPC кто, Вопрос вопрос, string да, string нет,
+                                  double мерка)
+    {
+        var с = new Ситуация
+        {
+            вопрос = вопрос,
+            варианты = new() { (да, мерка), (нет, 0.0) },
+            по_правилу = мерка > 0 ? да : нет,
+        };
+        return string.Equals(Кто(кто).ответ(h, кто, с), да, StringComparison.Ordinal);
+    }
+
+    private static Решающий Кто(NPC кто)
+        => кто.решающий as Решающий
+           ?? throw new InvalidOperationException($"у {кто.id} нет решающего");
 }

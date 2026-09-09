@@ -46,12 +46,18 @@ public static class Снимок
             ["Flat"] = new(StringComparer.Ordinal) { "id" },
             ["Кладовая"] = new(StringComparer.Ordinal) { "имя", "имя_род" },
             ["Взгляд"] = new(StringComparer.Ordinal) { "сытость", "целость", "теплота" },
+            // тот же список, что в docs/ПОРТ.md: генератор, ручки, вывод,
+            // зрители и три больших словаря, которые печатаются отдельно
+            ["House"] = new(StringComparer.Ordinal)
+            {
+                "rng", "B", "journal", "people", "flats", "кладовые", "реплики_быт", "hooks",
+            },
         };
 
     /// <summary>
-    /// Дом, собранный из данных: квартиры, кладовые и жильцы поле в поле.
-    /// Поля самого <c>House</c> сюда пока не входят — их заполняет не сборка,
-    /// а движок дня, и они приедут вместе с ним.
+    /// Дом целиком: квартиры, кладовые, жильцы и поля самого <c>House</c> —
+    /// всё поле в поле. Что из <c>House</c> не входит, перечислено
+    /// в <see cref="НЕ_СОСТОЯНИЕ"/> и совпадает со списком из docs/ПОРТ.md.
     /// </summary>
     public static JsonObject Собранный(House h)
     {
@@ -69,6 +75,7 @@ public static class Снимок
             ["квартиры"] = квартиры,
             ["кладовые"] = кладовые,
             ["жильцы"] = жильцы,
+            ["дом"] = Значение(h),
         };
     }
 
@@ -118,6 +125,15 @@ public static class Снимок
             var а = new JsonArray();
             foreach (var x in элементы.OrderBy(Ключом, StringComparer.Ordinal))
                 а.Add(Значение(x, ссылкой: true));
+            return а;
+        }
+
+        // кортеж — массивом: в Python это tuple, и печатается он списком
+        if (v is ITuple кортеж)
+        {
+            var а = new JsonArray();
+            for (int i = 0; i < кортеж.Length; i++)
+                а.Add(Значение(кортеж[i], ссылкой: true));
             return а;
         }
 

@@ -243,65 +243,10 @@ public static class Проверки
             return new List<string> { "сборка дома не сверена с прототипом" };
         }
 
-        using var ждём = Оракул.Json("""
-            # -*- coding: utf-8 -*-
-            # Снимок собранного дома по правилам Дом.Ядро/Данные/Снимок.cs.
-            # Скрипт ничего в прототипе не меняет: он его только читает.
-            import dataclasses, json, sys
-            from enum import Enum
-            sys.path.insert(0, ".")
-            from house import engine
-
-            СКРЫТЬ = {"NPC": {"_h", "решающий"}}
-            # в порте `values` — запись, а не словарь, и её поля сортируются
-            # по имени (правило 7); поэтому здесь тоже
-            КАК_ЗАПИСЬ = {"values"}
-
-            def ключ(k):
-                if isinstance(k, bool):   return "1" if k else "0"
-                if isinstance(k, Enum):   return str(k.value)
-                if isinstance(k, str):    return k
-                if isinstance(k, tuple):  return ",".join(ключ(x) for x in k)
-                if isinstance(k, float):
-                    r = round(k, 6)
-                    return repr(0.0 if r == 0.0 else r)
-                return str(k)
-
-            def знач(v, ссылкой=True, как_запись=False):
-                if v is None:              return None
-                if isinstance(v, bool):    return 1 if v else 0
-                if isinstance(v, Enum):    return v.value
-                if isinstance(v, str):     return v
-                if isinstance(v, float):
-                    r = round(v, 6)
-                    return 0.0 if r == 0.0 else r
-                if isinstance(v, int):     return v
-                if isinstance(v, dict):
-                    пары = sorted(v.items(), key=lambda kv: ключ(kv[0])) if как_запись \
-                           else list(v.items())
-                    return {ключ(k): знач(x) for k, x in пары}
-                if isinstance(v, (set, frozenset)):
-                    return [знач(x) for x in sorted(v, key=ключ)]
-                if isinstance(v, (list, tuple)):
-                    return [знач(x) for x in v]
-                if dataclasses.is_dataclass(v):
-                    id_ = getattr(v, "id", None)
-                    if ссылкой and isinstance(id_, str):
-                        return ["#", id_]
-                    скрыть = СКРЫТЬ.get(type(v).__name__, set())
-                    поля = sorted(dataclasses.fields(v), key=lambda f: f.name)
-                    return {f.name: знач(getattr(v, f.name),
-                                         как_запись=f.name in КАК_ЗАПИСЬ)
-                            for f in поля if f.name not in скрыть}
-                return str(v)
-
-            h = engine.Simulation(seed=1).h
-            print(json.dumps({
-                "квартиры": {str(k): знач(v, ссылкой=False) for k, v in h.flats.items()},
-                "кладовые": {k: знач(v, ссылкой=False) for k, v in h.кладовые.items()},
-                "жильцы":   {k: знач(v, ссылкой=False) for k, v in h.people.items()},
-            }, ensure_ascii=False))
-            """);
+        using var ждём = Оракул.Json(СНИМОК_PY + """
+        h = engine.Simulation(seed=1).h
+        печать(h)
+        """);
 
         var h = Собрать();
         using var мой = JsonDocument.Parse(Дом.Ядро.Снимок.Собранный(h).ToJsonString());
@@ -443,16 +388,264 @@ public static class Проверки
         }
     }
 
-    private const string ФИКСТУРА_PY = """
+    /// <summary>
+    /// Этап 1в, `social`: шум, запах, взгляд, слухи, ложь, слово, отношения,
+    /// союзы, группы и цена вещи.
+    ///
+    /// Дом ставится в затишье двенадцатого дня — в буран половина модуля
+    /// молчит, — с уже случившимися происшествиями и одним мёртвым жильцом
+    /// (поле `alive`, а не через `conflict.умер`: тот ещё не переехал).
+    /// Дальше сценарий проходит по всем парам и зовёт всё, что в модуле есть.
+    /// </summary>
+    public static List<string> Общество(Action<string> w)
+    {
+        if (!Оракул.Доступен)
+        {
+            w("  сверить не с чем: python не найден");
+            return new List<string> { "social не сверен с прототипом" };
+        }
+
+        using var ждём = Оракул.Json(ОБЩЕСТВО_PY);
+
+        var h = Собрать();
+        ОбстановкаОбщества(h, out var мертвец);
+        var живые = h.alive();
+
+        foreach (var a in живые)
+            foreach (var b2 in живые)
+            {
+                if (string.CompareOrdinal(a.id, b2.id) >= 0)
+                    continue;
+                Социальное.встретились(h, a, b2);
+                Социальное.gossip(h, a, b2);
+            }
+        for (int i = 0; i < живые.Count; i++)
+        {
+            var a = живые[i];
+            Социальное.observe(h, a, живые[(i + 1) % живые.Count]);
+            Социальное.emit(h, a, 1 + i % 5,
+                new[] { "готовка", "буржуйка", "ремонт", "разбор", "генератор" }[i % 5]);
+            Социальное.smell(h, a, hot: i % 2 == 0);
+        }
+        for (int i = 0; i < живые.Count; i++)
+        {
+            var a = живые[i];
+            var b2 = живые[(i + 3) % живые.Count];
+            Социальное.обещать(h, a, b2, "отдать", "еда");
+            if (i % 2 == 1)
+                Социальное.сдержал(h, a, b2, "отдать", "еда");
+            Социальное.обидели(h, b2, a, 20.0 + i, непрощаемо: i % 5 == 0);
+            Социальное.загладил(h, a, b2, 8.0);
+            Социальное.judge(h, a, "воровство", hate: 6.0, trust: -0.4,
+                             участники: new List<NPC> { b2 });
+            Социальное.видел(h, b2, 0.05, кто: a);
+            Социальное.переступил(h, a, "разбор");
+            Социальное.испугался(h, b2, a, 5.0);
+            Социальное.увидел_оружие(h, b2, a);
+            Социальное.держится(h, b2, a);
+            Социальное.отдалились(b2, a.id, 0.3);
+            Социальное.вошёл_в_квартиру(h, a, h.flats[b2.apt]);
+        }
+        Социальное.нашёл_тело(h, живые[0], мертвец);
+        foreach (var a in живые.Skip(1).Take(3))
+            Социальное.сообщить_о_смерти(h, живые[0], a, мертвец);
+        Социальное.house_shock(h, panic: 3.0, mood: -2.0, note: "проверка");
+        Социальное.register_incident(h, "проверка", null);
+        Социальное.spread_panic(h);
+        Социальное.alliance_check(h);
+        Социальное.update_groups(h);
+        Социальное.проверить_обещания(h);
+        Социальное.daily_decay(h);
+
+        var цены = new JsonObject();
+        foreach (var a in h.people.Значения)
+        {
+            var свои = new JsonObject();
+            foreach (var res in Ресурсы.ВСЕ)
+                свои[res] = new JsonArray(
+                    Дом.Ядро.Снимок.Округлить(Социальное.value_of(a, res, 2.0)),
+                    Дом.Ядро.Снимок.Округлить(
+                        Социальное.value_of(a, res, 2.0, глазами: живые[0])));
+            свои["деньги_цена"] = Дом.Ядро.Снимок.Округлить(Социальное.цена_денег(a));
+            свои["напряжение"] = Дом.Ядро.Снимок.Округлить(Социальное.напряжение_дома(h, a));
+            свои["выгода"] = Дом.Ядро.Снимок.Округлить(
+                Социальное.выгода_соседства(h, a, живые[1]));
+            свои["теснота"] = Дом.Ядро.Снимок.Округлить(
+                Социальное.теснота(h, a, живые[2], h.B));
+            var дни = new JsonArray();
+            foreach (var t in живые.Take(3))
+                дни.Add(Дом.Ядро.Снимок.Округлить(Социальное.believed_days(a, t, "еда")));
+            свои["дни"] = дни;
+            цены[a.id] = свои;
+        }
+
+        var стало = Дом.Ядро.Снимок.Собранный(h);
+        стало["цены"] = цены;
+        стало["лента"] = Дом.Ядро.Снимок.Округлить(h.rng.Random());
+
+        var плохо = new List<string>();
+        using var мой = JsonDocument.Parse(стало.ToJsonString());
+        Сравнение.Одинаково(ждём.RootElement, мой.RootElement, "общество", плохо);
+        if (плохо.Count > 0)
+            foreach (var x in плохо)
+                w("  " + x);
+        else
+            w($"  шум, слухи, слово и отношения совпадают с прототипом: " +
+              $"{живые.Count} живых, {живые.Count * (живые.Count - 1) / 2} пар, лента сходится");
+        return плохо;
+    }
+
+    private static void ОбстановкаОбщества(House h, out NPC мертвец)
+    {
+        h.day = 12;
+        h.режим = Режим.ЗАТИШЬЕ;
+        h.календарь.последнее_громкое = 9;
+        h.power_on = false;
+        h.water_on = false;
+        h.network = 0.0;
+        h.first_incident_day = 8;
+        h.календарь.происшествия_дни.Clear();
+        h.календарь.происшествия_дни.AddRange(new[] { 8, 10, 11 });
+        int i = 0;
+        foreach (var p in h.people.Значения)
+        {
+            p.panic = 10.0 + (i * 13) % 60;
+            p.mood = 30.0 + (i * 7) % 50;
+            p.normalcy = 0.2 + ((i * 11) % 70) / 100.0;
+            p.satiety = 20.0 + (i * 17) % 70;
+            p.warmth = 15.0 + (i * 5) % 60;
+            p.stock["еда"] = (i * 3) % 12;
+            p.stock["топливо"] = (i * 5) % 9;
+            p.burning = i % 3 == 0;
+            // без знания о местах и без злости не срабатывают ни ложь
+            // о местах, ни наговор — половина раздела «слово» осталась бы
+            // непройденной
+            p.места["двор"] = 0.2 + (i % 5) * 0.15;
+            p.места["магазин на Заречной"] = 0.95 - (i % 4) * 0.12;
+            p.места["гаражи"] = 0.5 + (i % 3) * 0.2;
+            i++;
+        }
+        // и злость: наговор начинается с неё
+        var все = h.people.Значения;
+        for (int j = 0; j < все.Count; j++)
+        {
+            все[j].hate[все[(j + 4) % все.Count].id] = 50.0 + j;
+            все[j].trust[все[(j + 2) % все.Count].id] = 7.0;
+        }
+        мертвец = h.people.Значения[6];
+        мертвец.alive = false;
+        мертвец.cause = "убит в драке";
+        мертвец.died_day = 11;
+    }
+
+    private const string ОБЩЕСТВО_PY = СНИМОК_PY + """
+        # Та же обстановка и тот же сценарий, что в Проверки.Общество.
+        from house import social
+        from house.model import Режим, RESOURCES
+
+        h = engine.Simulation(seed=1).h
+        h.day = 12
+        h.режим = Режим.ЗАТИШЬЕ
+        h.календарь.последнее_громкое = 9
+        h.power_on = False
+        h.water_on = False
+        h.network = 0.0
+        h.first_incident_day = 8
+        h.календарь.происшествия_дни = [8, 10, 11]
+        for i, p in enumerate(h.people.values()):
+            p.panic = 10.0 + (i * 13) % 60
+            p.mood = 30.0 + (i * 7) % 50
+            p.normalcy = 0.2 + ((i * 11) % 70) / 100.0
+            p.satiety = 20.0 + (i * 17) % 70
+            p.warmth = 15.0 + (i * 5) % 60
+            p.stock["еда"] = float((i * 3) % 12)
+            p.stock["топливо"] = float((i * 5) % 9)
+            p.burning = (i % 3 == 0)
+            p.места["двор"] = 0.2 + (i % 5) * 0.15
+            p.места["магазин на Заречной"] = 0.95 - (i % 4) * 0.12
+            p.места["гаражи"] = 0.5 + (i % 3) * 0.2
+        все = list(h.people.values())
+        for j, p in enumerate(все):
+            p.hate[все[(j + 4) % len(все)].id] = 50.0 + j
+            p.trust[все[(j + 2) % len(все)].id] = 7.0
+        мертвец = list(h.people.values())[6]
+        мертвец.alive = False
+        мертвец.cause = "убит в драке"
+        мертвец.died_day = 11
+
+        живые = h.alive()
+        for a in живые:
+            for b2 in живые:
+                if a.id >= b2.id:
+                    continue
+                social.встретились(h, a, b2)
+                social.gossip(h, a, b2)
+        виды = ["готовка", "буржуйка", "ремонт", "разбор", "генератор"]
+        for i, a in enumerate(живые):
+            social.observe(h, a, живые[(i + 1) % len(живые)])
+            social.emit(h, a, 1 + i % 5, виды[i % 5])
+            social.smell(h, a, hot=(i % 2 == 0))
+        for i, a in enumerate(живые):
+            b2 = живые[(i + 3) % len(живые)]
+            social.обещать(h, a, b2, "отдать", "еда")
+            if i % 2 == 1:
+                social.сдержал(h, a, b2, "отдать", "еда")
+            social.обидели(h, b2, a, 20.0 + i, непрощаемо=(i % 5 == 0))
+            social.загладил(h, a, b2, 8.0)
+            social.judge(h, a, "воровство", hate=6.0, trust=-0.4, участники=[b2])
+            social.видел(h, b2, 0.05, кто=a)
+            social.переступил(h, a, "разбор")
+            social.испугался(h, b2, a, 5.0)
+            social.увидел_оружие(h, b2, a)
+            social.держится(h, b2, a)
+            social.отдалились(b2, a.id, 0.3)
+            social.вошёл_в_квартиру(h, a, h.flats[b2.apt])
+        social.нашёл_тело(h, живые[0], мертвец)
+        for a in живые[1:4]:
+            social.сообщить_о_смерти(h, живые[0], a, мертвец)
+        social.house_shock(h, panic=3.0, mood=-2.0, note="проверка")
+        social.register_incident(h, "проверка", None)
+        social.spread_panic(h)
+        social.alliance_check(h)
+        social.update_groups(h)
+        social.проверить_обещания(h)
+        social.daily_decay(h)
+
+        цены = {}
+        for a in h.people.values():
+            свои = {}
+            for res in RESOURCES:
+                свои[res] = [окр(social.value_of(a, res, 2.0)),
+                             окр(social.value_of(a, res, 2.0, глазами=живые[0]))]
+            свои["деньги_цена"] = окр(social.цена_денег(a))
+            свои["напряжение"] = окр(social.напряжение_дома(h, a))
+            свои["выгода"] = окр(social.выгода_соседства(h, a, живые[1]))
+            свои["теснота"] = окр(social.теснота(h, a, живые[2], h.B))
+            свои["дни"] = [окр(social.believed_days(a, t, "еда")) for t in живые[:3]]
+            цены[a.id] = свои
+
+        печать(h, цены=цены, лента=окр(h.rng.random()))
+        """;
+
+    /// <summary>
+    /// Питоновская половина канонического снимка: те же семь правил, что
+    /// в `Дом.Ядро/Данные/Снимок.cs`. Подставляется в начало каждого скрипта
+    /// оракула; скрипт доводит дом до нужного состояния и зовёт `печать(h)`.
+    /// </summary>
+    private const string СНИМОК_PY = """
         # -*- coding: utf-8 -*-
-        # Та же обстановка и тот же сценарий, что в Проверки.Тело, плюс снимок
-        # по правилам Дом.Ядро/Данные/Снимок.cs.
         import dataclasses, json, sys
         from enum import Enum
         sys.path.insert(0, ".")
-        from house import engine, psyche, physiology, child, character, catalog
+        from house import engine
 
-        СКРЫТЬ = {"NPC": {"_h", "решающий"}}
+        СКРЫТЬ = {
+            "NPC": {"_h", "решающий"},
+            "House": {"rng", "B", "journal", "people", "flats", "кладовые",
+                      "реплики_быт", "hooks"},
+        }
+        # в порте `values` — запись, а не словарь, и её поля сортируются
+        # по имени (правило 7); поэтому здесь тоже
         КАК_ЗАПИСЬ = {"values"}
 
         def ключ(k):
@@ -477,8 +670,7 @@ public static class Проверки
             if isinstance(v, float):   return окр(v)
             if isinstance(v, int):     return v
             if isinstance(v, dict):
-                пары = sorted(v.items(), key=lambda kv: ключ(kv[0])) if как_запись \
-                       else list(v.items())
+                пары = sorted(v.items(), key=lambda kv: ключ(kv[0])) if как_запись                        else list(v.items())
                 return {ключ(k): знач(x) for k, x in пары}
             if isinstance(v, (set, frozenset)):
                 return [знач(x) for x in sorted(v, key=ключ)]
@@ -493,6 +685,25 @@ public static class Проверки
                 return {f.name: знач(getattr(v, f.name), как_запись=f.name in КАК_ЗАПИСЬ)
                         for f in поля if f.name not in скрыть}
             return str(v)
+
+        def снимок(h, **ещё):
+            д = {
+                "квартиры": {str(k): знач(v, ссылкой=False) for k, v in h.flats.items()},
+                "кладовые": {k: знач(v, ссылкой=False) for k, v in h.кладовые.items()},
+                "жильцы":   {k: знач(v, ссылкой=False) for k, v in h.people.items()},
+                "дом":      знач(h, ссылкой=False),
+            }
+            д.update(ещё)
+            return д
+
+        def печать(h, **ещё):
+            print(json.dumps(снимок(h, **ещё), ensure_ascii=False))
+
+        """;
+
+    private const string ФИКСТУРА_PY = СНИМОК_PY + """
+        # Та же обстановка и тот же сценарий, что в Проверки.Тело.
+        from house import psyche, physiology, child, character, catalog
 
         h = engine.Simulation(seed=1).h
 
@@ -550,13 +761,7 @@ public static class Проверки
             свои["причина_смерти"] = physiology.причина_смерти(p)
             мерки[p.id] = свои
 
-        print(json.dumps({
-            "квартиры": {str(k): знач(v, ссылкой=False) for k, v in h.flats.items()},
-            "кладовые": {k: знач(v, ссылкой=False) for k, v in h.кладовые.items()},
-            "жильцы":   {k: знач(v, ссылкой=False) for k, v in h.people.items()},
-            "мерки":    мерки,
-            "лента":    окр(h.rng.random()),
-        }, ensure_ascii=False))
+        печать(h, мерки=мерки, лента=окр(h.rng.random()))
         """;
 
     /// <summary>Собрать дом так же, как это делает `engine.Simulation.__init__`.</summary>
