@@ -29,6 +29,10 @@ public sealed class Хуки
     /// <summary>(h, текст) — реплика быта или чата, до подстановки рода.</summary>
     public List<Action<House, string>> on_реплика { get; } = new();
 
+    /// <summary>(h, кто, замысел) — человек взялся за долгое дело.
+    /// Зовётся, когда замысел заполнен целиком, а не когда заведён.</summary>
+    public List<Action<House, NPC, Замысел>> on_замысел { get; } = new();
+
     /// <summary>(a, b_id, trust, hate, aware, страх) — до затухания:
     /// наблюдатель мерит намерение, а не остаток.</summary>
     public List<Action<NPC, string, double, double, double, double>> on_adjust { get; } = new();
@@ -67,6 +71,12 @@ public sealed class Хуки
     {
         foreach (var f in on_реплика)
             f(h, текст);
+    }
+
+    internal void Зов_замысел(House h, NPC кто, Замысел з)
+    {
+        foreach (var f in on_замысел)
+            f(h, кто, з);
     }
 
     internal void Зов_adjust(NPC a, string b_id, double trust, double hate,

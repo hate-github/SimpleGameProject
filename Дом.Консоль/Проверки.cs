@@ -2022,6 +2022,152 @@ public static class Проверки
         print(json.dumps(сцены, ensure_ascii=False))
         """;
 
+    /// <summary>
+    /// Жизнь дома целыми днями: утро, день, чат, ночь, расчёт суток.
+    ///
+    /// Приёмка этапа 1г и первая настоящая приёмка порта вообще: всё
+    /// остальное сверяло куски, а здесь дом живёт сам. Снимок снимается
+    /// после каждого дня, а не только в конце: расхождение тогда называет
+    /// свой день, а не приносит развалины тридцатого.
+    /// </summary>
+    public static List<string> Жизнь(Action<string> w, long[] зёрна, int дней)
+    {
+        if (!Оракул.Доступен)
+        {
+            w("  сверить не с чем: python не найден");
+            return new List<string> { "жизнь дома не сверена с прототипом" };
+        }
+
+        // по дням идут отпечатки, а не снимки: снимок восьмого дня — 700 КБ,
+        // и тридцать дней на двадцати четырёх зёрнах через оракул не пролезут.
+        // Отпечаток считается по тому же каноническому тексту с обеих сторон,
+        // поэтому равенство хэшей значит равенство состояния
+        using var ждём = Оракул.Json(Скрипт(ЖИЗНЬ_PY, зёрна, дней, 0));
+
+        var мои = new JsonObject();
+        int живых = 0, событий = 0, дней_всего = 0;
+        foreach (long зерно in зёрна)
+        {
+            var h = Прожить(зерно, дней, out var отпечатки);
+            мои[Строка(зерно)] = отпечатки;
+            живых += h.alive().Count;
+            событий += h.события.Count;
+            дней_всего += отпечатки.Count;
+        }
+
+        var плохо = new List<string>();
+        using var мой = JsonDocument.Parse(мои.ToJsonString());
+        Сравнение.Одинаково(ждём.RootElement, мой.RootElement, "жизнь", плохо);
+        if (плохо.Count == 0)
+        {
+            w($"  жизнь дома совпадает с прототипом день в день: {зёрна.Length} зёрен "
+              + $"по {дней} дней ({дней_всего} отпечатков), {живых} живых к концу, "
+              + $"{событий} событий");
+            return плохо;
+        }
+
+        // разошлось — назвать поле, а не хэш. Первое расхождение называет
+        // зерно и день; тот же день переигрывается со снимками, и дальше
+        // сравнение говорит, какое поле уехало
+        foreach (var x in плохо.Take(3))
+            w("  " + x);
+        var (зерно_п, день_п) = Первое(плохо);
+        if (зерно_п is not null)
+        {
+            w($"  переигрываю зерно {зерно_п} до дня {день_п} со снимками:");
+            var подробно = new List<string>();
+            using var ждём2 = Оракул.Json(
+                Скрипт(ЖИЗНЬ_PY, new[] { зерно_п.Value }, день_п, 1));
+            var снимки = new JsonObject();
+            Прожить(зерно_п.Value, день_п, out _, снимки);
+            using var мой2 = JsonDocument.Parse(
+                new JsonObject { [Строка(зерно_п.Value)] = снимки }.ToJsonString());
+            Сравнение.Одинаково(ждём2.RootElement, мой2.RootElement, "день", подробно);
+            foreach (var x in подробно.Take(12))
+                w("    " + x);
+        }
+        return плохо;
+    }
+
+    /// <summary>Прожить зерно и собрать отпечаток каждого дня (а если
+    /// попросили — и сам снимок).</summary>
+    private static House Прожить(long зерно, int дней, out JsonObject отпечатки,
+                                 JsonObject? снимки = null)
+    {
+        var прогон = new Прогон(Пути.Данные, seed: зерно, days: дней);
+        var h = прогон.h;
+        Мир.build_calendar(h, Схема.Прочитать(Пути.Данные).events, дней);
+        отпечатки = new JsonObject();
+        for (int д = 1; д <= дней; д++)
+        {
+            прогон.one_day();
+            var снимок = Дом.Ядро.Снимок.Собранный(h);
+            снимок["лента"] = Снимок.Округлить(h.rng.Random());
+            string текст = Дом.Ядро.Снимок.Текстом(снимок);
+            отпечатки[Строка(д)] = Sha256_16(текст);
+            снимки?.Add(Строка(д), снимок.DeepClone());
+            if (h.alive().Count == 0)
+                break;
+        }
+        return h;
+    }
+
+    /// <summary>Первое расхождение по пути `жизнь.{зерно}.{день}`.</summary>
+    private static (long? зерно, int день) Первое(List<string> плохо)
+    {
+        foreach (string s in плохо)
+        {
+            var части = s.Split(':')[0].Split('.');
+            if (части.Length >= 3 && long.TryParse(части[1], out long з)
+                && int.TryParse(части[2], out int д))
+                return (з, д);
+        }
+        return (null, 0);
+    }
+
+    private static string Строка(long v)
+        => v.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+    /// <summary>Подставить в питоновский скрипт зёрна, число дней и то,
+    /// печатать ли снимки вместо отпечатков.</summary>
+    private static string Скрипт(string шаблон, long[] зёрна, int дней, int снимками)
+        => шаблон
+            .Replace("{ЗЁРНА}", string.Join(", ", зёрна.Select(Строка)),
+                     StringComparison.Ordinal)
+            .Replace("{ДНЕЙ}", Строка(дней), StringComparison.Ordinal)
+            .Replace("{СНИМКАМИ}", Строка(снимками), StringComparison.Ordinal);
+
+    private const string ЖИЗНЬ_PY = СНИМОК_PY + """
+        # Тот же прогон, что в Проверки.Жизнь. Эталон снимается при
+        # подробности 2, с ней и сверяемся: журнал при ней забирает у дома
+        # накопленную за день сводку — то есть владеет куском состояния
+        import hashlib, io
+        from house import world
+
+        СНИМКАМИ = {СНИМКАМИ}
+
+        всё = {}
+        for зерно in ({ЗЁРНА},):
+            sim = engine.Simulation(seed=зерно, days={ДНЕЙ}, verbosity=2,
+                                    secrets=True, stream=io.StringIO())
+            h = sim.h
+            world.build_calendar(h, sim.events, {ДНЕЙ})
+            дни = {}
+            for д in range(1, {ДНЕЙ} + 1):
+                sim.one_day()
+                с = снимок(h, лента=окр(h.rng.random()))
+                if СНИМКАМИ:
+                    дни[str(д)] = с
+                else:
+                    т = текстом(с)
+                    дни[str(д)] = hashlib.sha256(т.encode("utf-8")).hexdigest()[:16]
+                if not h.alive():
+                    break
+            всё[str(зерно)] = дни
+
+        print(json.dumps(всё, ensure_ascii=False))
+        """;
+
     /// <summary>Как называется цель варианта: жилец, квартира, кладовка
     /// или место вылазки.</summary>
     private static JsonNode? Имя(object? цель) => цель switch
@@ -2242,6 +2388,22 @@ public static class Проверки
             }
             д.update(ещё)
             return д
+
+        def текстом(v):
+            # восьмое правило снимка: как он превращается в одну строку.
+            # Разделители без пробелов, порядок ключей — как в снимке,
+            # и ВСЯКОЕ число печатается числом с точкой. Целое и дробное
+            # склеиваются нарочно: сверка чисел и так идёт по значению
+            if v is None:            return "null"
+            if v is True:            return "true"
+            if v is False:           return "false"
+            if isinstance(v, str):   return json.dumps(v, ensure_ascii=False)
+            if isinstance(v, (int, float)):
+                return repr(float(v))
+            if isinstance(v, dict):
+                return "{" + ",".join(json.dumps(k, ensure_ascii=False) + ":" + текстом(x)
+                                      for k, x in v.items()) + "}"
+            return "[" + ",".join(текстом(x) for x in v) + "]"
 
         def печать(h, **ещё):
             print(json.dumps(снимок(h, **ещё), ensure_ascii=False))

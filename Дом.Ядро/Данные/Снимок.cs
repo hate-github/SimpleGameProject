@@ -26,6 +26,7 @@
 using System.Collections;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Text.Json.Nodes;
 
 namespace Дом.Ядро;
@@ -196,4 +197,109 @@ public static class Снимок
         ITuple т => string.Join(",", Enumerable.Range(0, т.Length).Select(i => Ключом(т[i]))),
         _ => Convert.ToString(ключ, System.Globalization.CultureInfo.InvariantCulture) ?? "",
     };
+
+    /// <summary>
+    /// Восьмое правило: как снимок превращается в одну строку.
+    ///
+    /// Нужно затем, что тридцать дней на двадцати четырёх зёрнах снимками
+    /// через оракул не пролезут — по дням идут отпечатки. А чтобы равенство
+    /// отпечатков значило равенство состояния, текст должен быть один
+    /// на оба языка, и `ToJsonString` тут не годится: .NET печатает
+    /// целое 1.0 как «1», Python — как «1.0», и разделители у них разные.
+    ///
+    /// Правила: разделители без пробелов; порядок ключей — как в снимке;
+    /// **всякое** число печатается как число с точкой (кратчайшая запись,
+    /// что round-trip). Целое и дробное этим склеиваются нарочно: сверка
+    /// чисел и так идёт по значению, а не по записи (ловушка 3).
+    /// </summary>
+    public static string Текстом(JsonNode? узел)
+    {
+        var б = new StringBuilder();
+        Пиши(узел, б);
+        return б.ToString();
+    }
+
+    private static void Пиши(JsonNode? узел, StringBuilder б)
+    {
+        switch (узел)
+        {
+            case null:
+                б.Append("null");
+                return;
+            case JsonObject о:
+            {
+                б.Append('{');
+                bool первый = true;
+                foreach (var (ключ, знач) in о)
+                {
+                    if (!первый)
+                        б.Append(',');
+                    первый = false;
+                    Строка(ключ, б);
+                    б.Append(':');
+                    Пиши(знач, б);
+                }
+                б.Append('}');
+                return;
+            }
+            case JsonArray а:
+            {
+                б.Append('[');
+                for (int i = 0; i < а.Count; i++)
+                {
+                    if (i > 0)
+                        б.Append(',');
+                    Пиши(а[i], б);
+                }
+                б.Append(']');
+                return;
+            }
+        }
+        var значение = узел.AsValue();
+        if (значение.TryGetValue<string>(out var s))
+        {
+            Строка(s, б);
+            return;
+        }
+        if (значение.TryGetValue<bool>(out var флаг))
+        {
+            б.Append(флаг ? "true" : "false");
+            return;
+        }
+        // всё числовое — одним видом. Кратчайшая запись, что читается обратно
+        // в то же число, и всегда с точкой: так печатает `repr` в Python.
+        // Целое кладут в узел то как long, то как int, дробное как double —
+        // спрашиваем по очереди, а не гадаем
+        double число;
+        if (значение.TryGetValue<long>(out long ц))
+            число = ц;
+        else if (значение.TryGetValue<int>(out int ц32))
+            число = ц32;
+        else
+            число = значение.GetValue<double>();
+        б.Append(Текст.Repr(число).ToLowerInvariant());
+    }
+
+    /// <summary>Строка так, как её пишет `json.dumps(..., ensure_ascii=False)`:
+    /// экранируются только кавычка, слеш и управляющие.</summary>
+    private static void Строка(string s, StringBuilder б)
+    {
+        б.Append('"');
+        foreach (char c in s)
+            switch (c)
+            {
+                case '"':  б.Append("\\\""); break;
+                case '\\': б.Append("\\\\"); break;
+                case '\n': б.Append("\\n"); break;
+                case '\r': б.Append("\\r"); break;
+                case '\t': б.Append("\\t"); break;
+                default:
+                    if (c < 0x20)
+                        б.Append("\\u").Append(((int)c).ToString("x4", System.Globalization.CultureInfo.InvariantCulture));
+                    else
+                        б.Append(c);
+                    break;
+            }
+        б.Append('"');
+    }
 }
