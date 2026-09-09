@@ -1,17 +1,13 @@
-// Перенос house/conflict.py — ещё не сделан (2 109 строк, этап 1д).
+// Перенос house/conflict.py, строки 18–91 и 1163–1190: общее и оружие как вещь.
 //
-// Здесь только те две двери, в которые уже стучится перенесённое: сутки тела
-// зовут `умер`, сутки ребёнка — `смерть_ребёнка`. Обе нарочно падают,
-// а не молчат: молчащая заглушка — это тихо другое поведение, и эталон
-// показал бы это на десятом дне, когда искать будет дороже всего.
-//
-// В прототипе смерть ставит поля и зовёт `on_death`, а свидетелей считает
-// вызывающий; перенести это нельзя, пока не переехало всё, что смерть задевает
-// (наследство квартиры, дети-сироты, знание соседей о смерти, счёт дома).
+// Модуль разложен по тому, чем кончается: `.Вещи` — чужое, переложенное себе,
+// `.Смерть` — выбытие из дома, `.Кража` — ночная кража и подозрение,
+// `.Бой` — драка, потасовка и засада, `.Ночь` — то, что случается в общей
+// квартире, `.Налёт` — осада из стадий.
 
 namespace Дом.Ядро;
 
-public static class Конфликт
+public static partial class Конфликт
 {
     /// <summary>Общий множитель злости дома. Одно число вместо шести порогов.</summary>
     public static double aggr(House h)
@@ -50,17 +46,6 @@ public static class Конфликт
         s -= 0.12 * npc.injuries.Count;
         return Util.Clamp(s, 0.08, 0.95);
     }
-
-    /// <summary>Смерть жильца. Единственное место, где человек умирает.</summary>
-    public static void умер(House h, NPC p, string причина, string? строка = null,
-                            IReadOnlySet<string>? свидетели = null)
-        => throw new NotImplementedException(
-            $"conflict.умер переезжает на этапе 1д: {p.id} — {причина}");
-
-    /// <summary>Дом узнал, что человек ел человечину (GDD 11).</summary>
-    public static void reveal_taboo(House h, NPC кто, NPC? witness = null)
-        => throw new NotImplementedException(
-            $"conflict.reveal_taboo переезжает на этапе 1д: {кто.id}");
 
     /// <summary>
     /// Взять оружие в руки. Прежнее остаётся там, откуда взято новое.
@@ -135,12 +120,4 @@ public static class Конфликт
         }
     }
 
-    /// <summary>Кража (GDD 12.5).</summary>
-    public static void steal(House h, NPC вор, NPC жертва)
-        => throw new NotImplementedException("conflict.steal переезжает на этапе 1д");
-
-    /// <summary>Смерть ребёнка на руках (GDD 12.6).</summary>
-    public static void смерть_ребёнка(House h, NPC p, Ребёнок р)
-        => throw new NotImplementedException(
-            $"conflict.смерть_ребёнка переезжает на этапе 1д: {р.имя} у {p.id}");
 }

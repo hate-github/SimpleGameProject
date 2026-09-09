@@ -52,6 +52,22 @@ public static class Текст
     /// форматированию чисел место в одном файле.</summary>
     public static string G(double v) => v.ToString("G6", CultureInfo.InvariantCulture);
 
+    /// <summary>`round(v, N)` из Python: то же округление, что у `Ф`,
+    /// но числом, а не строкой.</summary>
+    public static double Округлить(double v, int знаков)
+        => double.IsNaN(v) || double.IsInfinity(v)
+           ? v
+           : double.Parse(Ф(v, знаков), NumberStyles.Float, CultureInfo.InvariantCulture);
+
+    /// <summary>`str(v)` из Python: кратчайшая запись, но у целого числа
+    /// с плавающей точкой остаётся «.0» — в C# его бы не было.</summary>
+    public static string Repr(double v)
+    {
+        string s = v.ToString("R", CultureInfo.InvariantCulture);
+        return s.Contains('.') || s.Contains('E') || s.Contains('N') || s.Contains('I')
+               ? s : s + ".0";
+    }
+
     /// <summary>`f"{s:&lt;N}"`: дополнить пробелами справа.</summary>
     public static string Слева(string s, int ширина) => s.PadRight(ширина);
 
