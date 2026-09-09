@@ -764,10 +764,243 @@ public static class Проверки
         печать(h, мерки=мерки, лента=окр(h.rng.random()))
         """;
 
-    /// <summary>Собрать дом так же, как это делает `engine.Simulation.__init__`.</summary>
-    public static House Собрать(long зерно = 1)
+    /// <summary>
+    /// Этап 1в, вторая половина: мир, улица, услуги и сожительство.
+    ///
+    /// Календарь событий и погоды считается своими ветками генератора
+    /// (`branch("мир")`, `branch("погода")`) до первого действия — его сверка
+    /// доказывает, что ветвление потока перенесено верно. Дальше четыре утра,
+    /// вылазки на всех, заказы у мастеров, плата за лечение и переезды.
+    /// </summary>
+    public static List<string> МирИУлица(Action<string> w)
     {
-        var данные = Схема.Прочитать(Пути.Данные);
+        if (!Оракул.Доступен)
+        {
+            w("  сверить не с чем: python не найден");
+            return new List<string> { "мир и улица не сверены с прототипом" };
+        }
+
+        using var ждём = Оракул.Json(МИР_PY);
+
+        var h = Собрать(out var данные);
+        Мир.build_calendar(h, данные.events, 30);
+        // четыре утра: пятое несёт скриптовую кражу, а конфликт ещё не переехал
+        for (int д = 0; д < 4; д++)
+            Мир.start_of_day(h, данные.events);
+
+        h.снег = 0.8;
+        // без этого магазин к четвёртому утру уже закрыт, и вся ветка покупки
+        // (`_купить`, кошелёк, очередь) осталась бы непройденной
+        h.магазины = true;
+        h.банки = true;
+        var живые = h.alive();
+        for (int i = 0; i < живые.Count; i++)
+        {
+            var a = живые[i];
+            a.stock["деньги"] = 200.0 + (i * 37) % 400;
+            a.счёт = 100.0 + (i * 23) % 300;
+            a.stock["материалы"] = (i * 3) % 9;
+            a.panic = 20.0 + (i * 11) % 60;
+        }
+
+        var улица = new JsonObject();
+        foreach (var a in h.people.Значения)
+        {
+            var своё = new JsonObject();
+            foreach (var м in Улица.МЕСТА)
+                своё[м.имя] = new JsonArray(
+                    Дом.Ядро.Снимок.Округлить(Улица.оценка_места(h, a, м)),
+                    Улица.место_доступно(h, a, м) ? 1 : 0,
+                    Дом.Ядро.Снимок.Округлить(Улица.минимум_часов(h, м)));
+            своё["куда"] = Улица.выбрать_место(h, a)?.имя;
+            своё["кошелёк"] = Дом.Ядро.Снимок.Округлить(Улица.кошелёк(h, a));
+            своё["купить"] = new JsonArray(Улица._что_купить(h, a).Select(x => (JsonNode)x!).ToArray());
+            своё["кладовая"] = Улица.выбрать_кладовую(h, a)?.id;
+            своё["чужая"] = Улица.чужая_кладовая(h, a)?.id;
+            улица[a.id] = своё;
+        }
+
+        for (int i = 0; i < живые.Count; i++)
+        {
+            var a = живые[i];
+            var м = Улица.МЕСТА[i % Улица.МЕСТА.Count];
+            Улица._outing(h, a, 2.0 + i % 4, м,
+                          i % 5 == 0 ? живые[(i + 1) % живые.Count] : null);
+            var к = Улица.выбрать_кладовую(h, a);
+            if (к is not null)
+                Улица._из_кладовой(h, a, к, 1.0);
+        }
+
+        // услуги: заказ, сдача и плата за лечение
+        var мастера = живые.Where(p => p.skills.Contains("слесарь", StringComparer.Ordinal)
+                                       || p.skills.Contains("электрик", StringComparer.Ordinal))
+                           .ToList();
+        var заказы = new JsonObject();
+        foreach (var a in живые)
+            foreach (var м in мастера)
+            {
+                if (string.Equals(a.id, м.id, StringComparison.Ordinal))
+                    continue;
+                var (что, оценка) = Услуги.что_заказать(h, a, м, h.B, 0.6, 0.4);
+                заказы[$"{a.id}->{м.id}"] = new JsonArray(что,
+                    Дом.Ядро.Снимок.Округлить(оценка),
+                    Дом.Ядро.Снимок.Округлить(
+                        Услуги.возьмётся_за_заказ(h, м, a, 3.0, h.B)));
+                if (что is not null)
+                    Услуги.заказать(h, a, м, 0.6, 0.4, что);
+            }
+        h.day += 4;
+        Услуги.готовые_заказы(h);
+        var медики = живые.Where(p => p.skills.Contains("медик", StringComparer.Ordinal)).ToList();
+        foreach (var м in медики)
+            foreach (var a in живые.Take(5))
+                if (!string.Equals(a.id, м.id, StringComparison.Ordinal))
+                    Услуги.плата_за_лечение(h, м, a, h.B);
+
+        // сожительство
+        for (int i = 0; i < живые.Count; i += 3)
+        {
+            var гость = живые[i];
+            var хозяин = живые[(i + 1) % живые.Count];
+            if (!string.Equals(гость.id, хозяин.id, StringComparison.Ordinal))
+                Сожительство.переехать(h, гость, хозяин);
+        }
+        Сожительство.дрова_к_печке(h);
+        foreach (var a in h.alive())
+            Сожительство.теснота_ночи(h, a);
+        foreach (var a in h.alive().ToList())
+            if (a.guests.Count > 0)
+            {
+                var г = h.get(a.guests.OrderBy(x => x, StringComparer.Ordinal).First());
+                if (г is not null)
+                    Сожительство.выгнать(h, a, г);
+            }
+        foreach (var a in h.alive().ToList())
+            if (!string.IsNullOrEmpty(a.living_with))
+            {
+                var host = h.get(a.living_with);
+                if (host is not null)
+                    Сожительство.съехать(h, a, host);
+            }
+        Сожительство.cut_ties(h, живые[2]);
+        Мир.вытяжка_мёрзнет(h);
+        Мир.запах_по_стояку(h);
+
+        var стало = Дом.Ядро.Снимок.Собранный(h);
+        стало["улица"] = улица;
+        стало["заказы"] = заказы;
+        стало["лента"] = Дом.Ядро.Снимок.Округлить(h.rng.Random());
+
+        var плохо = new List<string>();
+        using var мой = JsonDocument.Parse(стало.ToJsonString());
+        Сравнение.Одинаково(ждём.RootElement, мой.RootElement, "мир", плохо);
+        if (плохо.Count > 0)
+            foreach (var x in плохо)
+                w("  " + x);
+        else
+            w("  мир, улица, услуги и сожительство совпадают с прототипом: " +
+              $"календарь на 30 дней, четыре утра, {живые.Count} вылазок, лента сходится");
+        return плохо;
+    }
+
+    private const string МИР_PY = СНИМОК_PY + """
+        # Тот же сценарий, что в Проверки.МирИУлица.
+        from house import world, street, services, household, schema
+
+        события = schema.load_json("events.json")
+        sim = engine.Simulation(seed=1)
+        h = sim.h
+        world.build_calendar(h, события, 30)
+        for _ in range(4):
+            world.start_of_day(h, события)
+
+        h.снег = 0.8
+        h.магазины = True
+        h.банки = True
+        живые = h.alive()
+        for i, a in enumerate(живые):
+            a.stock["деньги"] = 200.0 + (i * 37) % 400
+            a.счёт = 100.0 + (i * 23) % 300
+            a.stock["материалы"] = float((i * 3) % 9)
+            a.panic = 20.0 + (i * 11) % 60
+
+        улица = {}
+        for a in h.people.values():
+            своё = {}
+            for м in street.МЕСТА:
+                своё[м.имя] = [окр(street.оценка_места(h, a, м)),
+                               1 if street.место_доступно(h, a, м) else 0,
+                               окр(street.минимум_часов(h, м))]
+            куда = street.выбрать_место(h, a)
+            своё["куда"] = куда.имя if куда else None
+            своё["кошелёк"] = окр(street.кошелёк(h, a))
+            своё["купить"] = street._что_купить(h, a)
+            к = street.выбрать_кладовую(h, a)
+            своё["кладовая"] = к.id if к else None
+            ч = street.чужая_кладовая(h, a)
+            своё["чужая"] = ч.id if ч else None
+            улица[a.id] = своё
+
+        for i, a in enumerate(живые):
+            м = street.МЕСТА[i % len(street.МЕСТА)]
+            street._outing(h, a, 2.0 + i % 4, м,
+                           живые[(i + 1) % len(живые)] if i % 5 == 0 else None)
+            к = street.выбрать_кладовую(h, a)
+            if к is not None:
+                street._из_кладовой(h, a, к, 1.0)
+
+        мастера = [p for p in живые
+                   if "слесарь" in p.skills or "электрик" in p.skills]
+        заказы = {}
+        for a in живые:
+            for м in мастера:
+                if a.id == м.id:
+                    continue
+                что, оценка = services.что_заказать(h, a, м, h.B, 0.6, 0.4)
+                заказы[f"{a.id}->{м.id}"] = [
+                    что, окр(оценка),
+                    окр(services.возьмётся_за_заказ(h, м, a, 3.0, h.B))]
+                if что is not None:
+                    services.заказать(h, a, м, 0.6, 0.4, что)
+        h.day += 4
+        services.готовые_заказы(h)
+        медики = [p for p in живые if "медик" in p.skills]
+        for м in медики:
+            for a in живые[:5]:
+                if a.id != м.id:
+                    services.плата_за_лечение(h, м, a, h.B)
+
+        for i in range(0, len(живые), 3):
+            гость = живые[i]
+            хозяин = живые[(i + 1) % len(живые)]
+            if гость.id != хозяин.id:
+                household.переехать(h, гость, хозяин)
+        household.дрова_к_печке(h)
+        for a in h.alive():
+            household.теснота_ночи(h, a)
+        for a in list(h.alive()):
+            if a.guests:
+                г = h.get(sorted(a.guests)[0])
+                if г is not None:
+                    household.выгнать(h, a, г)
+        for a in list(h.alive()):
+            if a.living_with:
+                host = h.get(a.living_with)
+                if host is not None:
+                    household.съехать(h, a, host)
+        household.cut_ties(h, живые[2])
+        world.вытяжка_мёрзнет(h)
+        world.запах_по_стояку(h)
+
+        печать(h, улица=улица, заказы=заказы, лента=окр(h.rng.random()))
+        """;
+
+    /// <summary>Собрать дом так же, как это делает `engine.Simulation.__init__`.</summary>
+    public static House Собрать(long зерно = 1) => Собрать(out _, зерно);
+
+    public static House Собрать(out Данные данные, long зерно = 1)
+    {
+        данные = Схема.Прочитать(Пути.Данные);
         var h = new House { rng = new Rng(зерно), B = данные.Баланс };
         foreach (var в in данные.lines.Массив("быт").EnumerateArray())
             h.реплики_быт.Add(new РепликаБыта(

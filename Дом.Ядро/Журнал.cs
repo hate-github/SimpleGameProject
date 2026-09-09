@@ -20,6 +20,9 @@ public interface IЖурнал
     /// <summary>То, чего дом не видит: кто на самом деле украл и подбросил.
     /// Печатается только с `--секреты`.</summary>
     void secret(string текст);
+
+    /// <summary>Внешнее событие дня (GDD 21): скриптовое или случайное.</summary>
+    void @event(string текст, bool scripted = false);
 }
 
 /// <summary>Журнал, который ничего не пишет.</summary>
@@ -27,4 +30,5 @@ public sealed class ЗаглушкаЖурнала : IЖурнал
 {
     public void line(string текст, int заметность = 0) { }
     public void secret(string текст) { }
+    public void @event(string текст, bool scripted = false) { }
 }

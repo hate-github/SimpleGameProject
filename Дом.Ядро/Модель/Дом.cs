@@ -44,7 +44,7 @@ public sealed record Подброс(string кто, string что, int день);
 /// <summary>Очереди на утро: ночью положили, утром разобрали (discoveries, report).</summary>
 public sealed class Ожидает
 {
-    public List<(string вор, Кладовая кладовка)> вскрытые_кладовые { get; } = new();
+    public List<(string вор, string кладовка)> вскрытые_кладовые { get; } = new();
     public Словарь<int, Подброс> подброшено { get; set; } = new();      // квартира -> что и кто положил
     public List<(string вор, string жертва)> пропажи { get; } = new();
     public Словарь<string, List<string>> не_простил { get; } =          // кто -> кого не простил

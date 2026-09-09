@@ -14,7 +14,8 @@ namespace Дом.Ядро;
 public static class Конфликт
 {
     /// <summary>Смерть жильца. Единственное место, где человек умирает.</summary>
-    public static void умер(House h, NPC p, string причина, string? строка = null)
+    public static void умер(House h, NPC p, string причина, string? строка = null,
+                            IReadOnlySet<string>? свидетели = null)
         => throw new NotImplementedException(
             $"conflict.умер переезжает на этапе 1д: {p.id} — {причина}");
 
@@ -22,6 +23,83 @@ public static class Конфликт
     public static void reveal_taboo(House h, NPC кто, NPC? witness = null)
         => throw new NotImplementedException(
             $"conflict.reveal_taboo переезжает на этапе 1д: {кто.id}");
+
+    /// <summary>
+    /// Взять оружие в руки. Прежнее остаётся там, откуда взято новое.
+    ///
+    /// Слот один, поэтому «взял топор» всегда значит «нож положил», а класть
+    /// его некуда, кроме стен: это то же правило, что у построек — вещь
+    /// остаётся там, где её оставили, а не исчезает вместе с решением. Иначе
+    /// дом к третьей неделе вооружён целиком, и численное превосходство
+    /// (GDD 17) перестаёт значить что-либо.
+    /// </summary>
+    public static string? вооружиться(House h, NPC npc, string чем, СОружием? куда_старое = null,
+                                      bool вслух = true, string? текст = null)
+    {
+        var новое = Слова.Оружие(чем);
+        var старое = npc.weapon;
+        if (Таблицы.ОРУЖИЕ_ВЕС[новое] <= Таблицы.ОРУЖИЕ_ВЕС[старое])
+            return null;
+        npc.weapon = новое;
+        if (старое != Оружие.НЕТ)
+        {
+            СОружием куда = куда_старое ?? h.flats[npc.apt];
+            куда.оружие.Add(старое);
+        }
+        h.bump("оружие_сменило_руки");
+        npc.bump("вооружался");
+        // с оружием в руках человека видят: это и есть «свидетель инвентаря»
+        // из GDD 12.3, и с него же начинается страх (GDD 17)
+        if (вслух)
+        {
+            var видели = h.others(npc).Where(_ => h.rng.Chance(h.B["оружие_заметно"])).ToList();
+            Социальное.увидел_оружие(h, null, npc, свидетели: видели,
+                                     доля: h.B["оружие_страх_доля"]);
+            h.journal.line(текст ?? ($"{npc.@short} {Util.Vb(npc.sex, "взял")} "
+                + $"{(Таблицы.ОРУЖИЕ_ВИН.TryGetValue(новое, out var в) ? в : чем)} себе."), 1);
+        }
+        return чем;
+    }
+
+    /// <summary>
+    /// Взять из этих стен то, что лучше своего. Возвращает название или null.
+    /// Топор в углу и ружьё над дверью остаются в квартире так же, как
+    /// буржуйка и заклеенные окна (GDD 15): кто занял квартиру или разобрал
+    /// её, тот и вооружился.
+    /// </summary>
+    public static string? подобрать_оружие(House h, NPC npc, СОружием стены, bool вслух = true)
+    {
+        if (стены.оружие.Count == 0)
+            return null;
+        var лучшее = стены.оружие[0];
+        foreach (var w in стены.оружие)
+            if (Таблицы.ОРУЖИЕ_ВЕС[w] > Таблицы.ОРУЖИЕ_ВЕС[лучшее])
+                лучшее = w;
+        if (Таблицы.ОРУЖИЕ_ВЕС[лучшее] <= Таблицы.ОРУЖИЕ_ВЕС[npc.weapon])
+            return null;
+        стены.оружие.Remove(лучшее);
+        if (вооружиться(h, npc, лучшее.Текст(), куда_старое: стены, вслух: вслух) is null)
+        {
+            стены.оружие.Add(лучшее);
+            return null;
+        }
+        return лучшее.Текст();
+    }
+
+    /// <summary>Выбывший оставляет оружие в стенах: у него оно больше
+    /// не в руках.</summary>
+    public static void сложить_оружие(House h, NPC person, СОружием стены)
+    {
+        if (person.weapon != Оружие.НЕТ)
+        {
+            стены.оружие.Add(person.weapon);
+            person.weapon = Оружие.НЕТ;
+        }
+    }
+
+    /// <summary>Кража (GDD 12.5).</summary>
+    public static void steal(House h, NPC вор, NPC жертва)
+        => throw new NotImplementedException("conflict.steal переезжает на этапе 1д");
 
     /// <summary>Смерть ребёнка на руках (GDD 12.6).</summary>
     public static void смерть_ребёнка(House h, NPC p, Ребёнок р)

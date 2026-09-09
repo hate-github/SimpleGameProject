@@ -2,6 +2,13 @@
 
 namespace Дом.Ядро;
 
+/// <summary>Стены, в которых может лежать оружие: квартира и кладовая.
+/// В Python это утиная типизация — у обеих есть поле `оружие`.</summary>
+public interface СОружием
+{
+    List<Оружие> оружие { get; }
+}
+
 /// <summary>
 /// Квартира — вещь, а не приложение к жильцу (GDD 12, 15).
 ///
@@ -13,7 +20,7 @@ namespace Дом.Ядро;
 /// Отсюда же берётся жильё как имущество: его можно занять, за него можно
 /// прийти с ломом, и его можно испортить, ломая дверь.
 /// </summary>
-public sealed class Flat
+public sealed class Flat : СОружием
 {
     public required int apt { get; set; }
     public required int floor { get; set; }
@@ -115,7 +122,7 @@ public sealed class Flat
 /// квартира стала вещью: занял чужой угол — получил и то, что к нему
 /// приписано.
 /// </summary>
-public sealed class Кладовая
+public sealed class Кладовая : СОружием
 {
     public required string id { get; set; }
     public required ВидКладовой вид { get; set; }

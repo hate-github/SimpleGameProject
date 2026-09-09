@@ -33,6 +33,12 @@ public sealed class Хуки
     /// наблюдатель мерит намерение, а не остаток.</summary>
     public List<Action<NPC, string, double, double, double, double>> on_adjust { get; } = new();
 
+    /// <summary>(h, npc, dur, м, спутник) — вылазка (street._outing).</summary>
+    public List<Action<House, NPC, double, Место, NPC?>> on_outing { get; } = new();
+
+    /// <summary>(…, итог) — вылазка кончилась.</summary>
+    public List<Action<House, NPC, double, Место, NPC?>> after_outing { get; } = new();
+
     /// <summary>(h, кто, умерший).</summary>
     public List<Action<House, NPC, NPC>> on_узнал_о_смерти { get; } = new();
 
@@ -62,6 +68,18 @@ public sealed class Хуки
     {
         foreach (var f in on_adjust)
             f(a, b_id, trust, hate, aware, страх);
+    }
+
+    internal void Зов_outing(House h, NPC npc, double dur, Место м, NPC? спутник)
+    {
+        foreach (var f in on_outing)
+            f(h, npc, dur, м, спутник);
+    }
+
+    internal void Зов_после_outing(House h, NPC npc, double dur, Место м, NPC? спутник)
+    {
+        foreach (var f in after_outing)
+            f(h, npc, dur, м, спутник);
     }
 
     internal void Зов_узнал_о_смерти(House h, NPC кто, NPC умерший)
