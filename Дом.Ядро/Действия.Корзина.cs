@@ -67,7 +67,7 @@ public sealed class Корзина
 
     /// <summary>Сколько раз сегодня уже выходил к соседям и сколько ещё можно.</summary>
     public int визитов { get; }
-    public int предел_визитов { get; }
+    public double предел_визитов { get; }
 
     public List<((string key, object? target) что, double оценка)> варианты { get; } = new();
 
@@ -79,7 +79,8 @@ public sealed class Корзина
     public List<(string key, object? target, string почему)> отказы { get; } = new();
     public Dictionary<КлючЦели, object?> детали { get; } = new();
 
-    public Корзина(House h, NPC npc, int визитов, int предел_визитов, Самочувствие? с = null)
+    public Корзина(House h, NPC npc, int визитов, double предел_визитов,
+                   Самочувствие? с = null)
     {
         this.h = h;
         this.npc = npc;

@@ -169,9 +169,7 @@ public static partial class Действия
     {
         var b = h.B;
         var соседи = h.others(npc);
-        double свой_сумма = 0.0;
-        foreach (var o in соседи)
-            свой_сумма += npc.свой(o.id);
+        double свой_сумма = Util.Sum(соседи.Select(o => npc.свой(o.id)));
         return new Самочувствие
         {
             голод = 1.0 - Util.Norm(npc.satiety, 15, 75),

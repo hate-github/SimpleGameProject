@@ -10,8 +10,14 @@ namespace Дом.Консоль;
 
 public static class Сравнение
 {
-    /// <summary>Округление до шестого знака — то же, что в каноническом снимке.</summary>
-    public const int ЗНАКОВ = 6;
+    /// <summary>
+    /// Насколько числа считаются одним и тем же. Не округление: округлять
+    /// нельзя, потому что ровная половина решается в Python и в C# по-разному
+    /// при одинаковом числе. Допуск относительный — он глушит последние биты
+    /// (в том числе известную щель `math.exp`, `docs/ПОРТ.md`) и не создаёт
+    /// своих расхождений на границе.
+    /// </summary>
+    public const double ДОПУСК = 1e-9;
 
     /// <summary>
     /// Сложить в <paramref name="расхождения"/> все места, где деревья
@@ -82,11 +88,11 @@ public static class Сравнение
                 return true;
             case JsonValueKind.Number:
             {
-                double а = Math.Round(ждём.GetDouble(), ЗНАКОВ);
-                double б = Math.Round(стало.GetDouble(), ЗНАКОВ);
-                if (а != б)
+                double а = ждём.GetDouble(), б = стало.GetDouble();
+                double щель = ДОПУСК * Math.Max(1.0, Math.Max(Math.Abs(а), Math.Abs(б)));
+                if (!(Math.Abs(а - б) <= щель))
                 {
-                    расхождения.Add($"{путь}: в прототипе {а}, в порте {б}");
+                    расхождения.Add($"{путь}: в прототипе {а:R}, в порте {б:R}");
                     return false;
                 }
                 return true;

@@ -13,6 +13,44 @@ namespace Дом.Ядро;
 
 public static class Конфликт
 {
+    /// <summary>Общий множитель злости дома. Одно число вместо шести порогов.</summary>
+    public static double aggr(House h)
+        => Math.Max(0.2, h.B.Есть("агрессивность_дома") ? h.B["агрессивность_дома"] : 1.0);
+
+    /// <summary>
+    /// Насколько чужая квартира лучше своей — с поправкой на то, что ломая
+    /// дверь, ты портишь то, ради чего пришёл (GDD 16). Ноль, если своя
+    /// не хуже или если идти всё равно некуда.
+    /// </summary>
+    public static double хочу_его_квартиру(House h, NPC npc, NPC t)
+    {
+        if (!string.IsNullOrEmpty(npc.living_with))
+            return 0.0;
+        var b = h.B;
+        double выгода = h.ценность_жилья(h.flats[t.apt], npc)
+                        - h.ценность_жилья(h.flats[npc.apt], npc);
+        if (!npc.ключи.Contains(t.apt))
+            // выломанная дверь — минус к призу. С ключами ломать нечего
+            выгода -= b["дверь_ломается_за"] * 1.6 * b["жильё_вес_защиты"];
+        return Math.Max(0.0, выгода);
+    }
+
+    /// <summary>Скрытность выводится из черт и возраста — отдельной черты
+    /// в ГДД нет.</summary>
+    public static double stealth(NPC npc)
+    {
+        double s = 0.42 + 0.025 * (10 - npc.trait("вспыльчивость"));
+        if (npc.skills.Contains("ловкий", StringComparer.Ordinal))
+            s += 0.16;
+        if (npc.age > 55)
+            s -= 0.10;
+        if (npc.age < 25)
+            s += 0.05;
+        s -= npc.panic / 100.0 * 0.18;
+        s -= 0.12 * npc.injuries.Count;
+        return Util.Clamp(s, 0.08, 0.95);
+    }
+
     /// <summary>Смерть жильца. Единственное место, где человек умирает.</summary>
     public static void умер(House h, NPC p, string причина, string? строка = null,
                             IReadOnlySet<string>? свидетели = null)

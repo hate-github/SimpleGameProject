@@ -36,11 +36,11 @@ public static class Ресурсы
     /// </summary>
     public static double Вещи(Словарь<string, double> stock)
     {
-        double сумма = 0.0;
+        var части = new List<double>();
         foreach (var (k, v) in stock)          // порядок вставки, как в Python
             if (!string.Equals(k, ДЕНЬГИ, StringComparison.Ordinal))
-                сумма += v;
-        return сумма;
+                части.Add(v);
+        return Util.Sum(части);
     }
 
     /// <summary>

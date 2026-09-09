@@ -628,6 +628,203 @@ public static class Проверки
         """;
 
     /// <summary>
+    /// Этап 1г, первая половина: сбор вариантов хода.
+    ///
+    /// `gather` — сердце решения: шесть разделов, которые превращают состояние
+    /// дома в оценённые варианты. Сверяется вся корзина каждого жильца —
+    /// действие, цель и оценка, в том самом порядке, в котором разделы их
+    /// складывали: порядок здесь решает жребий мягкого выбора.
+    /// </summary>
+    public static List<string> Сбор(Action<string> w)
+    {
+        if (!Оракул.Доступен)
+        {
+            w("  сверить не с чем: python не найден");
+            return new List<string> { "сбор вариантов не сверен с прототипом" };
+        }
+
+        using var ждём = Оракул.Json(СБОР_PY);
+
+        var h = Собрать(out var данные);
+        Мир.build_calendar(h, данные.events, 30);
+        for (int д = 0; д < 4; д++)
+            Мир.start_of_day(h, данные.events);
+        ОбстановкаСбора(h);
+
+        var корзины = new JsonObject();
+        foreach (var p in h.people.Значения)
+        {
+            var к = Действия.gather(h, p);
+            var список = new JsonArray();
+            foreach (var (что, оценка) in к.варианты)
+                список.Add(new JsonArray(что.key, Имя(что.target),
+                                         Дом.Ядро.Снимок.Округлить(оценка)));
+            var с = Действия.самочувствие(h, p);
+            корзины[p.id] = new JsonObject
+            {
+                ["варианты"] = список,
+                ["визитов"] = к.визитов,
+                ["предел"] = Дом.Ядро.Снимок.Округлить(к.предел_визитов),
+                ["чувства"] = new JsonArray(
+                    Дом.Ядро.Снимок.Округлить(с.зову),
+                    Дом.Ядро.Снимок.Округлить(с.средний_свой),
+                    Дом.Ядро.Снимок.Округлить(с.отчаяние),
+                    Дом.Ядро.Снимок.Округлить(с.невмоготу)),
+                ["просьба"] = new JsonArray(
+                    Дом.Ядро.Снимок.Округлить(p.вес_черт("попросить")),
+                    Дом.Ядро.Снимок.Округлить(p.каким_кажусь())),
+            };
+        }
+
+        var стало = Дом.Ядро.Снимок.Собранный(h);
+        стало["корзины"] = корзины;
+        стало["лента"] = Дом.Ядро.Снимок.Округлить(h.rng.Random());
+
+        var плохо = new List<string>();
+        using var мой = JsonDocument.Parse(стало.ToJsonString());
+        Сравнение.Одинаково(ждём.RootElement, мой.RootElement, "сбор", плохо);
+        if (плохо.Count > 0)
+            foreach (var x in плохо)
+                w("  " + x);
+        else
+            w($"  сбор вариантов совпадает с прототипом: {h.people.Count} корзин, " +
+              "шесть разделов, лента сходится");
+        return плохо;
+    }
+
+    /// <summary>Как называется цель варианта: жилец, квартира, кладовка
+    /// или место вылазки.</summary>
+    private static JsonNode? Имя(object? цель) => цель switch
+    {
+        null => null,
+        NPC p => p.id,
+        Flat f => f.id,
+        Кладовая к => к.id,
+        Место м => м.имя,
+        _ => цель.ToString(),
+    };
+
+    private static void ОбстановкаСбора(House h)
+    {
+        h.режим = Режим.ЗАТИШЬЕ;
+        h.снег = 0.7;
+        h.first_incident_day = 2;
+        h.календарь.происшествия_дни.Clear();
+        h.календарь.происшествия_дни.AddRange(new[] { 2, 3 });
+        int i = 0;
+        var все = h.people.Значения;
+        foreach (var p in все)
+        {
+            p.satiety = 12.0 + (i * 17) % 70;
+            p.hydration = 15.0 + (i * 23) % 65;
+            p.warmth = 18.0 + (i * 7) % 50;
+            p.rest = 25.0 + (i * 11) % 60;
+            p.health = 55.0 + (i * 5) % 45;
+            p.mood = 25.0 + (i * 13) % 55;
+            p.panic = 15.0 + (i * 19) % 65;
+            p.normalcy = 0.25 + ((i * 9) % 65) / 100.0;
+            p.stock["еда"] = (i * 3) % 11;
+            p.stock["вода"] = (i * 5) % 8;
+            p.stock["топливо"] = (i * 7) % 9;
+            p.stock["материалы"] = (i * 11) % 13;
+            p.stock["лекарства"] = i % 3;
+            p.stock["деньги"] = 50.0 + (i * 29) % 250;
+            p.места["двор и мусорки"] = 0.2 + (i % 5) * 0.15;
+            p.места["магазин на Заречной"] = 0.9 - (i % 4) * 0.15;
+            p.hate[все[(i + 4) % все.Count].id] = 40.0 + i;
+            p.trust[все[(i + 2) % все.Count].id] = 7.0;
+            p.близость[все[(i + 1) % все.Count].id] = 4.0 + i % 5;
+            if (i % 4 == 1)
+                p.injuries.Add("ушиб ноги");
+            if (i % 5 == 2)
+                p.sick = "простуда";
+            // чтобы мена и просьба видели, у кого что есть
+            foreach (var o in все)
+                if (!string.Equals(o.id, p.id, StringComparison.Ordinal))
+                {
+                    var св = p.сведения_о(o.id);
+                    св.aware = 30.0 + (i * 7) % 50;
+                    p.memory.Add(new Память
+                    {
+                        день = h.day, вид = Вид.СМОТРЕЛ, кто = o.id,
+                    });
+                }
+            i++;
+        }
+    }
+
+    private const string СБОР_PY = СНИМОК_PY + """
+        # Тот же сценарий, что в Проверки.Сбор.
+        from house import world, actions, schema
+        from house.model import Режим, Память, Вид
+
+        события = schema.load_json("events.json")
+        h = engine.Simulation(seed=1).h
+        world.build_calendar(h, события, 30)
+        for _ in range(4):
+            world.start_of_day(h, события)
+
+        h.режим = Режим.ЗАТИШЬЕ
+        h.снег = 0.7
+        h.first_incident_day = 2
+        h.календарь.происшествия_дни = [2, 3]
+        все = list(h.people.values())
+        for i, p in enumerate(все):
+            p.satiety = 12.0 + (i * 17) % 70
+            p.hydration = 15.0 + (i * 23) % 65
+            p.warmth = 18.0 + (i * 7) % 50
+            p.rest = 25.0 + (i * 11) % 60
+            p.health = 55.0 + (i * 5) % 45
+            p.mood = 25.0 + (i * 13) % 55
+            p.panic = 15.0 + (i * 19) % 65
+            p.normalcy = 0.25 + ((i * 9) % 65) / 100.0
+            p.stock["еда"] = float((i * 3) % 11)
+            p.stock["вода"] = float((i * 5) % 8)
+            p.stock["топливо"] = float((i * 7) % 9)
+            p.stock["материалы"] = float((i * 11) % 13)
+            p.stock["лекарства"] = float(i % 3)
+            p.stock["деньги"] = 50.0 + (i * 29) % 250
+            p.места["двор и мусорки"] = 0.2 + (i % 5) * 0.15
+            p.места["магазин на Заречной"] = 0.9 - (i % 4) * 0.15
+            p.hate[все[(i + 4) % len(все)].id] = 40.0 + i
+            p.trust[все[(i + 2) % len(все)].id] = 7.0
+            p.близость[все[(i + 1) % len(все)].id] = 4.0 + i % 5
+            if i % 4 == 1:
+                p.injuries.append("ушиб ноги")
+            if i % 5 == 2:
+                p.sick = "простуда"
+            for o in все:
+                if o.id != p.id:
+                    p.сведения_о(o.id).aware = 30.0 + (i * 7) % 50
+                    p.memory.append(Память(h.day, Вид.СМОТРЕЛ, o.id))
+
+        def имя(цель):
+            if цель is None:
+                return None
+            v = getattr(цель, "id", None)
+            if isinstance(v, str):
+                return v
+            v = getattr(цель, "имя", None)
+            return v if isinstance(v, str) else str(цель)
+
+        корзины = {}
+        for p in h.people.values():
+            к = actions.gather(h, p)
+            с = actions.самочувствие(h, p)
+            корзины[p.id] = {
+                "варианты": [[key, имя(target), окр(score)]
+                             for (key, target), score in к.варианты],
+                "визитов": к.визитов,
+                "предел": окр(к.предел_визитов),
+                "чувства": [окр(с.зову), окр(с.средний_свой),
+                            окр(с.отчаяние), окр(с.невмоготу)],
+                "просьба": [окр(p.вес_черт("попросить")), окр(p.каким_кажусь())],
+            }
+
+        печать(h, корзины=корзины, лента=окр(h.rng.random()))
+        """;
+
+    /// <summary>
     /// Питоновская половина канонического снимка: те же семь правил, что
     /// в `Дом.Ядро/Данные/Снимок.cs`. Подставляется в начало каждого скрипта
     /// оракула; скрипт доводит дом до нужного состояния и зовёт `печать(h)`.
@@ -654,13 +851,13 @@ public static class Проверки
             if isinstance(k, str):    return k
             if isinstance(k, tuple):  return ",".join(ключ(x) for x in k)
             if isinstance(k, float):
-                r = round(k, 6)
-                return repr(0.0 if r == 0.0 else r)
+                return repr(0.0 if k == 0.0 else k)
             return str(k)
 
         def окр(v):
-            r = round(v, 6)
-            return 0.0 if r == 0.0 else r
+            # не округляем: половина решается по-разному, а сверка идёт
+            # с допуском (Сравнение.ДОПУСК). Здесь только −0.0 → 0.0
+            return 0.0 if v == 0.0 else v
 
         def знач(v, ссылкой=True, как_запись=False):
             if v is None:              return None

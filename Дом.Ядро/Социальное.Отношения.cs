@@ -85,9 +85,7 @@ public static partial class Социальное
             // и второе затухание, важнее первого: у того, кто уже со всеми
             // свой, новая близость даётся тяжело. Вечер, проведённый у одной
             // двери, — это вечер, не проведённый у остальных
-            double сумма = 0.0;
-            foreach (var (_, v) in кто.близость)
-                сумма += v;
+            double сумма = Util.Sum(кто.близость.Значения);
             double занят = сумма / (10.0 * Math.Max(1, кто.близость.Count));
             double шаг = сила * Math.Max(0.15, 1.0 - cur / 11.0)
                          * Math.Max(0.2, 1.0 - занят * h.B["близость_внимание"]);
@@ -252,9 +250,7 @@ public static partial class Социальное
     {
         var b = h.B;
         double v = recent_incidents(h, 6) * b["напряжение_за_происшествие"];
-        double отказов = 0.0;
-        foreach (var r in npc.asking.Значения)
-            отказов += r.отказали;
+        double отказов = Util.Sum(npc.asking.Значения.Select(r => r.отказали));
         v += Math.Min(b["напряжение_отказов_потолок"], отказов) * b["напряжение_за_отказ"];
         // самая громкая ссора в доме — как её видно с утра
         v += h.сутки.злость_дома / 100.0 * b["напряжение_за_злость"];
@@ -267,10 +263,7 @@ public static partial class Социальное
         var people = h.alive();
         if (people.Count < 2)
             return;
-        double сумма = 0.0;
-        foreach (var p in people)
-            сумма += p.panic;
-        double avg = сумма / people.Count;
+        double avg = Util.Sum(people.Select(p => p.panic)) / people.Count;
         double k = h.B["паника_заражение"];
         foreach (var p in people)
             // общительные заражаются сильнее, замкнутые меньше

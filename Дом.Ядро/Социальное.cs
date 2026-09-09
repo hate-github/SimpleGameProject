@@ -122,9 +122,7 @@ public static partial class Социальное
         свои = свои.Where(o => !string.Equals(o.id, a.id, StringComparison.Ordinal)).ToList();
         // сила защитников — какой она кажется тому, кто выбирает, к кому
         // проситься: чужое здоровье он не знает, знает лицо
-        double сила = 0.0;
-        foreach (var o in свои)
-            сила += a.видимая_сила(o);
+        double сила = Util.Sum(свои.Select(o => a.видимая_сила(o)));
         польза += сила * B["соседство_вес_защиты"] * тревога;
         if (a.allies.Contains(партнёр.id))
             польза += 1.0;

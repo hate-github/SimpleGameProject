@@ -262,10 +262,11 @@ public static partial class Улица
     /// </summary>
     public static double сколько_поднимет(House h, NPC npc, Кладовая к, Баланс b)
     {
-        double v = 0.0;
+        var части = new List<double>();
         foreach (var (res, было) in к.stock)   // правда: видно: своя кладовка — знает наизусть
             if (было > 0 && нужно_наверх(h, npc, res, b))
-                v += Math.Min(было, b["кладовая_за_раз"]);
+                части.Add(Math.Min(было, b["кладовая_за_раз"]));
+        double v = Util.Sum(части);
         if (к.тулуп && npc.одежда < b["одежда_максимум"])
             v += 2.0;
         if (к.оружие.Count > 0)
@@ -375,7 +376,7 @@ public static partial class Улица
             return true;
         }
 
-        while (got.Where(п => п.Key != "тулуп").Sum(п => п.Value) < потолок)
+        while (Util.Sum(got.Where(п => п.Key != "тулуп").Select(п => п.Value)) < потолок)
         {
             // берёт самое нужное, на что хватает: не хватило на банку — взял воду
             string? res = null;

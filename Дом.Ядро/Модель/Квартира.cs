@@ -87,10 +87,10 @@ public sealed class Flat : СОружием
     public double потери_тепла(Баланс b)
     {
         var цены = b.Таблица("дыра_градусов");
-        double сумма = 0.0;
+        var части = new List<double>();
         foreach (var (вид, n) in дыры)          // порядок вставки, как в Python
-            сумма += цены.Взять(вид, цены["стена"]) * n;
-        return сумма;
+            части.Add(цены.Взять(вид, цены["стена"]) * n);
+        return Util.Sum(части);
     }
 
     /// <summary>

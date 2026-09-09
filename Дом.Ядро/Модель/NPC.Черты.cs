@@ -28,10 +28,10 @@ public sealed partial class NPC
         var веса = _h.B.Таблица2("веса_черт");
         if (!веса.TryGetValue(key, out var таблица))
             return 0.0;
-        double сумма = 0.0;
+        var части = new List<double>();
         foreach (var (черта, вес) in таблица)      // порядок вставки, как в Python
-            сумма += t01(черта) * вес;
-        return сумма;
+            части.Add(t01(черта) * вес);
+        return Util.Sum(части);
     }
 
     /// <summary>
@@ -47,11 +47,10 @@ public sealed partial class NPC
         if (пунктики.Count == 0 || _h is null)
             return 0.0;
         var таблица = _h.B.Таблица2("пунктики");
-        double сумма = 0.0;
+        var части = new List<double>();
         foreach (var п in пунктики)
-            if (таблица.TryGetValue(п, out var свой))
-                сумма += свой.Взять(key, 0.0);
-        return сумма;
+            части.Add(таблица.TryGetValue(п, out var свой) ? свой.Взять(key, 0.0) : 0.0);
+        return Util.Sum(части);
     }
 
     /// <summary>Сколько ртов кормит (GDD 12.1: дневное потребление).</summary>
