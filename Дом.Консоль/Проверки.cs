@@ -317,6 +317,248 @@ public static class Проверки
         return плохо;
     }
 
+    /// <summary>
+    /// Этап 1б: характер, психика, физиология и сутки ребёнка.
+    ///
+    /// Свежий дом эти четыре модуля почти не трогают: при работающем отоплении
+    /// никто не мёрзнет, не болеет и не ранен, а значит ни одна ветка
+    /// с броском `rng` не выполняется вовсе — и проверка была бы пустой.
+    /// Поэтому дом ставится в положение двенадцатого дня без отопления, воды,
+    /// света и связи, а жильцам раздаются травмы, болезни и провалившиеся
+    /// шкалы — по одной и той же формуле на обеих сторонах.
+    ///
+    /// Сверяется не только состояние после двух суток, но и **положение
+    /// в ленте случайности**: последним делом с обеих сторон берётся ещё одно
+    /// число, и если порт бросил монету лишний раз или на раз меньше, оно
+    /// разойдётся.
+    /// </summary>
+    public static List<string> Тело(Action<string> w)
+    {
+        if (!Оракул.Доступен)
+        {
+            w("  сверить не с чем: python не найден");
+            return new List<string> { "сутки тела не сверены с прототипом" };
+        }
+
+        using var ждём = Оракул.Json(ФИКСТУРА_PY);
+
+        var h = Собрать();
+        Обстановка(h);
+        var мерки = new JsonObject();
+        for (int проход = 0; проход < 2; проход++)
+        {
+            h.календарь.последнее_громкое = проход == 0 ? 11 : 0;
+            foreach (var p in h.alive())
+            {
+                Психика.горизонт(h, p);
+                Психика.дрейф_нормальности(h, p);
+            }
+            int infra = (h.heating ? 0 : 1) + (h.water_on ? 0 : 1)
+                      + (h.power_on ? 0 : 1) + (h.network <= 0 ? 1 : 0);
+            foreach (var p in h.alive().ToList())
+            {
+                double room = Физиология.расход_и_тепло(h, p, infra);
+                Дети.сутки(h, p, room);
+                Физиология.износ(h, p, infra);
+            }
+        }
+        foreach (var p in h.people.Значения)
+        {
+            var свои = new JsonObject();
+            foreach (var key in Дом.Ядро.Каталог.COST.Ключи)
+            {
+                var (запрет, склонность) = Характер.мерка_поступка(p, key, h.B);
+                свои[key] = new JsonArray(
+                    Дом.Ядро.Снимок.Округлить(запрет),
+                    Дом.Ядро.Снимок.Округлить(склонность),
+                    Дом.Ядро.Снимок.Округлить(Характер.своя_мерка(p, key, h.B)),
+                    Дом.Ядро.Снимок.Округлить(Характер.norm_gate(p, key, h.B)));
+            }
+            свои["причина_смерти"] = Физиология.причина_смерти(p);
+            мерки[p.id] = свои;
+        }
+
+        var стало = Дом.Ядро.Снимок.Собранный(h);
+        стало["мерки"] = мерки;
+        стало["лента"] = Дом.Ядро.Снимок.Округлить(h.rng.Random());
+
+        var плохо = new List<string>();
+        using var мой = JsonDocument.Parse(стало.ToJsonString());
+        Сравнение.Одинаково(ждём.RootElement, мой.RootElement, "сутки", плохо);
+        if (плохо.Count > 0)
+            foreach (var x in плохо)
+                w("  " + x);
+        else
+            w("  сутки тела, психика, характер и ребёнок совпадают с прототипом: " +
+              $"двое суток на {h.people.Count} жильцах, " +
+              $"{Дом.Ядро.Каталог.COST.Count} мерок на каждого, лента сходится");
+        return плохо;
+    }
+
+    /// <summary>
+    /// Положение, в котором эти четыре модуля работают целиком: двенадцатый
+    /// день без коммуналок, промёрзшие и больные жильцы. Ровно то же самое
+    /// делает питоновская половина проверки — формула одна.
+    /// </summary>
+    private static void Обстановка(House h)
+    {
+        h.day = 12;
+        h.heating = false;
+        h.power_on = false;
+        h.water_on = false;
+        h.network = 0.0;
+        h.outside = -28.0;
+        int i = 0;
+        foreach (var p in h.people.Значения)
+        {
+            p.warmth = 10.0 + (i * 7) % 45;
+            p.satiety = 30.0 + (i * 11) % 60;
+            p.hydration = 28.0 + (i * 13) % 55;
+            p.rest = 20.0 + (i * 5) % 70;
+            p.health = 80.0 + (i * 3) % 20;
+            p.mood = 30.0 + (i * 9) % 60;
+            p.panic = 10.0 + (i * 17) % 70;
+            p.часы_работы = (i % 5) * 1.5;
+            p.день_разговора = i % 3 == 0 ? 12 : -99;
+            p.burning = i % 6 == 0;
+            if (i % 4 == 1)
+                p.injuries.Add("ушиб руки");
+            if (i % 4 == 2)
+            {
+                p.injuries.Add("перелом ноги");
+                p.injuries.Add("порез руки");
+            }
+            if (i % 5 == 3)
+                p.sick = "простуда";
+            int j = 0;
+            foreach (var р in p.дети)
+            {
+                р.тепло = 20.0 + (i * 13 + j) % 50;
+                р.сытость = 40.0 + (i * 7 + j) % 45;
+                р.здоровье = 95.0;
+                р.болен = (i + j) % 2 == 1 ? "простуда" : null;
+                j++;
+            }
+            i++;
+        }
+    }
+
+    private const string ФИКСТУРА_PY = """
+        # -*- coding: utf-8 -*-
+        # Та же обстановка и тот же сценарий, что в Проверки.Тело, плюс снимок
+        # по правилам Дом.Ядро/Данные/Снимок.cs.
+        import dataclasses, json, sys
+        from enum import Enum
+        sys.path.insert(0, ".")
+        from house import engine, psyche, physiology, child, character, catalog
+
+        СКРЫТЬ = {"NPC": {"_h", "решающий"}}
+        КАК_ЗАПИСЬ = {"values"}
+
+        def ключ(k):
+            if isinstance(k, bool):   return "1" if k else "0"
+            if isinstance(k, Enum):   return str(k.value)
+            if isinstance(k, str):    return k
+            if isinstance(k, tuple):  return ",".join(ключ(x) for x in k)
+            if isinstance(k, float):
+                r = round(k, 6)
+                return repr(0.0 if r == 0.0 else r)
+            return str(k)
+
+        def окр(v):
+            r = round(v, 6)
+            return 0.0 if r == 0.0 else r
+
+        def знач(v, ссылкой=True, как_запись=False):
+            if v is None:              return None
+            if isinstance(v, bool):    return 1 if v else 0
+            if isinstance(v, Enum):    return v.value
+            if isinstance(v, str):     return v
+            if isinstance(v, float):   return окр(v)
+            if isinstance(v, int):     return v
+            if isinstance(v, dict):
+                пары = sorted(v.items(), key=lambda kv: ключ(kv[0])) if как_запись \
+                       else list(v.items())
+                return {ключ(k): знач(x) for k, x in пары}
+            if isinstance(v, (set, frozenset)):
+                return [знач(x) for x in sorted(v, key=ключ)]
+            if isinstance(v, (list, tuple)):
+                return [знач(x) for x in v]
+            if dataclasses.is_dataclass(v):
+                id_ = getattr(v, "id", None)
+                if ссылкой and isinstance(id_, str):
+                    return ["#", id_]
+                скрыть = СКРЫТЬ.get(type(v).__name__, set())
+                поля = sorted(dataclasses.fields(v), key=lambda f: f.name)
+                return {f.name: знач(getattr(v, f.name), как_запись=f.name in КАК_ЗАПИСЬ)
+                        for f in поля if f.name not in скрыть}
+            return str(v)
+
+        h = engine.Simulation(seed=1).h
+
+        # --- обстановка: двенадцатый день без коммуналок ---
+        h.day = 12
+        h.heating = False
+        h.power_on = False
+        h.water_on = False
+        h.network = 0.0
+        h.outside = -28.0
+        for i, p in enumerate(h.people.values()):
+            p.warmth = 10.0 + (i * 7) % 45
+            p.satiety = 30.0 + (i * 11) % 60
+            p.hydration = 28.0 + (i * 13) % 55
+            p.rest = 20.0 + (i * 5) % 70
+            p.health = 80.0 + (i * 3) % 20
+            p.mood = 30.0 + (i * 9) % 60
+            p.panic = 10.0 + (i * 17) % 70
+            p.часы_работы = (i % 5) * 1.5
+            p.день_разговора = 12 if i % 3 == 0 else -99
+            p.burning = (i % 6 == 0)
+            if i % 4 == 1:
+                p.injuries.append("ушиб руки")
+            if i % 4 == 2:
+                p.injuries.append("перелом ноги")
+                p.injuries.append("порез руки")
+            if i % 5 == 3:
+                p.sick = "простуда"
+            for j, р in enumerate(p.дети):
+                р.тепло = 20.0 + (i * 13 + j) % 50
+                р.сытость = 40.0 + (i * 7 + j) % 45
+                р.здоровье = 95.0
+                р.болен = "простуда" if (i + j) % 2 == 1 else None
+
+        # --- двое суток ---
+        for проход in range(2):
+            h.календарь.последнее_громкое = 11 if проход == 0 else 0
+            for p in h.alive():
+                psyche.горизонт(h, p)
+                psyche.дрейф_нормальности(h, p)
+            infra = ((not h.heating) + (not h.water_on) + (not h.power_on) + (h.network <= 0))
+            for p in list(h.alive()):
+                room = physiology.расход_и_тепло(h, p, infra)
+                child.сутки(h, p, room)
+                physiology.износ(h, p, infra)
+
+        мерки = {}
+        for p in h.people.values():
+            свои = {}
+            for key in catalog.COST:
+                з, с = character.мерка_поступка(p, key, h.B)
+                свои[key] = [окр(з), окр(с),
+                             окр(character.своя_мерка(p, key, h.B)),
+                             окр(character.norm_gate(p, key, h.B))]
+            свои["причина_смерти"] = physiology.причина_смерти(p)
+            мерки[p.id] = свои
+
+        print(json.dumps({
+            "квартиры": {str(k): знач(v, ссылкой=False) for k, v in h.flats.items()},
+            "кладовые": {k: знач(v, ссылкой=False) for k, v in h.кладовые.items()},
+            "жильцы":   {k: знач(v, ссылкой=False) for k, v in h.people.items()},
+            "мерки":    мерки,
+            "лента":    окр(h.rng.random()),
+        }, ensure_ascii=False))
+        """;
+
     /// <summary>Собрать дом так же, как это делает `engine.Simulation.__init__`.</summary>
     public static House Собрать(long зерно = 1)
     {

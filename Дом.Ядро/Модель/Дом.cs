@@ -136,7 +136,7 @@ public sealed class House
     public List<РепликаБыта> реплики_быт { get; } = new();
 
     // вывод
-    public object? journal { get; set; }
+    public IЖурнал journal { get; set; } = new ЗаглушкаЖурнала();
     public Словарь<string, double> stats { get; } = Словари.Числа();
     public List<string> chronicle { get; } = new();
     // поток событий для движка: то же, что в журнале, только записями (ADR-14)
