@@ -7,6 +7,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Дом.Ядро;
 
 namespace Дом.Консоль;
@@ -146,6 +147,215 @@ public static class Проверки
             w($"  вопросы игроку совпадают с прототипом: {из_python.Count} членов, " +
               "имя в имя и текст в текст");
         return плохо;
+    }
+
+    /// <summary>
+    /// Справочник действий — против самого прототипа. Сверяются все
+    /// одиннадцать таблиц, и не только состав, но и порядок: `COST` идёт
+    /// в порядке записей, а это порядок вариантов в корзине и, значит,
+    /// порядок жребия.
+    /// </summary>
+    public static List<string> Каталог(Action<string> w)
+    {
+        if (!Оракул.Доступен)
+        {
+            w("  сверить не с чем: python не найден");
+            return new List<string> { "каталог не сверен с прототипом" };
+        }
+
+        using var ждём = Оракул.Json("""
+            # -*- coding: utf-8 -*-
+            import json, sys
+            sys.path.insert(0, ".")
+            from house import catalog as c
+
+            пары = lambda d: [[k, v] for k, v in d.items()]
+            имена = lambda x: (x if isinstance(x, str) else None)
+            данные = {
+                "COST": [[k, [v[0], v[1]]] for k, v in c.COST.items()],
+                "НОРМА": пары(c.НОРМА),
+                "ТЕГИ": [[k, list(v)] for k, v in c.ТЕГИ.items()],
+                "СУД": [[k, [имена(x) for x in v]] for k, v in c.СУД.items()],
+                "NOTABLE": пары(c.NOTABLE),
+                "СТРОЙКА": пары(c.СТРОЙКА),
+                "ПОСТРОЙКИ": [[k, [v[0], v[1], list(v[2]), v[3]]]
+                              for k, v in c.ПОСТРОЙКИ.items()],
+                "ВИЗИТЫ": sorted(c.ВИЗИТЫ),
+                "РАБОТА": sorted(c.РАБОТА),
+                "ОБЫЧНОЕ": sorted(c.ОБЫЧНОЕ),
+                "ВЫХОД": sorted(c.ВЫХОД_НА_ПЛОЩАДКУ),
+                "ЦЕННОСТИ": sorted(c.ЦЕННОСТИ),
+                "ПУНКТИК_КЛЮЧИ": sorted(c.ПУНКТИК_КЛЮЧИ),
+                "ВЕСА_КЛЮЧИ": sorted(c.ВЕСА_КЛЮЧИ),
+            }
+            print(json.dumps(данные, ensure_ascii=False))
+            """);
+
+        var стало = new JsonObject
+        {
+            ["COST"] = Пары(Дом.Ядро.Каталог.COST,
+                            ш => (JsonNode?)new JsonArray(ш!.громкость, ш.вид)),
+            ["НОРМА"] = Пары(Дом.Ядро.Каталог.НОРМА, v => (JsonNode?)JsonValue.Create(v)),
+            ["ТЕГИ"] = Пары(Дом.Ядро.Каталог.ТЕГИ, Строки),
+            ["СУД"] = Пары(Дом.Ядро.Каталог.СУД,
+                           с => (JsonNode?)new JsonArray(с.ненависть, с.доверие)),
+            ["NOTABLE"] = Пары(Дом.Ядро.Каталог.NOTABLE, v => (JsonNode?)JsonValue.Create(v)),
+            ["СТРОЙКА"] = Пары(Дом.Ядро.Каталог.СТРОЙКА, v => (JsonNode?)JsonValue.Create(v)),
+            ["ПОСТРОЙКИ"] = Пары(Дом.Ядро.Каталог.ПОСТРОЙКИ,
+                                 п => (JsonNode?)new JsonArray(
+                                     п.уровень, п.материалы, Строки(п.умения), п.потолок)),
+            ["ВИЗИТЫ"] = Набор(Дом.Ядро.Каталог.ВИЗИТЫ),
+            ["РАБОТА"] = Набор(Дом.Ядро.Каталог.РАБОТА),
+            ["ОБЫЧНОЕ"] = Набор(Дом.Ядро.Каталог.ОБЫЧНОЕ),
+            ["ВЫХОД"] = Набор(Дом.Ядро.Каталог.ВЫХОД_НА_ПЛОЩАДКУ),
+            ["ЦЕННОСТИ"] = Набор(Дом.Ядро.Каталог.ЦЕННОСТИ),
+            ["ПУНКТИК_КЛЮЧИ"] = Набор(Дом.Ядро.Каталог.ПУНКТИК_КЛЮЧИ),
+            ["ВЕСА_КЛЮЧИ"] = Набор(Дом.Ядро.Каталог.ВЕСА_КЛЮЧИ),
+        };
+
+        var плохо = new List<string>();
+        using var мой = JsonDocument.Parse(стало.ToJsonString());
+        Сравнение.Одинаково(ждём.RootElement, мой.RootElement, "каталог", плохо);
+        if (плохо.Count > 0)
+            foreach (var x in плохо)
+                w("  " + x);
+        else
+            w($"  справочник действий совпадает с прототипом: {Дом.Ядро.Каталог.ДЕЙСТВИЯ.Count} " +
+              $"действий, {Дом.Ядро.Каталог.ПОСТУПКИ.Count} поступков, 14 таблиц");
+        return плохо;
+    }
+
+    /// <summary>
+    /// Главная приёмка этапа 1а: дом, собранный из `npcs.json`, поле в поле
+    /// совпадает с питоновским. Сверяются квартиры, кладовые и жильцы целиком —
+    /// каждое поле каждой записи, включая порядок ключей в словарях.
+    ///
+    /// Снимок считается по правилам `Дом.Ядро.Снимок`; ту же половину правил
+    /// повторяет питоновский скрипт ниже. Это и есть та самая переписанная
+    /// на JSON сериализация, о которой говорит `docs/ПОРТ.md`, — пока только
+    /// для собранного дома, до первого дня.
+    /// </summary>
+    public static List<string> ДомИзДанных(Action<string> w)
+    {
+        if (!Оракул.Доступен)
+        {
+            w("  сверить не с чем: python не найден");
+            return new List<string> { "сборка дома не сверена с прототипом" };
+        }
+
+        using var ждём = Оракул.Json("""
+            # -*- coding: utf-8 -*-
+            # Снимок собранного дома по правилам Дом.Ядро/Данные/Снимок.cs.
+            # Скрипт ничего в прототипе не меняет: он его только читает.
+            import dataclasses, json, sys
+            from enum import Enum
+            sys.path.insert(0, ".")
+            from house import engine
+
+            СКРЫТЬ = {"NPC": {"_h", "решающий"}}
+            # в порте `values` — запись, а не словарь, и её поля сортируются
+            # по имени (правило 7); поэтому здесь тоже
+            КАК_ЗАПИСЬ = {"values"}
+
+            def ключ(k):
+                if isinstance(k, bool):   return "1" if k else "0"
+                if isinstance(k, Enum):   return str(k.value)
+                if isinstance(k, str):    return k
+                if isinstance(k, tuple):  return ",".join(ключ(x) for x in k)
+                if isinstance(k, float):
+                    r = round(k, 6)
+                    return repr(0.0 if r == 0.0 else r)
+                return str(k)
+
+            def знач(v, ссылкой=True, как_запись=False):
+                if v is None:              return None
+                if isinstance(v, bool):    return 1 if v else 0
+                if isinstance(v, Enum):    return v.value
+                if isinstance(v, str):     return v
+                if isinstance(v, float):
+                    r = round(v, 6)
+                    return 0.0 if r == 0.0 else r
+                if isinstance(v, int):     return v
+                if isinstance(v, dict):
+                    пары = sorted(v.items(), key=lambda kv: ключ(kv[0])) if как_запись \
+                           else list(v.items())
+                    return {ключ(k): знач(x) for k, x in пары}
+                if isinstance(v, (set, frozenset)):
+                    return [знач(x) for x in sorted(v, key=ключ)]
+                if isinstance(v, (list, tuple)):
+                    return [знач(x) for x in v]
+                if dataclasses.is_dataclass(v):
+                    id_ = getattr(v, "id", None)
+                    if ссылкой and isinstance(id_, str):
+                        return ["#", id_]
+                    скрыть = СКРЫТЬ.get(type(v).__name__, set())
+                    поля = sorted(dataclasses.fields(v), key=lambda f: f.name)
+                    return {f.name: знач(getattr(v, f.name),
+                                         как_запись=f.name in КАК_ЗАПИСЬ)
+                            for f in поля if f.name not in скрыть}
+                return str(v)
+
+            h = engine.Simulation(seed=1).h
+            print(json.dumps({
+                "квартиры": {str(k): знач(v, ссылкой=False) for k, v in h.flats.items()},
+                "кладовые": {k: знач(v, ссылкой=False) for k, v in h.кладовые.items()},
+                "жильцы":   {k: знач(v, ссылкой=False) for k, v in h.people.items()},
+            }, ensure_ascii=False))
+            """);
+
+        var h = Собрать();
+        using var мой = JsonDocument.Parse(Дом.Ядро.Снимок.Собранный(h).ToJsonString());
+
+        var плохо = new List<string>();
+        Сравнение.Одинаково(ждём.RootElement, мой.RootElement, "дом", плохо);
+        if (плохо.Count > 0)
+            foreach (var x in плохо)
+                w("  " + x);
+        else
+            w($"  дом из npcs.json совпадает с питоновским поле в поле: " +
+              $"{h.flats.Count} квартир, {h.кладовые.Count} кладовых, {h.people.Count} жильцов");
+        return плохо;
+    }
+
+    /// <summary>Собрать дом так же, как это делает `engine.Simulation.__init__`.</summary>
+    public static House Собрать(long зерно = 1)
+    {
+        var данные = Схема.Прочитать(Пути.Данные);
+        var h = new House { rng = new Rng(зерно), B = данные.Баланс };
+        foreach (var в in данные.lines.Массив("быт").EnumerateArray())
+            h.реплики_быт.Add(new РепликаБыта(
+                в.Строка("текст"),
+                в.Есть("занятие") ? в.Строка("занятие") : null,
+                в.Есть("условие")
+                    ? new Условие(в.GetProperty("условие").Строка("вид"),
+                                  в.GetProperty("условие").Число("день"))
+                    : null));
+        Сборка.build_house(h, данные.npcs);
+        return h;
+    }
+
+    private static JsonArray Пары<T>(Дом.Ядро.Словарь<string, T> т, Func<T, JsonNode?> как)
+    {
+        var а = new JsonArray();
+        foreach (var (k, v) in т)          // порядок вставки — он тоже сверяется
+            а.Add(new JsonArray(k, как(v)));
+        return а;
+    }
+
+    private static JsonArray Набор(IReadOnlySet<string> s)
+    {
+        var а = new JsonArray();
+        foreach (var x in s.OrderBy(x => x, StringComparer.Ordinal))
+            а.Add(x);
+        return а;
+    }
+
+    private static JsonNode? Строки(string[] xs)
+    {
+        var а = new JsonArray();
+        foreach (var x in xs)
+            а.Add(x);
+        return а;
     }
 
     private static void Сверить(List<string> плохо, long зерно, string имя,

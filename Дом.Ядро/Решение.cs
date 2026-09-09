@@ -116,3 +116,18 @@ public static class Вопросы
     /// <summary>Все вопросы с их текстом — для сверки с прототипом и локализации.</summary>
     public static IReadOnlyDictionary<Вопрос, string> Все => _текст;
 }
+
+/// <summary>
+/// Кто может решать за жильца (`decision.РЕШАЮЩИЕ`). Имя лежит в npcs.json
+/// (ключ «решает»); сами реализации — `Софтмакс`, `Скрипт`, `Человек` —
+/// приезжают вместе со швом на этапе 1д.
+/// </summary>
+public static class Решающие
+{
+    public const string СОФТМАКС = "softmax";
+    public const string СКРИПТ = "скрипт";
+    public const string ЧЕЛОВЕК = "человек";
+
+    public static readonly IReadOnlySet<string> ИМЕНА =
+        new HashSet<string>(StringComparer.Ordinal) { СОФТМАКС, СКРИПТ, ЧЕЛОВЕК };
+}

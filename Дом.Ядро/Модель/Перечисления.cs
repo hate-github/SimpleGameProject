@@ -167,6 +167,9 @@ public static class Слова
     public static Вид Вид(string s) => (Вид)Найти(_вид, s, nameof(Вид));
     public static Ночь Ночь(string s) => (Ночь)Найти(_ночь, s, nameof(Ночь));
 
+    /// <summary>Есть ли такое оружие вообще (для проверки данных).</summary>
+    public static bool ЕстьОружие(string s) => Array.IndexOf(_оружие, s) >= 0;
+
     private static int Найти(string[] где, string что, string чего)
     {
         int i = Array.IndexOf(где, что);
