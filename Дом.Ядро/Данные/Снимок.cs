@@ -174,7 +174,7 @@ public static class Снимок
     /// </summary>
     public static double Округлить(double v) => v == 0.0 ? 0.0 : v;
 
-    private static string Строкой(Enum e) => e switch
+    internal static string Строкой(Enum e) => e switch
     {
         Оружие о => о.Текст(),
         ВидКладовой к => к.Текст(),
@@ -188,7 +188,7 @@ public static class Снимок
 
     /// <summary>Ключ словаря или элемент множества — строкой, как его пишет
     /// Python: строка как есть, число десятичным, пара — через запятую.</summary>
-    private static string Ключом(object? ключ) => ключ switch
+    internal static string Ключом(object? ключ) => ключ switch
     {
         null => "",
         string s => s,

@@ -29,10 +29,9 @@ public static class Физиология
         // к оружию привыкают тем, что носят его: каждый день понемногу
         if (p.weapon != Оружие.НЕТ)
         {
-            string имя = p.weapon.Текст();
             double своё = Таблицы.СВОЙСКОЕ.TryGetValue(p.weapon, out var с) ? с : 0.0;
-            double было = p.рука.Взять(имя, своё);
-            p.рука[имя] = Util.Clamp(было + b["рука_за_день"], 0.0, 1.0);
+            double было = p.рука.Взять(p.weapon, своё);
+            p.рука[p.weapon] = Util.Clamp(было + b["рука_за_день"], 0.0, 1.0);
         }
 
         double room = h.room_temp(p);

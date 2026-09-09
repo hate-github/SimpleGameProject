@@ -291,9 +291,9 @@ public static partial class Конфликт
         foreach (var p in crew.Concat(defenders))
             if (p.weapon != Оружие.НЕТ)
             {
-                double было = p.рука.Взять(p.weapon.Текст(),
+                double было = p.рука.Взять(p.weapon,
                     Таблицы.СВОЙСКОЕ.TryGetValue(p.weapon, out var своё) ? своё : 0.0);
-                p.рука[p.weapon.Текст()] = Util.Clamp(было + b["рука_за_бой"], 0.0, 1.0);
+                p.рука[p.weapon] = Util.Clamp(было + b["рука_за_бой"], 0.0, 1.0);
             }
 
         // и то, что дом узнаёт о себе. Кто не вышел на крик — знает, что

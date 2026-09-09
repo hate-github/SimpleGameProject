@@ -129,10 +129,12 @@ public static class Сборка
             // у него годами. Охотнику привычно любое огнестрельное — это его
             // ремесло, а не эта конкретная винтовка
             if (p.weapon != Оружие.НЕТ)
-                p.рука[p.weapon.Текст()] = 1.0;
+                p.рука[p.weapon] = 1.0;
             if (p.skills.Contains("охотник", StringComparer.Ordinal))
-                foreach (var w in Таблицы.ОГНЕСТРЕЛ.Select(о => о.Текст())
-                                                   .OrderBy(x => x, StringComparer.Ordinal))
+                // порядок по названию: в прототипе это `sorted(FIREARMS)`
+                // по строковому значению члена
+                foreach (var w in Таблицы.ОГНЕСТРЕЛ.OrderBy(о => о.Текст(),
+                                                            StringComparer.Ordinal))
                     p.рука[w] = Math.Max(p.рука.Взять(w, 0.0), h.B["рука_охотника"]);
 
             foreach (var other in h.people.Значения)

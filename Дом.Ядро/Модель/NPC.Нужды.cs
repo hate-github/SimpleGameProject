@@ -185,7 +185,7 @@ public sealed partial class NPC
         if (w == Оружие.НЕТ)
             return 1.0;
         double своё = Таблицы.СВОЙСКОЕ.TryGetValue(w, out var с) ? с : 0.0;
-        return Util.Clamp(рука.Взять(w.Текст(), своё), 0.0, 1.0);
+        return Util.Clamp(рука.Взять(w, своё), 0.0, 1.0);
     }
 
     /// <summary>Боевая сила (GDD 17: оружие и численное превосходство решают

@@ -8,7 +8,7 @@
 
 namespace Дом.Ядро;
 
-public static class Отчёт
+public static partial class Отчёт
 {
     /// <summary>
     /// Чем кончился день у тех, кто его пролежал: одна строка вместо восьми.

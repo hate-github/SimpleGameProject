@@ -277,9 +277,9 @@ public static partial class Действия
             if (string.Equals(делает, "уход_за_оружием", StringComparison.Ordinal)
                 && npc.weapon != Оружие.НЕТ)
             {
-                double было = npc.рука.Взять(npc.weapon.Текст(),
+                double было = npc.рука.Взять(npc.weapon,
                     Таблицы.СВОЙСКОЕ.TryGetValue(npc.weapon, out var своё) ? своё : 0.0);
-                npc.рука[npc.weapon.Текст()] =
+                npc.рука[npc.weapon] =
                     Util.Clamp(было + b["рука_за_уход"], 0.0, 1.0);
                 h.bump("ухода_за_оружием");
             }

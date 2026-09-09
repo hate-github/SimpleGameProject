@@ -167,6 +167,22 @@ public static class Слова
     public static Вид Вид(string s) => (Вид)Найти(_вид, s, nameof(Вид));
     public static Ночь Ночь(string s) => (Ночь)Найти(_ночь, s, nameof(Ночь));
 
+    /// <summary>
+    /// Член перечисления по типу и его тексту. Нужно сохранению: в снимке
+    /// лежит имя типа и значение, как в прототипе, а какой это тип —
+    /// известно только на месте.
+    /// </summary>
+    public static object Значением(Type тип, string s)
+    {
+        if (тип == typeof(Оружие))      return Оружие(s);
+        if (тип == typeof(ВидКладовой)) return Кладовая(s);
+        if (тип == typeof(Режим))       return Режим(s);
+        if (тип == typeof(ВидСобытия))  return Событие(s);
+        if (тип == typeof(Вид))         return Вид(s);
+        if (тип == typeof(Ночь))        return Ночь(s);
+        throw new ArgumentException($"нет перечисления {тип.Name}");
+    }
+
     /// <summary>Есть ли такое оружие вообще (для проверки данных).</summary>
     public static bool ЕстьОружие(string s) => Array.IndexOf(_оружие, s) >= 0;
 
