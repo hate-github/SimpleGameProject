@@ -46,7 +46,13 @@ class Journal:
     def w(self, s=""):
         self.stream.write(s + "\n")
 
-    def flush_day(self, h):
+    def шапка_дня(self, h):
+        """Заголовок дня: число, погода и то, что в доме отключено.
+
+        Отдельно от `flush_day`, потому что живой журнал (`играть.py`) печатает
+        его перед первой строкой дня, а не в конце: игрок должен видеть день,
+        пока день идёт.
+        """
         weather = f"{h.outside:+.0f}°C"
         infra = []
         if not h.heating:
@@ -59,9 +65,12 @@ class Journal:
             infra.append("без связи")
         tail = (" · " + ", ".join(infra)) if infra else ""
         режим = h.режим
+        return (f"══ ДЕНЬ {h.day} · {режим} · {weather}{tail} "
+                + "═" * max(0, 40 - len(tail) - (len(режим) - 6)))
+
+    def flush_day(self, h):
         self.w()
-        self.w(f"══ ДЕНЬ {h.day} · {режим} · {weather}{tail} "
-               + "═" * max(0, 40 - len(tail) - (len(режим) - 6)))
+        self.w(self.шапка_дня(h))
         shown = [t for imp, t in self.buf if imp >= (2 if self.verbosity == 0 else (1 if self.verbosity == 1 else 0))]
         for t in shown:
             prefix = "  "
