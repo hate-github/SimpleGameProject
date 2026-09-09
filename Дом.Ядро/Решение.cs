@@ -119,8 +119,7 @@ public static class Вопросы
 
 /// <summary>
 /// Кто может решать за жильца (`decision.РЕШАЮЩИЕ`). Имя лежит в npcs.json
-/// (ключ «решает»); сами реализации — `Софтмакс`, `Скрипт`, `Человек` —
-/// приезжают вместе со швом на этапе 1д.
+/// (ключ «решает»).
 /// </summary>
 public static class Решающие
 {
@@ -135,8 +134,9 @@ public static class Решающие
     public static Решающий Создать(string имя) => имя switch
     {
         СОФТМАКС => new Софтмакс(),
-        _ => throw new NotImplementedException(
-            $"решающий «{имя}» переезжает вместе с разбором решения (этап 1г)"),
+        СКРИПТ   => new Скрипт(),
+        ЧЕЛОВЕК  => new Человек(),
+        _ => throw new ArgumentException($"неизвестный решающий «{имя}»"),
     };
 }
 
@@ -160,9 +160,10 @@ public sealed class Ситуация
 /// Шов решения (GDD 13): кто выбирает за жильца. Правила дома одни для всех —
 /// они собирают оценённые варианты, а выбирает из них `Решающий` жильца.
 ///
-/// Пока перенесён только <c>ответ</c> — им пользуются монета и правило.
-/// <c>день</c>, <c>ночь</c> и <c>выбор</c> приезжают вместе с корзиной
-/// (этап 1г), <c>Скрипт</c> и <c>Человек</c> — вместе с разбором решения.
+/// Четыре вопроса, и они разные по существу. <c>день</c> — что делать ходом,
+/// с целью и корзиной за спиной. <c>ночь</c> — как ночевать. <c>ответ</c> —
+/// да или нет там, где стояла монета или правило. <c>выбор</c> — одно
+/// из оценённого без монеты: за что взяться, о чём говорить.
 /// </summary>
 public abstract class Решающий
 {
@@ -170,20 +171,89 @@ public abstract class Решающий
     /// У мягкого выбора NPC объяснение не читает никто.</summary>
     public virtual bool разбирает => false;
 
+    /// <summary>Что делать этим ходом. Вариант — действие и его цель.</summary>
+    public abstract (string key, object? target)? день(
+        House h, NPC npc,
+        IReadOnlyList<((string key, object? target) что, double вес)> варианты,
+        Корзина? корзина = null);
+
+    /// <summary>Как ночевать (`model.Ночь`).</summary>
+    public abstract string? ночь(House h, NPC npc,
+                                 IReadOnlyList<(string что, double вес)> варианты,
+                                 Самочувствие? с = null);
+
     /// <summary>Ответ на ситуацию: у своей двери в осаду, у чужой — с просьбой.</summary>
     public abstract string? ответ(House h, NPC npc, Ситуация с);
+
+    /// <summary>Одно из оценённого без монеты: за что взяться, о чём говорить.</summary>
+    public abstract string? выбор(House h, NPC npc, Вопрос вопрос,
+                                  IReadOnlyList<(string что, double вес)> варианты);
+
+    /// <summary>
+    /// Привести варианты к общему виду для разбора. В Python список один
+    /// и тот же — пары «что и сколько», где «что» бывает кортежем, строкой
+    /// или жильцом; в C# у каждого вопроса свой тип, и разбору нужен общий.
+    /// </summary>
+    internal static List<(object? что, double вес)> Вширь(
+        IReadOnlyList<((string key, object? target) что, double вес)> варианты)
+    {
+        var @out = new List<(object?, double)>(варианты.Count);
+        foreach (var (что, вес) in варианты)
+            @out.Add((((string, object?))(что.key, что.target), вес));
+        return @out;
+    }
+
+    /// <inheritdoc cref="Вширь(IReadOnlyList{ValueTuple{ValueTuple{string, object}, double}})"/>
+    internal static List<(object? что, double вес)> Вширь(
+        IReadOnlyList<(string что, double вес)> варианты)
+    {
+        var @out = new List<(object?, double)>(варианты.Count);
+        foreach (var (что, вес) in варианты)
+            @out.Add((что, вес));
+        return @out;
+    }
 }
 
 /// <summary>NPC: обычно лучшее, иногда второе или третье. Страх делает выбор
-/// безрассуднее.</summary>
+/// безрассуднее, днём — и недосып.</summary>
 public sealed class Софтмакс : Решающий
 {
+    public override (string key, object? target)? день(
+        House h, NPC npc, IReadOnlyList<((string key, object? target) что, double вес)> варианты,
+        Корзина? корзина = null)
+    {
+        var b = h.B;
+        double temp = b["температура_выбора"]
+                      + (npc.panic / 100.0) * b["температура_выбора_паника"];
+        temp += (1.0 - npc.rest / 100.0) * 0.4;
+        // пусто — это «нечего выбрать», а не пара нулей: у обобщённого
+        // `SoftmaxPick` умолчание для кортежа именно пара нулей
+        if (варианты.Count == 0)
+            return null;
+        return h.rng.SoftmaxPick(варианты, temp);
+    }
+
+    public override string? ночь(House h, NPC npc, IReadOnlyList<(string что, double вес)> варианты,
+                                 Самочувствие? с = null)
+    {
+        var b = h.B;
+        double temp = b["температура_выбора"]
+                      + (npc.panic / 100.0) * b["температура_выбора_паника"];
+        return h.rng.SoftmaxPick(варианты, temp);
+    }
+
     public override string? ответ(House h, NPC npc, Ситуация с)
     {
         if (с.склонность is not null)
             return h.rng.Chance(с.склонность.Value) ? с.варианты[0].ответ : с.варианты[1].ответ;
         return с.по_правилу;
     }
+
+    public override string? выбор(House h, NPC npc, Вопрос вопрос,
+                                  IReadOnlyList<(string что, double вес)> варианты)
+        // лучшее, без монеты: цель и тема площадки выбираются жёстко, и это
+        // то самое `max`, что стояло здесь до шва (Замыслы.выбрать, Площадка)
+        => (string?)Разбор.Лучший(Вширь(варианты));
 }
 
 public static class Решение

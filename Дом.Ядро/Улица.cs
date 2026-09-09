@@ -506,11 +506,3 @@ public static partial class Улица
         return лучшее;
     }
 }
-
-/// <summary>Форматирование чисел так, как их печатает Python.</summary>
-public static class Текст
-{
-    /// <summary>`{v:g}` — «3», «0.5», «1.25».</summary>
-    public static string G(double v)
-        => v.ToString("G6", System.Globalization.CultureInfo.InvariantCulture);
-}
