@@ -1,0 +1,105 @@
+// Перенос house/замысел.py — пока только таблицы и `вес`.
+//
+// Весь модуль (что человек задумывает, как ведёт и когда бросает) переезжает
+// на этапе 1д. `вес` приехал раньше потому, что его зовёт `Корзина.add`:
+// без него ни один вариант хода не считается.
+
+namespace Дом.Ядро;
+
+public static class Замыслы
+{
+    // `замысел_вес`: тройка значит «это и есть то, ради чего я живу»,
+    // единица — «по пути пригодится».
+    public static readonly IReadOnlyDictionary<string, IReadOnlyDictionary<string, double>>
+        ПОДКРАШИВАЕТ = new Dictionary<string, IReadOnlyDictionary<string, double>>(
+            StringComparer.Ordinal)
+        {
+            ["тепло"] = new Dictionary<string, double>(StringComparer.Ordinal)
+            {
+                ["утепление"] = 3.0, ["буржуйка"] = 2.6, ["дверь"] = 1.4, ["топить"] = 1.2,
+                ["заказать"] = 1.6, ["генератор_собрать"] = 1.2, ["костёр"] = 0.8,
+            },
+            ["запас"] = new Dictionary<string, double>(StringComparer.Ordinal)
+            {
+                ["вылазка"] = 2.4, ["кладовая"] = 2.2, ["обмен"] = 1.6,
+                ["вскрыть_кладовую"] = 1.0, ["разбор"] = 1.0, ["попросить"] = 0.8,
+            },
+            ["угол"] = new Dictionary<string, double>(StringComparer.Ordinal)
+            {
+                ["занять"] = 3.0, ["разбор"] = 1.8, ["переехать"] = 1.4, ["утепление"] = 0.8,
+            },
+            ["рассорить"] = new Dictionary<string, double>(StringComparer.Ordinal)
+            {
+                ["шепнуть"] = 3.0, ["подбросить"] = 2.6, ["наблюдение"] = 1.4,
+                ["разговор"] = 0.8,
+            },
+            ["уйти"] = new Dictionary<string, double>(StringComparer.Ordinal)
+            {
+                ["уйти"] = 3.0, ["одежда"] = 2.0, ["вылазка"] = 1.2, ["кладовая"] = 1.2,
+            },
+            // шестой вид, и первый, который не про себя. Подкрашивает всё,
+            // что делается ради другого, — но только когда этот другой
+            // и есть тот самый
+            ["вместе"] = new Dictionary<string, double>(StringComparer.Ordinal)
+            {
+                ["поделиться"] = 2.6, ["позвать"] = 2.4, ["лечить"] = 2.0,
+                ["вернуть"] = 1.4, ["отдать_на_ночь"] = 1.2, ["собрание"] = 0.6,
+            },
+        };
+
+    /// <summary>У каких видов подкраска зависит от того, к кому идут.</summary>
+    public static readonly IReadOnlySet<string> ПАРНЫЕ =
+        new HashSet<string>(StringComparer.Ordinal) { "вместе" };
+
+    public static readonly IReadOnlyDictionary<string, string> НАЗВАНИЕ =
+        new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["тепло"] = "чтобы дома всегда было тепло",
+            ["запас"] = "набить шкаф и перестать считать дни",
+            ["угол"] = "перебраться туда, где стены целы",
+            ["рассорить"] = "стравить этих двоих",
+            ["уйти"] = "собраться и уйти",
+            ["вместе"] = "перезимовать вдвоём",
+        };
+
+    /// <summary>Все виды замысла.</summary>
+    public static readonly IReadOnlyList<string> ВИДЫ = НАЗВАНИЕ.Keys.ToList();
+
+    static Замыслы()
+    {
+        // полнота двух таблиц сверяется при первом обращении, как
+        // у справочника действий: забытая строка иначе тихо ничего
+        // не подкрашивает
+        var нет = ВИДЫ.Where(в => !ПОДКРАШИВАЕТ.ContainsKey(в)).ToList();
+        var лишние = ПОДКРАШИВАЕТ.Keys.Where(в => !НАЗВАНИЕ.ContainsKey(в)).ToList();
+        var чужие = ПАРНЫЕ.Where(в => !НАЗВАНИЕ.ContainsKey(в)).ToList();
+        if (нет.Count > 0 || лишние.Count > 0 || чужие.Count > 0)
+            throw new InvalidOperationException("виды замысла не сходятся: "
+                + (нет.Count > 0 ? $"нечего подкрашивать — {string.Join(", ", нет)}; " : "")
+                + (лишние.Count > 0 ? $"подкраска без названия — {string.Join(", ", лишние)}; " : "")
+                + (чужие.Count > 0 ? $"парный без названия — {string.Join(", ", чужие)}" : ""));
+    }
+
+    /// <summary>
+    /// Насколько замысел подталкивает вот к этому действию.
+    ///
+    /// <paramref name="target"/> — к кому оно обращено. У пяти видов из шести
+    /// цель безразлична: утеплять окна и набивать шкаф можно только у себя.
+    /// У шестого — наоборот: поделиться с кем угодно и поделиться с тем,
+    /// с кем условился зимовать, — два разных поступка, и подкрашивается
+    /// только второй.
+    /// </summary>
+    public static double вес(House h, NPC npc, string key, object? target = null)
+    {
+        var з = npc.замысел;
+        if (з is null || з.сегодня_спит)
+            return 0.0;
+        if (!ПОДКРАШИВАЕТ.TryGetValue(з.вид, out var таблица)
+            || !таблица.TryGetValue(key, out double к) || к == 0.0)
+            return 0.0;
+        if (ПАРНЫЕ.Contains(з.вид)
+            && !string.Equals((target as NPC)?.id, з.друг, StringComparison.Ordinal))
+            return 0.0;
+        return к * h.B["замысел_вес"];
+    }
+}
