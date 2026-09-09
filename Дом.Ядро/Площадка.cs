@@ -204,4 +204,49 @@ public static class Площадка
         return острота + npc.t01("общительность") * 2.0 - npc.t01("жадность")
                - рискованно - b["собрание_решимость"];
     }
+
+    /// <summary>Кто по расписанию должен не спать этой ночью. null —
+    /// расписания нет.</summary>
+    public static NPC? чья_ночь(House h)
+    {
+        var д = h.дежурство;
+        if (д is null || h.day > д.до)
+            return null;
+        var очередь = д.очередь
+            .Where(i => h.живой(i) is not null && h.get(i)!.dependents == 0).ToList();
+        if (очередь.Count == 0)
+            return null;
+        return h.get(очередь[(h.day - д.начало) % очередь.Count]);
+    }
+
+    /// <summary>
+    /// Утром: вышел ли вчерашний дежурный. Нарушивший виноват перед всеми.
+    ///
+    /// Это и есть разница между обещанием одному человеку и обязательством
+    /// перед домом: за сорванную ночь злятся все, а не один сосед.
+    /// </summary>
+    public static void проверить_дежурство(House h)
+    {
+        var b = h.B;
+        string? кто_id = h.ожидает.дежурил_вчера;
+        h.ожидает.дежурил_вчера = null;
+        if (string.IsNullOrEmpty(кто_id))
+            return;
+        var кто = h.живой(кто_id);
+        if (кто is null)
+            return;
+        if (кто.дежурил_ночь == h.day - 1)
+        {
+            foreach (var p in h.others(кто))
+                Социальное.adjust(p, кто.id, trust: b["дежурство_доверие"], hate: -3);
+            h.bump("дежурств_по_расписанию");
+            return;
+        }
+        foreach (var p in h.others(кто))
+            Социальное.adjust(p, кто.id, trust: -b["дежурство_доверие"] * 1.5,
+                              hate: b["дежурство_ненависть"]);
+        h.bump("дежурство_нарушено");
+        h.journal.line($"{кто.@short} {Util.Vb(кто.sex, "проспал")} свою ночь. "
+                       + "Об этом сказали все и сразу.", 2);
+    }
 }

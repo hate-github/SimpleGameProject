@@ -177,10 +177,15 @@ public abstract class Решающий
         IReadOnlyList<((string key, object? target) что, double вес)> варианты,
         Корзина? корзина = null);
 
-    /// <summary>Как ночевать (`model.Ночь`).</summary>
-    public abstract string? ночь(House h, NPC npc,
-                                 IReadOnlyList<(string что, double вес)> варианты,
-                                 Самочувствие? с = null);
+    /// <summary>
+    /// Как ночевать (`model.Ночь`). Вариант — вид ночи и тот, к кому она
+    /// относится: краж и ножей в списке столько, сколько соседей, и они
+    /// различаются только целью.
+    /// </summary>
+    public abstract (string вид, object? кому)? ночь(
+        House h, NPC npc,
+        IReadOnlyList<((string вид, object? кому) что, double вес)> варианты,
+        Самочувствие? с = null);
 
     /// <summary>Ответ на ситуацию: у своей двери в осаду, у чужой — с просьбой.</summary>
     public abstract string? ответ(House h, NPC npc, Ситуация с);
@@ -233,12 +238,16 @@ public sealed class Софтмакс : Решающий
         return h.rng.SoftmaxPick(варианты, temp);
     }
 
-    public override string? ночь(House h, NPC npc, IReadOnlyList<(string что, double вес)> варианты,
-                                 Самочувствие? с = null)
+    public override (string вид, object? кому)? ночь(
+        House h, NPC npc,
+        IReadOnlyList<((string вид, object? кому) что, double вес)> варианты,
+        Самочувствие? с = null)
     {
         var b = h.B;
         double temp = b["температура_выбора"]
                       + (npc.panic / 100.0) * b["температура_выбора_паника"];
+        if (варианты.Count == 0)
+            return null;
         return h.rng.SoftmaxPick(варианты, temp);
     }
 

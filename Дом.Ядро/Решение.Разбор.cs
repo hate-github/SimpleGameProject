@@ -182,13 +182,15 @@ public sealed class Скрипт : Решающий
         return выбор is null ? null : (выбор.Value.Item1, выбор.Value.Item2);
     }
 
-    public override string? ночь(House h, NPC npc, IReadOnlyList<(string что, double вес)> варианты,
-                                 Самочувствие? с = null)
+    public override (string вид, object? кому)? ночь(
+        House h, NPC npc,
+        IReadOnlyList<((string вид, object? кому) что, double вес)> варианты,
+        Самочувствие? с = null)
     {
         var общие = Решающий.Вширь(варианты);
-        var что = (string?)Разбор.Лучший(общие);
+        var что = (ValueTuple<string, object?>?)Разбор.Лучший(общие);
         _записать(h, npc, Вопрос.НОЧЬ, общие, Разбор.имя(что), чувства: с);
-        return что;
+        return что is null ? null : (что.Value.Item1, что.Value.Item2);
     }
 
     public override string? ответ(House h, NPC npc, Ситуация с)
@@ -272,11 +274,17 @@ public sealed class Человек : Решающий
         return о is null ? null : (о.Value.Item1, о.Value.Item2);
     }
 
-    public override string? ночь(House h, NPC npc, IReadOnlyList<(string что, double вес)> варианты,
-                                 Самочувствие? с = null)
-        => варианты.Count == 0
-           ? null
-           : (string?)_выбрать(h, npc, Вопрос.НОЧЬ, Решающий.Вширь(варианты), чувства: с);
+    public override (string вид, object? кому)? ночь(
+        House h, NPC npc,
+        IReadOnlyList<((string вид, object? кому) что, double вес)> варианты,
+        Самочувствие? с = null)
+    {
+        if (варианты.Count == 0)
+            return null;
+        var о = (ValueTuple<string, object?>?)_выбрать(
+            h, npc, Вопрос.НОЧЬ, Решающий.Вширь(варианты), чувства: с);
+        return о is null ? null : (о.Value.Item1, о.Value.Item2);
+    }
 
     public override string? ответ(House h, NPC npc, Ситуация с)
     {

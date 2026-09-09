@@ -23,6 +23,9 @@ public interface IЖурнал
 
     /// <summary>Внешнее событие дня (GDD 21): скриптовое или случайное.</summary>
     void @event(string текст, bool scripted = false);
+
+    /// <summary>Реплика в общем чате (GDD 19): кто написал и что.</summary>
+    void chat(string кто, string текст);
 }
 
 /// <summary>Журнал, который ничего не пишет.</summary>
@@ -31,4 +34,5 @@ public sealed class ЗаглушкаЖурнала : IЖурнал
     public void line(string текст, int заметность = 0) { }
     public void secret(string текст) { }
     public void @event(string текст, bool scripted = false) { }
+    public void chat(string кто, string текст) { }
 }
