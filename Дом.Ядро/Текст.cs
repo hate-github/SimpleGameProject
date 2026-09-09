@@ -69,13 +69,75 @@ public static class Текст
            ? v
            : double.Parse(Ф(v, знаков), NumberStyles.Float, CultureInfo.InvariantCulture);
 
-    /// <summary>`str(v)` из Python: кратчайшая запись, но у целого числа
-    /// с плавающей точкой остаётся «.0» — в C# его бы не было.</summary>
+    /// <summary>
+    /// `str(v)` из Python.
+    ///
+    /// Цифры берутся у .NET (кратчайшая круглая запись — тот же набор,
+    /// что у Python), а раскладываются по питоновскому правилу, потому что
+    /// раскладка у языков разная в трёх местах сразу:
+    ///
+    ///     1e15      Python «1000000000000000.0», .NET «1E+15»
+    ///     1e16+2    Python «1.0000000000000002e+16», .NET «10000000000000002»
+    ///     1e-5      Python «1e-05», .NET «1E-05»
+    ///
+    /// Правило Python: к степени переходят, когда точка стоит правее
+    /// шестнадцатого знака или левее четвёртого до него
+    /// (`decpt &gt; 16 || decpt &lt;= -4`); в позиционной записи у целого
+    /// остаётся «.0», в степенной — нет; сама степень всегда со знаком
+    /// и не короче двух цифр.
+    ///
+    /// Нашла это проверка «числа строкой», заведённая после того, как
+    /// заглавная «E» в `G` пережила всю проверку и всплыла на тридцатом
+    /// дне игры. Второй раз то же семейство ошибок — уже здесь.
+    /// </summary>
     public static string Repr(double v)
     {
-        string s = v.ToString("R", CultureInfo.InvariantCulture);
-        return s.Contains('.') || s.Contains('E') || s.Contains('N') || s.Contains('I')
-               ? s : s + ".0";
+        if (double.IsNaN(v))
+            return "nan";
+        if (double.IsInfinity(v))
+            return v > 0 ? "inf" : "-inf";
+
+        string r = v.ToString("R", CultureInfo.InvariantCulture);
+        bool минус = double.IsNegative(v);          // минус ноль тоже со знаком
+        if (r.StartsWith('-'))
+            r = r[1..];
+
+        // разобрать чужую раскладку на цифры и положение точки
+        int e = r.IndexOfAny(new[] { 'E', 'e' });
+        int степень = 0;
+        if (e >= 0)
+        {
+            степень = int.Parse(r[(e + 1)..], NumberStyles.Integer, CultureInfo.InvariantCulture);
+            r = r[..e];
+        }
+        int точка = r.IndexOf('.');
+        string цифры = точка < 0 ? r : r[..точка] + r[(точка + 1)..];
+        int сколько = (точка < 0 ? r.Length : точка) + степень;
+
+        int ведущих = 0;
+        while (ведущих < цифры.Length - 1 && цифры[ведущих] == '0')
+            ведущих++;
+        цифры = цифры[ведущих..].TrimEnd('0');
+        сколько -= ведущих;
+        if (цифры.Length == 0)
+        {
+            цифры = "0";
+            сколько = 1;
+        }
+
+        string знак = минус ? "-" : "";
+        if (сколько > 16 || сколько <= -4)
+        {
+            string мантисса = цифры.Length > 1 ? цифры[..1] + "." + цифры[1..] : цифры;
+            int показатель = сколько - 1;
+            return знак + мантисса + "e" + (показатель < 0 ? "-" : "+")
+                   + Math.Abs(показатель).ToString("00", CultureInfo.InvariantCulture);
+        }
+        if (сколько <= 0)
+            return знак + "0." + new string('0', -сколько) + цифры;
+        if (сколько >= цифры.Length)
+            return знак + цифры + new string('0', сколько - цифры.Length) + ".0";
+        return знак + цифры[..сколько] + "." + цифры[сколько..];
     }
 
     /// <summary>`f"{s:&lt;N}"`: дополнить пробелами справа.</summary>
