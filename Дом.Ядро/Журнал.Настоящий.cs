@@ -18,7 +18,15 @@ namespace Дом.Ядро;
 /// Журнал: копит строки дня и печатает их разом. Чат жильцов живёт отдельно
 /// (`Чат`): он не показывает дом, а меняет его.
 /// </summary>
-public sealed class Журнал : IЖурнал
+/// <remarks>
+/// Не запечатан и `line` виртуален нарочно: живой журнал консольной игры
+/// наследует его и переопределяет одну эту точку. Всё остальное — сводка
+/// дня, шапка, панель — зовёт `line` через себя, и в наследнике попадает
+/// в его версию. Композиция вместо наследования эту цепочку рвёт: сводка
+/// звала бы `line` внутреннего журнала и уходила в буфер, которого никто
+/// не печатает. Так и случилось при первом переносе.
+/// </remarks>
+public class Журнал : IЖурнал
 {
     /// <summary>0 — только крупное, 1 — обычно, 2 — каждое действие.</summary>
     public int verbosity { get; }
@@ -26,8 +34,8 @@ public sealed class Журнал : IЖурнал
     /// <summary>Печатать ли то, чего дом не видит: кто украл, кто подбросил.</summary>
     public bool secrets { get; }
 
-    private readonly TextWriter поток;
-    private readonly List<(int важность, string текст)> buf = new();
+    protected readonly TextWriter поток;
+    protected readonly List<(int важность, string текст)> buf = new();
 
     /// <summary>
     /// Часы текущего хода: их ставит ход дня и снимает после. Так время
@@ -47,7 +55,7 @@ public sealed class Журнал : IЖурнал
     // --- запись ---
     public void line(string текст, int заметность = 1) => line(текст, заметность, false);
 
-    public void line(string текст, int заметность, bool hidden)
+    public virtual void line(string текст, int заметность, bool hidden)
     {
         if (hidden && !secrets)
             return;
@@ -93,7 +101,7 @@ public sealed class Журнал : IЖурнал
                + new string('═', Math.Max(0, 40 - tail.Length - (режим.Length - 6)));
     }
 
-    public void flush_day(House h)
+    public virtual void flush_day(House h)
     {
         w();
         w(шапка_дня(h));

@@ -48,9 +48,19 @@ public static class Текст
         return s.StartsWith('-') ? s : "+" + s;
     }
 
-    /// <summary>`f"{v:g}"` — «3», «0.5», «1.25». Приехало из `Улица.cs`:
-    /// форматированию чисел место в одном файле.</summary>
-    public static string G(double v) => v.ToString("G6", CultureInfo.InvariantCulture);
+    /// <summary>
+    /// `f"{v:g}"` — «3», «0.5», «1.25».
+    ///
+    /// Порог перехода в степень у «G6» и у питоновского `g` один и тот же
+    /// (степень от −4 до 5 включительно печатается обычной записью),
+    /// а вот буква разная: .NET пишет «6.21725E-15», Python — «6.21725e-15».
+    /// Нашлось это на тридцатом дне сыгранной вручную жизни: остаток воды
+    /// в шкафу к тому времени успевает стать 6.21725e-15, и раньше такого
+    /// числа в журнале просто не встречалось.
+    /// </summary>
+    public static string G(double v)
+        => v.ToString("G6", CultureInfo.InvariantCulture).Replace("E", "e",
+                                                                 StringComparison.Ordinal);
 
     /// <summary>`round(v, N)` из Python: то же округление, что у `Ф`,
     /// но числом, а не строкой.</summary>

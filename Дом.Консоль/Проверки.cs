@@ -2546,6 +2546,157 @@ public static class Проверки
         print(json.dumps(всё, ensure_ascii=False))
         """;
 
+    /// <summary>
+    /// Консоль: прогон и игра руками.
+    ///
+    /// Приёмка этапа 2. Прогон сверяется с `run.py`, игра — с `играть.py`,
+    /// и обе знак в знак: одна и та же жизнь, один и тот же сценарий ответов,
+    /// одна и та же стенограмма.
+    ///
+    /// Сценарий нарочно не из одних нулей: в нём и справки («?», «я», «т»),
+    /// и «всё», и мимо списка, и число за краем — так проверяется не только
+    /// то, что игра идёт, но и то, что она понимает игрока и не решает
+    /// за него.
+    /// </summary>
+    public static List<string> Консоль(Action<string> w)
+    {
+        if (!Оракул.Доступен)
+        {
+            w("  сверить не с чем: python не найден");
+            return new List<string> { "консоль не сверена с прототипом" };
+        }
+
+        var плохо = new List<string>();
+        using var ждём = Оракул.Json(КОНСОЛЬ_PY);
+
+        // ---- прогон ----
+        {
+            var писало = new StringWriter { NewLine = "\n" };
+            var журнал = new Дом.Ядро.Журнал(2, secrets: true, поток: писало);
+            var прогон = new Прогон(Пути.Данные, seed: 9, days: 5, журнал: журнал);
+            прогон.run();
+            Отчёт.final_report(прогон.h, 5, 9);
+            Сверить(плохо, "прогон", ждём.RootElement.GetProperty("прогон").GetString()!,
+                    писало.ToString());
+        }
+
+        // ---- игра ----
+        int вопросов = 0;
+        {
+            var писало = new StringWriter { NewLine = "\n" };
+            var читало = new StringReader(ОТВЕТЫ);
+            Команды.Играть(new Ключи(
+                new[] { "играть", "--кто", "лида", "--зерно", "31", "--дней", "4" }),
+                читало, писало);
+            string моё = писало.ToString();
+            вопросов = Сколько(моё, new string('┈', 74));
+            Сверить(плохо, "игра", ждём.RootElement.GetProperty("игра").GetString()!, моё);
+        }
+
+        if (плохо.Count > 0)
+            foreach (var x in плохо.Take(6))
+                w("  " + x);
+        else
+            w($"  консоль совпадает с прототипом знак в знак: прогон на пять дней "
+              + $"и четыре дня, сыгранные руками ({вопросов} вопросов игроку)");
+        return плохо;
+    }
+
+    /// <summary>Сверить две стенограммы и назвать первую разошедшуюся
+    /// строку.</summary>
+    private static void Сверить(List<string> плохо, string что, string ждём, string стало)
+    {
+        if (string.Equals(ждём, стало, StringComparison.Ordinal))
+            return;
+        var а = ждём.Split('\n');
+        var б = стало.Split('\n');
+        for (int i = 0; i < Math.Max(а.Length, б.Length); i++)
+        {
+            string x = i < а.Length ? а[i] : "«нет строки»";
+            string y = i < б.Length ? б[i] : "«нет строки»";
+            if (!string.Equals(x, y, StringComparison.Ordinal))
+            {
+                плохо.Add($"{что}, строка {i + 1}:\n      прототип: {x}\n"
+                          + $"      порт:     {y}");
+                return;
+            }
+        }
+        плохо.Add($"{что}: длина в прототипе {ждём.Length}, в порте {стало.Length}");
+    }
+
+    private static int Сколько(string где, string что)
+    {
+        int n = 0, i = 0;
+        while ((i = где.IndexOf(что, i, StringComparison.Ordinal)) >= 0)
+        {
+            n++;
+            i += что.Length;
+        }
+        return n;
+    }
+
+    /// <summary>
+    /// Сценарий игрока. Не одни нули: справки, «всё», мимо списка и число
+    /// за краем — чтобы проверялся и разбор ответа, а не только то,
+    /// что игра идёт.
+    /// </summary>
+    private const string ОТВЕТЫ =
+        "?\nя\nт\nвсё\nмимо\n99\n0\n"
+        + "1\n0\n2\nвсё\n0\n3\nя\n0\n1\n0\n1\n0\n2\nвсё\n0\n3\nя\n0\n1\n0\n"
+        + "1\n0\n2\nвсё\n0\n3\nя\n0\n1\n0\n1\n0\n2\nвсё\n0\n3\nя\n0\n1\n0\n"
+        + "1\n0\n2\nвсё\n0\n3\nя\n0\n1\n0\n1\n0\n2\nвсё\n0\n3\nя\n0\n1\n0\n"
+        + "1\n0\n2\nвсё\n0\n3\nя\n0\n1\n0\n1\n0\n2\nвсё\n0\n3\nя\n0\n1\n0\n"
+        + "1\n0\n2\nвсё\n0\n3\nя\n0\n1\n0\n1\n0\n2\nвсё\n0\n3\nя\n0\n1\n0\n";
+
+    private const string КОНСОЛЬ_PY = """
+        # -*- coding: utf-8 -*-
+        # Тот же прогон и та же игра, что в Проверки.Консоль.
+        import io, json, sys
+        sys.path.insert(0, ".")
+        from house import report
+        from house.decision import Человек
+        from house.engine import Simulation
+        import играть
+
+        всё = {}
+
+        буфер = io.StringIO()
+        sim = Simulation(seed=9, days=5, verbosity=2, secrets=True, stream=буфер)
+        sim.run()
+        report.final_report(sim.h, 5, 9)
+        всё["прогон"] = буфер.getvalue()
+
+        ОТВЕТЫ = ("?\nя\nт\nвсё\nмимо\n99\n0\n"
+                  + "1\n0\n2\nвсё\n0\n3\nя\n0\n1\n0\n" * 10)
+        экран = io.StringIO()
+        было_out, было_in = sys.stdout, sys.stdin
+        sys.stdout, sys.stdin = экран, io.StringIO(ОТВЕТЫ)
+        try:
+            sim = Simulation(seed=31, days=4, verbosity=1, stream=io.StringIO())
+            h = sim.h
+            живой = играть.ЖивойЖурнал(verbosity=1, secrets=False, stream=экран)
+            живой.дом = h
+            h.journal = живой
+            я = h.people["лида"]
+            я.решающий = Человек(спросить=играть.сделать_спросить(h, "лида"))
+            print(f"Зерно 31. Вы — {я.name}, кв.{я.apt}: {я.role}.")
+            print("Ответ — номер варианта. «всё» — весь список, «?» — дом, "
+                  "«я» — состояние, «т» — что знаю о соседях, «в» — выход.")
+            sim.run()
+            print()
+            report.final_report(h, 4, 31, w=lambda s="": print(s))
+            print()
+            if я.здесь():
+                print(f"{я.short} дожил{'а' if я.sex == 'ж' else ''} до конца метели.")
+            else:
+                print(f"{я.short}: {я.cause} (день {я.died_day}).")
+        finally:
+            sys.stdout, sys.stdin = было_out, было_in
+        всё["игра"] = экран.getvalue()
+
+        print(json.dumps(всё, ensure_ascii=False))
+        """;
+
     /// <summary>Как называется цель варианта: жилец, квартира, кладовка
     /// или место вылазки.</summary>
     private static JsonNode? Имя(object? цель) => цель switch
