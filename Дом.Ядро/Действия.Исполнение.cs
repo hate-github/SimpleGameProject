@@ -229,6 +229,19 @@ public static partial class Действия
     public static Исход execute(House h, NPC npc, string key, object? target,
                                 object? детали = null)
     {
+        // Наблюдаемая точка (house/hooks.py, `@наблюдаемо("execute")`).
+        // Хук ничего не меняет и не трогает `h.rng`, поэтому обёртка
+        // поведения не касается: прогон с пустыми списками и с полными
+        // один и тот же до последнего слова.
+        h.hooks.Зов_execute(h, npc, key, target, детали);
+        var итог = _execute(h, npc, key, target, детали);
+        h.hooks.Зов_после_execute(h, npc, key, target, детали, итог);
+        return итог;
+    }
+
+    private static Исход _execute(House h, NPC npc, string key, object? target,
+                                  object? детали = null)
+    {
         var b = h.B;
         double spent = hours(key, npc, b);
 

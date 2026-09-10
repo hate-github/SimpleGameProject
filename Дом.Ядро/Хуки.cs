@@ -43,6 +43,14 @@ public sealed class Хуки
     /// <summary>(h, npc, корзина) — сбор кончился, до порога и выбора.</summary>
     public List<Action<House, NPC, Корзина>> after_gather { get; } = new();
 
+    /// <summary>(h, npc, key, target, детали) — за дело взялись.</summary>
+    public List<Action<House, NPC, string, object?, object?>> on_execute { get; } = new();
+
+    /// <summary>(h, npc, key, target, детали, итог) — дело кончилось.
+    /// Час на личных часах к этому времени уже потрачен, поэтому
+    /// наблюдатель знает и когда началось, и когда кончилось.</summary>
+    public List<Action<House, NPC, string, object?, object?, Исход>> after_execute { get; } = new();
+
     /// <summary>(h, npc, dur, м, спутник) — вылазка (street._outing).</summary>
     public List<Action<House, NPC, double, Место, NPC?>> on_outing { get; } = new();
 
@@ -96,6 +104,20 @@ public sealed class Хуки
     {
         foreach (var f in after_gather)
             f(h, npc, корзина);
+    }
+
+    internal void Зов_execute(House h, NPC npc, string key, object? target,
+                              object? детали)
+    {
+        foreach (var f in on_execute)
+            f(h, npc, key, target, детали);
+    }
+
+    internal void Зов_после_execute(House h, NPC npc, string key, object? target,
+                                    object? детали, Исход итог)
+    {
+        foreach (var f in after_execute)
+            f(h, npc, key, target, детали, итог);
     }
 
     internal void Зов_outing(House h, NPC npc, double dur, Место м, NPC? спутник)
