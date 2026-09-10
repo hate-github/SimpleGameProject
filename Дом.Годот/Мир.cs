@@ -888,6 +888,130 @@ public partial class Мир : Node3D
         }
     }
 
+    /// <summary>
+    /// Кто сейчас стоит в подъезде.
+    ///
+    /// Фигуры — не жизнь сама по себе, а снимок хода: дом посчитал, что
+    /// в этот час такой-то стоит у такой-то двери, и здесь это видно.
+    /// Двигаться они не двигаются, и правильно: время в доме идёт только
+    /// когда игрок тратит свои часы. Захочешь застать соседа на лестнице —
+    /// приходи в тот час, когда он там, а не жди у двери.
+    ///
+    /// Кого нет в списке — того и нет в подъезде: он дома за дверью или
+    /// вовсе за порогом. Решает это `Дом.Экран.Подача.В_подъезде`,
+    /// и потому это проверяется из консоли, а не глазами.
+    ///
+    /// Фигура не ставится вплотную к игроку. Они твёрдые — сквозь соседа
+    /// не пройти, иначе вся затея не стоит ничего, — а поставленная
+    /// в занятое место твёрдая фигура выталкивает героя в стену.
+    /// </summary>
+    public void Соседи(IReadOnlyList<Дом.Экран.ВПодъезде> кто, Vector3 герой)
+    {
+        _соседи ??= Узел("соседи");
+        foreach (var у in _соседи.GetChildren())
+            у.QueueFree();
+
+        var занято = new Dictionary<int, int>();
+        foreach (var с in кто)
+        {
+            var д = _двери.FirstOrDefault(x => x.квартира == с.квартира);
+            float y = ЭТАЖ * (с.этаж - 1);
+            занято.TryGetValue(с.квартира, out int сколько);
+            занято[с.квартира] = сколько + 1;
+            // второй у той же двери встаёт рядом, а не в первого
+            float вбок = сколько * 0.55f;
+
+            Vector3 где;
+            float лицом;
+            if (с.где == Дом.Экран.Где.УДвери && д is not null)
+            {
+                где = д.перед with { Z = д.перед.Z + вбок };
+                лицом = д.в_дом > 0 ? -90 : 90;      // лицом к створке
+            }
+            else
+            {
+                // площадка: посреди пролёта, лицом к лестнице
+                где = new Vector3(вбок - 0.4f, y, (ЗАД + ШАГ_ВВЕРХ) / 2);
+                лицом = 180;
+            }
+            if (где.DistanceTo(герой with { Y = где.Y }) < 0.85f)
+                continue;
+            Фигура(где, лицом, с.id, с.имя);
+        }
+    }
+
+    private Node3D? _соседи;
+
+    private Node3D Узел(string имя)
+    {
+        var у = new Node3D { Name = имя };
+        AddChild(у);
+        return у;
+    }
+
+    /// <summary>
+    /// Человек: пальто, голова, имя над головой.
+    ///
+    /// Моделей людей у проекта нет, и рисовать их сейчас нечем. Но пустая
+    /// площадка врёт сильнее, чем грубая фигура: она говорит «дома никого»,
+    /// когда дом посчитал обратное. Цвет пальто берётся от имени, чтобы
+    /// соседи различались с первого взгляда и не менялись между ходами.
+    /// </summary>
+    private void Фигура(Vector3 где, float лицом, string id, string имя)
+    {
+        var тело = new StaticBody3D
+        {
+            Position = где,
+            RotationDegrees = new Vector3(0, лицом, 0),
+        };
+        var пальто = Материал(Пальто(id), 0.95f);
+        тело.AddChild(new MeshInstance3D
+        {
+            Mesh = new CapsuleMesh { Height = 1.55f, Radius = 0.26f },
+            MaterialOverride = пальто,
+            Position = new Vector3(0, 0.78f, 0),
+        });
+        тело.AddChild(new MeshInstance3D
+        {
+            Mesh = new SphereMesh { Height = 0.24f, Radius = 0.12f },
+            MaterialOverride = Материал(new Color("#8a6f56"), 0.9f),
+            Position = new Vector3(0, 1.66f, 0),
+        });
+        тело.AddChild(new CollisionShape3D
+        {
+            Shape = new CapsuleShape3D { Height = 1.75f, Radius = 0.28f },
+            Position = new Vector3(0, 0.88f, 0),
+        });
+        тело.AddChild(new Label3D
+        {
+            Text = имя,
+            FontSize = 96,
+            PixelSize = 0.0028f,
+            Modulate = new Color("#e6dfcd"),
+            Billboard = BaseMaterial3D.BillboardModeEnum.Enabled,
+            Position = new Vector3(0, 1.95f, 0),
+            DoubleSided = true,
+            Shaded = false,
+        });
+        _соседи!.AddChild(тело);
+    }
+
+    /// <summary>Цвет пальто по имени: тот же человек — тот же цвет,
+    /// в этой жизни и в следующей.</summary>
+    private static Color Пальто(string id)
+    {
+        int h = 0;
+        foreach (char c in id)
+            h = unchecked(h * 31 + c);
+        return ПАЛЬТО[(h & 0x7fffffff) % ПАЛЬТО.Length];
+    }
+
+    private static readonly Color[] ПАЛЬТО =
+    {
+        new("#4a5560"), new("#5c4a3f"), new("#3f5147"), new("#63544a"),
+        new("#47445c"), new("#5a5340"), new("#3e4a56"), new("#584349"),
+    };
+
     /// <summary>Где остались зарубки прошлых жизней.</summary>
     public void Отголоски(IReadOnlyCollection<int> квартиры)
     {
