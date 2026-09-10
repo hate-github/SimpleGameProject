@@ -31,8 +31,21 @@ using Дом.Ядро;
 
 namespace Дом.Годот;
 
-/// <summary>Дверь квартиры: к ней подходят и в неё стучат.</summary>
-public sealed record ДверьКвартиры(int квартира, Node3D узел, Vector3 перед);
+/// <summary>
+/// Дверь квартиры: к ней подходят, в неё стучат, и она рассказывает.
+///
+/// Всё, что здесь хранится сверх узла, — это чем дверь **говорит**:
+/// своя краска (общий материал перекрасить нельзя — перекрасятся все
+/// двадцать), щель света понизу и зарубка на косяке от прошлой жизни.
+/// </summary>
+public sealed record ДверьКвартиры(
+    int квартира,
+    StaticBody3D узел,
+    Vector3 перед,
+    float в_дом,
+    StandardMaterial3D краска,
+    MeshInstance3D щель,
+    MeshInstance3D зарубка);
 
 public partial class Мир : Node3D
 {
@@ -99,7 +112,6 @@ public partial class Мир : Node3D
 
         var бетон = Материал(new Color("#3a3a36"), 0.95f);
         var пол = Материал(new Color("#2b2926"), 0.9f);
-        var дверь = Материал(new Color("#6b4a2c"), 0.7f);
         var ступень = Материал(new Color("#4a4843"), 0.9f);
 
         Стены(бетон, высота, этажей);
@@ -113,7 +125,7 @@ public partial class Мир : Node3D
             Коробка(пол, new Vector3(ШИРИНА * 2, 0.2f, до - ЗАД),
                     new Vector3(0, y - 0.1f, (ЗАД + до) / 2));
 
-            Двери(h, дверь, э, y);
+            Двери(h, э, y);
 
             if (э < этажей)
                 Лестница(ступень, пол, y);
@@ -192,7 +204,7 @@ public partial class Мир : Node3D
     }
 
     /// <summary>Четыре двери на площадку: две слева, две справа.</summary>
-    private void Двери(House h, StandardMaterial3D материал, int э, float y)
+    private void Двери(House h, int э, float y)
     {
         for (int i = 0; i < 4; i++)
         {
@@ -203,11 +215,15 @@ public partial class Мир : Node3D
             float в_дом = -сторона;
             float z = Глубина(кв);
             var место = new Vector3(сторона * (ШИРИНА - 0.07f), y + 1.05f, z);
-            var узел = Коробка(материал, new Vector3(0.14f, 2.1f, 0.95f), место);
+            // своя краска на каждую дверь: общий материал перекрасить
+            // нельзя, перекрасятся все двадцать разом
+            var краска = Материал(ДЕРЕВО, 0.7f);
+            var узел = Коробка(краска, new Vector3(0.14f, 2.1f, 0.95f), место);
             узел.Name = $"дверь{кв}";
             Табличка(узел, кв, в_дом);
             _двери.Add(new ДверьКвартиры(
-                кв, узел, new Vector3(место.X + в_дом * 0.9f, y, z)));
+                кв, узел, new Vector3(место.X + в_дом * 0.9f, y, z),
+                в_дом, краска, Щель(место, в_дом), Зарубка(место, в_дом)));
         }
     }
 
@@ -262,6 +278,95 @@ public partial class Мир : Node3D
         });
         AddChild(пандус);
     }
+
+    /// <summary>
+    /// Щель света понизу. Единственное, что видно снаружи о чужом тепле:
+    /// у соседа работает генератор — значит, из-под двери светит.
+    /// </summary>
+    private MeshInstance3D Щель(Vector3 дверь, float в_дом)
+    {
+        var м = new MeshInstance3D
+        {
+            Mesh = new BoxMesh { Size = new Vector3(0.05f, 0.03f, 0.85f) },
+            MaterialOverride = new StandardMaterial3D
+            {
+                AlbedoColor = new Color("#ffd79a"),
+                EmissionEnabled = true,
+                Emission = new Color("#ffd79a"),
+                EmissionEnergyMultiplier = 2.0f,
+                ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
+            },
+            Position = дверь + new Vector3(в_дом * 0.07f, -1.02f, 0),
+            Visible = false,
+        };
+        AddChild(м);
+        return м;
+    }
+
+    /// <summary>
+    /// Зарубка на косяке — отголосок прошлой жизни (ГДД 10).
+    ///
+    /// Игра не объясняет, что это. Царапина у двери, и всё; что именно
+    /// здесь однажды было, скажет подсказка, если подойти и посмотреть.
+    /// Это и есть разница между «показать игроку память» и «дать ему
+    /// на неё наткнуться».
+    /// </summary>
+    private MeshInstance3D Зарубка(Vector3 дверь, float в_дом)
+    {
+        var м = new MeshInstance3D
+        {
+            Mesh = new BoxMesh { Size = new Vector3(0.03f, 0.16f, 0.02f) },
+            MaterialOverride = new StandardMaterial3D
+            {
+                AlbedoColor = new Color("#9aa0b8"),
+                ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
+            },
+            Position = дверь + new Vector3(в_дом * 0.08f, 0.30f, 0.52f),
+            Visible = false,
+        };
+        AddChild(м);
+        return м;
+    }
+
+    /// <summary>
+    /// Что двери говорят сегодня.
+    ///
+    /// Считается не здесь: `Дом.Экран.Подача.Снаружи` решает, что видно
+    /// с площадки, и потому это проверяется из консоли. Узлу остаётся
+    /// краска, щель и угол — и ни одного собственного решения.
+    /// </summary>
+    public void Обновить(IReadOnlyList<Дом.Экран.ДверьСнаружи> что)
+    {
+        var по_номеру = что.ToDictionary(д => д.квартира);
+        foreach (var д in _двери)
+        {
+            if (!по_номеру.TryGetValue(д.квартира, out var с))
+                continue;
+
+            д.краска.AlbedoColor =
+                с.горело ? КОПОТЬ
+                : с.разобрана ? ГОЛО
+                : с.живут ? ДЕРЕВО
+                : ПУСТО;
+            д.щель.Visible = с.свет;
+
+            // сорванный замок виден тем, что дверь больше не закрывается
+            д.узел.RotationDegrees = new Vector3(
+                0, с.взломана || с.разобрана ? д.в_дом * 11 : 0, 0);
+        }
+    }
+
+    /// <summary>Где остались зарубки прошлых жизней.</summary>
+    public void Отголоски(IReadOnlyCollection<int> квартиры)
+    {
+        foreach (var д in _двери)
+            д.зарубка.Visible = квартиры.Contains(д.квартира);
+    }
+
+    private static readonly Color ДЕРЕВО = new("#6b4a2c");
+    private static readonly Color ПУСТО = new("#40301f");
+    private static readonly Color КОПОТЬ = new("#241d18");
+    private static readonly Color ГОЛО = new("#37312a");
 
     /// <summary>Номер квартиры на двери. Читается как есть: подъезд —
     /// это место, где номера написаны краской.</summary>
