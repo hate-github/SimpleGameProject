@@ -12,7 +12,7 @@ using Дом.Ядро;
 
 namespace Дом.Консоль;
 
-public static class Проверки
+public static partial class Проверки
 {
     /// <summary>
     /// Генератор случайности против файла-вектора (`data/rng_вектор.json`).
