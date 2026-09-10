@@ -22,7 +22,7 @@ public static class Физиология
         double work = p.часы_работы;
         double drain = b["расход_сытости"] + work * b["расход_сытости_за_час_работы"];
         if (p.warmth < 40)
-            drain += b["расход_сытости_на_холоде"];
+            drain += b["расход_сытости_на_холоде"] * Поправки.Холод(p);  // Устойчивость
         p.satiety = Util.Clamp(p.satiety - drain);
         p.hydration = Util.Clamp(p.hydration - b["расход_жажды"]);
 

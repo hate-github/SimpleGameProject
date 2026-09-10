@@ -43,7 +43,14 @@ public static class Снимок
     private static readonly Dictionary<string, HashSet<string>> НЕ_СОСТОЯНИЕ =
         new(StringComparer.Ordinal)
         {
-            ["NPC"] = new(StringComparer.Ordinal) { "shelter", "решающий" },
+            ["NPC"] = new(StringComparer.Ordinal)
+            {
+                // `умения` и `карман` — то же, что `решающий`: приставлено
+                // к жильцу снаружи и в мире не существует. У соседей их нет
+                // вовсе, и прогон без игрока даёт ровно тот же снимок,
+                // что и раньше
+                "shelter", "решающий", "умения", "карман",
+            },
             ["Flat"] = new(StringComparer.Ordinal) { "id" },
             ["Кладовая"] = new(StringComparer.Ordinal) { "имя", "имя_род" },
             ["Взгляд"] = new(StringComparer.Ordinal) { "сытость", "целость", "теплота" },

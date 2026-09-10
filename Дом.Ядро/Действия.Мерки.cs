@@ -517,7 +517,7 @@ public static partial class Действия
                                   || npc.skills.Contains("электрик", StringComparer.Ordinal)))
             v -= b["часы_ремонта_за_умение"];
         if (Каталог.РАБОТА.Contains(key))
-            v *= npc.speed(b);
+            v *= npc.speed(b) * Поправки.Быстрее(npc);   // Физика (ГДД 8.1)
         return v;
     }
 }

@@ -118,6 +118,21 @@ public sealed partial class NPC
 
     // --- социальное ---
     public string? group { get; set; }
+    /// <summary>
+    /// Навыки и карман вне времени — только у того, у кого есть наследие
+    /// (ГДД 3, 8, 9). У соседей их нет и не будет: они ничего не помнят
+    /// и ничему не учатся, и это единственное, чем герой от них отличается.
+    ///
+    /// В снимок и в сейв дома **не входят** — как и `решающий`: это
+    /// не состояние мира, а то, что к жильцу приставлено снаружи. Наследие
+    /// сохраняется отдельным файлом (`Хранение`), карман умирает вместе
+    /// с жизнью.
+    /// </summary>
+    public Умения? умения { get; set; }
+
+    /// <inheritdoc cref="умения"/>
+    public Карман? карман { get; set; }
+
     public string? living_with { get; set; }    // к кому переехал
     public HashSet<string> guests { get; } = new(StringComparer.Ordinal);
     public HashSet<string> allies { get; } = new(StringComparer.Ordinal);

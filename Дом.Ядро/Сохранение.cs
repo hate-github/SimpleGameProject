@@ -263,7 +263,7 @@ public static class Сохранение
     /// </summary>
     private static readonly HashSet<string> НЕ_У_ЖИЛЬЦА = new(StringComparer.Ordinal)
     {
-        "решающий", "shelter",
+        "решающий", "shelter", "умения", "карман",
     };
 
     // ---------------------------------------------------------------- обратно
