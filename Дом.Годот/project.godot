@@ -1,13 +1,10 @@
-; Проект Godot 4 для «Опять здесь».
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
 ;
-; Держит только то, что принадлежит движку: окно, главную сцену и имя
-; сборки. Баланс, жильцы, события и реплики остаются в `data/*.json`
-; и читаются ядром напрямую — в `.tres` их не переводить, это убьёт
-; двустороннюю проверку ручек (навык godot-boundary).
-;
-; Порядок разделов движок переписывает под себя при каждом запуске —
-; спорить с ним не надо. А вот этот заголовок он сносит и подставляет
-; свой; возвращать руками.
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
 
 config_version=5
 
