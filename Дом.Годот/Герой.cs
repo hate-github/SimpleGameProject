@@ -63,6 +63,9 @@ public partial class Герой : CharacterBody3D
         {
             TargetPosition = new Vector3(0, 0, -2.2f),  // рука дотянется
             Enabled = true,
+            // своя дверь распахнута, и вместо створки в проёме стоит
+            // область: тело в нём не пропустило бы человека домой
+            CollideWithAreas = true,
         };
         _глаза.AddChild(_луч);
 
