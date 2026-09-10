@@ -23,6 +23,10 @@ public partial class ПодъездUI : ScrollContainer
     /// <summary>Откуда брать. Ставится корневым узлом.</summary>
     public Сеанс? Сеанс { get; set; }
 
+    /// <summary>Что помнится с прошлых жизней: по нему на плане
+    /// проступают отголоски (ГДД 10).</summary>
+    public Наследие? Наследие { get; set; }
+
     public override void _Ready()
     {
         HorizontalScrollMode = ScrollMode.Disabled;
@@ -70,6 +74,22 @@ public partial class ПодъездUI : ScrollContainer
                 };
                 з.AddThemeColorOverride("font_color", new Color("#c8945a"));
                 _столбец.AddChild(з);
+            }
+
+            // и отголоски прошлых жизней (ГДД 10) — тем же местом, но
+            // другим цветом: это не то, что случилось сейчас, а то, что
+            // здесь однажды было. Игра не объясняет, что это; игрок сам
+            // вспоминает — или не вспоминает
+            foreach (var о in (Наследие?.отголоски ?? new List<Отголосок>())
+                              .Where(о => о.квартира == кв.номер).TakeLast(2))
+            {
+                var э = new Label
+                {
+                    Text = "    ~ " + о.текст,
+                    AutowrapMode = TextServer.AutowrapMode.WordSmart,
+                };
+                э.AddThemeColorOverride("font_color", new Color("#6a6f8a"));
+                _столбец.AddChild(э);
             }
         }
 

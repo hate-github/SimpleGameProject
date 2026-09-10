@@ -26,6 +26,19 @@ public static class Пути
     /// <summary>Папка с `balance.json`, `npcs.json` и прочими.</summary>
     public static string Данные => _данные ??= Найти();
 
+    /// <summary>
+    /// Файл наследия (ГДД 24): одно сохранение на петлю, рядом с игрой.
+    ///
+    /// `user://` — то место, куда движок пускает игру писать на любой
+    /// машине; класть сейв в папку проекта нельзя, у собранной игры её
+    /// может не быть вовсе.
+    /// </summary>
+    public static string Наследие
+        => System.IO.Path.Combine(
+               ProjectSettings.GlobalizePath("user://"), "наследие.json");
+
+    public static bool ЕстьНаследие => System.IO.File.Exists(Наследие);
+
     private static string Найти()
     {
         string корень = ProjectSettings.GlobalizePath("res://");
