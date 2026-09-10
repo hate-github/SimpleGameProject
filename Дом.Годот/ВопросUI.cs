@@ -12,6 +12,24 @@
 // Вес показывается. Это не отладка: в ГДД 13 объяснение решения — часть
 // игры, а не служебная информация. Интерфейс, который показывает игроку
 // меньше, чем знает NPC, — уже другая игра.
+//
+// ----------------------------------------------------------------------
+//
+// Два вида: **лист** и **разворот**, и разница между ними — не косметика.
+//
+// Лист лежит в углу, не ловит мышь и никого не держит: пока он висит,
+// человек ходит по подъезду, смотрит на двери и может ответить, просто
+// подойдя. Разворот занимает экран, отпускает мышь и останавливает
+// человека — он для тех случаев, когда вариантов тридцать и нужен весь
+// список с весами.
+//
+// Первая версия знала только разворот, и это была не игра от первого лица,
+// а диалоговое окно на чёрном фоне: подъезд построен, а смотреть на него
+// некогда — экран занят списком. Отбирать варианты, чтобы список стал
+// короче, было нельзя (это и значит «не фильтровать»), поэтому короче стал
+// не список, а то, что видно сразу: десять первых по весу и честная строка
+// «и ещё N — пробел». Полный список в одном нажатии, порядок тот же,
+// нумерация та же.
 
 using Godot;
 using Дом.Ядро;
@@ -22,51 +40,96 @@ public partial class ВопросUI : PanelContainer
 {
     private VBoxContainer _столбец = null!;
     private Label _заголовок = null!;
-    private VBoxContainer _варианты = null!;
+    private VBoxContainer _полный = null!;
+    private VBoxContainer _лист = null!;
+    private ScrollContainer _окно = null!;
+
+    /// <summary>Куда класть строки сейчас: в лист или в разворот.</summary>
+    private VBoxContainer _варианты => _всё ? _полный : _лист;
     private System.Action<int>? _ответить;
 
-    /// <summary>Сколько вариантов показывать сразу. У жильца в доме
-    /// на пятнадцать их бывает и тридцать; остальные — по кнопке.</summary>
-    [Export] public int Коротко { get; set; } = 12;
+    /// <summary>Сколько вариантов видно в листе. Десять — потому что
+    /// столько цифр на клавиатуре: одиннадцатому нечего нажать.</summary>
+    [Export] public int Коротко { get; set; } = 10;
+
+    /// <summary>
+    /// Размер и высота строки листа — числами, а не по теме.
+    ///
+    /// Высоту листа считает <see cref="Лечь"/>, и считает он её по числу
+    /// строк. Значит, высота строки должна быть известна тому, кто её
+    /// умножает, — иначе смена темы молча сдвинет список за нижний край.
+    /// </summary>
+    private const int КЕГЛЬ = 15;
+    private const int ВЫСОТА_СТРОКИ = 23;
+    private const int ШАПКА = 26;      // строка заголовка
+    private const int ПОЛЯ = 16;       // рамка панели сверху и снизу
+
 
     private bool _всё;
     private ВопросИгроку? _текущий;
+    private IReadOnlyList<int?> _двери = System.Array.Empty<int?>();
+
+    /// <summary>Развёрнут ли весь список. Пока развёрнут — человек стоит
+    /// и мышь свободна; пока лист — ходит.</summary>
+    public bool Развёрнут => Visible && _всё;
+
+    public ВопросИгроку? текущий => _текущий;
 
     public override void _Ready()
     {
         Visible = false;
-        _столбец = new VBoxContainer();
+        MouseFilter = MouseFilterEnum.Pass;
+
+        _столбец = new VBoxContainer
+        {
+            SizeFlagsVertical = Control.SizeFlags.ShrinkBegin,
+        };
         AddChild(_столбец);
 
         _заголовок = new Label { AutowrapMode = TextServer.AutowrapMode.WordSmart };
         _столбец.AddChild(_заголовок);
+        _столбец.AddThemeConstantOverride("separation", 2);
 
         // Список прокручивается, а не растёт вниз без предела. Первый же
         // запуск в Godot показал, зачем: тридцать вариантов выдавили журнал
         // и план подъезда в полосу высотой в четыре строки — а решать,
         // не видя, что случилось за день, нельзя
-        var окно = new ScrollContainer
+        _окно = new ScrollContainer
         {
             HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled,
-            CustomMinimumSize = new Vector2(0, 300),
             SizeFlagsVertical = Control.SizeFlags.ShrinkBegin,
         };
-        _столбец.AddChild(окно);
+        _столбец.AddChild(_окно);
 
-        _варианты = new VBoxContainer
+        _полный = new VBoxContainer
         {
             SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
         };
-        окно.AddChild(_варианты);
+        _окно.AddChild(_полный);
+
+        // Лист — прямо в столбце, без прокрутки, и это не мелочь.
+        // `ScrollContainer` высоты по содержимому не имеет: она на то
+        // и прокрутка. Первый заход считал её числом строк — и промахнулся,
+        // потому что высоту строки задаёт тема, а не тот, кто её угадывает:
+        // лист уезжал за нижний край экрана. Без прокрутки высоту считает
+        // сам контейнер, и угадывать нечего.
+        _лист = new VBoxContainer
+        {
+            SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
+        };
+        _лист.SizeFlagsVertical = Control.SizeFlags.ShrinkBegin;
+        _лист.AddThemeConstantOverride("separation", 2);
+        _столбец.AddChild(_лист);
     }
 
-    public void Показать(ВопросИгроку в, System.Action<int> ответить)
+    public void Показать(ВопросИгроку в, IReadOnlyList<int?> двери,
+                         System.Action<int> ответить)
     {
         _текущий = в;
+        _двери = двери;
         _ответить = ответить;
         _всё = false;
         Visible = true;
-        _заголовок.Text = в.заголовок;
         Разложить();
     }
 
@@ -75,7 +138,17 @@ public partial class ВопросUI : PanelContainer
         Visible = false;
         _текущий = null;
         _ответить = null;
+        _двери = System.Array.Empty<int?>();
         Очистить();
+    }
+
+    /// <summary>Свернуть разворот обратно в лист, никого не выбрав.</summary>
+    public void Свернуть()
+    {
+        if (!_всё)
+            return;
+        _всё = false;
+        Разложить();
     }
 
     private void Разложить()
@@ -84,42 +157,119 @@ public partial class ВопросUI : PanelContainer
         if (_текущий is null)
             return;
 
+        // в листе — только первая строка шапки; самочувствие и закрытые
+        // двери длинные, и в углу экрана от них остаётся каша
+        _заголовок.Text = _всё
+            ? _текущий.заголовок
+            : _текущий.заголовок.Split('\n')[0];
+
         int сколько = _всё ? _текущий.варианты.Count
                            : System.Math.Min(Коротко, _текущий.варианты.Count);
+
+        _окно.Visible = _всё;
+        _лист.Visible = !_всё;
+        _окно.CustomMinimumSize = new Vector2(0, _всё ? 360 : 0);
         for (int i = 0; i < сколько; i++)
         {
             int номер = i;                         // замыкание берёт копию
             var в = _текущий.варианты[i];
-            var кнопка = new Button
+            string подпись = _всё ? $"{i}.  {в.строка}"
+                                  : $"{i}.  {Коротко_о(в.строка)}";
+            if (!_всё && i < _двери.Count && _двери[i] is int кв)
+                подпись += $"   ⌂{кв}";
+
+            if (_всё)
             {
-                Text = $"{i}.  {в.строка}",
-                Alignment = HorizontalAlignment.Left,
-            };
-            кнопка.Pressed += () => _ответить?.Invoke(номер);
-            _варианты.AddChild(кнопка);
+                var кнопка = new Button
+                {
+                    Text = подпись,
+                    Alignment = HorizontalAlignment.Left,
+                };
+                кнопка.Pressed += () => _ответить?.Invoke(номер);
+                _варианты.AddChild(кнопка);
+            }
+            else
+                _варианты.AddChild(Строка(подпись));
         }
 
         if (сколько < _текущий.варианты.Count)
-        {
-            var ещё = new Button
-            {
-                Text = $"… и ещё {_текущий.варианты.Count - сколько}",
-                Alignment = HorizontalAlignment.Left,
-            };
-            ещё.Pressed += () => { _всё = true; Разложить(); };
-            _варианты.AddChild(ещё);
-        }
-    }
+            _варианты.AddChild(Строка(
+                $"…и ещё {_текущий.варианты.Count - сколько}   ·   пробел"));
+        else if (!_всё)
+            _варианты.AddChild(Строка("пробел — весь список с весами"));
 
-    private void Очистить()
-    {
-        foreach (var узел in _варианты.GetChildren())
-            узел.QueueFree();
+        _заголовок.AddThemeFontSizeOverride("font_size", КЕГЛЬ + 1);
+        Лечь();
     }
 
     /// <summary>
-    /// Клавишами тоже: цифра — вариант, «всё» на пробел. Мышь для тридцати
-    /// вариантов в день — это тридцать движений туда и обратно.
+    /// Лечь в нижний левый угол экрана.
+    ///
+    /// Числами, а не якорями. Якорь с ростом вверх взял бы высоту
+    /// из минимального размера, а у развёрнутого списка внутри прокрутка,
+    /// и минимального размера по содержимому у неё нет вовсе. Здесь
+    /// ошибиться негде: сколько строк, столько и высоты, а разворот
+    /// занимает столько, сколько ему отмерено.
+    /// </summary>
+    private void Лечь()
+    {
+        var экран = GetParentControl()?.Size ?? GetViewportRect().Size;
+        int строк = (_всё ? _полный : _лист).GetChildCount();
+        float высота = _всё
+            ? Mathf.Min(экран.Y - 90, 400)
+            : ШАПКА + строк * (ВЫСОТА_СТРОКИ + 2) + ПОЛЯ;
+        Size = new Vector2(Mathf.Min(660, экран.X * 0.54f), высота);
+        Position = new Vector2(14, экран.Y - 46 - высота);
+    }
+
+    public override void _Process(double delta)
+    {
+        if (Visible)
+            Лечь();
+    }
+
+    /// <summary>Строка листа: кегль и высота названы, а не взяты у темы.</summary>
+    private static Label Строка(string текст)
+    {
+        var л = new Label
+        {
+            Text = текст,
+            CustomMinimumSize = new Vector2(0, ВЫСОТА_СТРОКИ),
+            VerticalAlignment = VerticalAlignment.Center,
+            // без этого раскладка растягивает строки по высоте панели:
+            // строк становится столько же, а места они занимают больше
+            SizeFlagsVertical = Control.SizeFlags.ShrinkBegin,
+        };
+        л.AddThemeFontSizeOverride("font_size", КЕГЛЬ);
+        return л;
+    }
+
+    /// <summary>В листе вес не печатается: он занимает половину строки,
+    /// а строк десять и висят они поверх подъезда. В развороте — весь,
+    /// как было (ГДД 13).</summary>
+    private static string Коротко_о(string строка)
+    {
+        int i = строка.IndexOf("  ", System.StringComparison.Ordinal);
+        return i > 0 ? строка[..i].TrimEnd() : строка;
+    }
+
+    /// <summary>Убрать строки из обоих видов. `QueueFree` снимает узел
+    /// не сразу, поэтому его сначала отцепляют: иначе следующая раскладка
+    /// успевает посчитать высоту вместе с теми строками, которых уже нет.</summary>
+    private void Очистить()
+    {
+        foreach (var где in new[] { _полный, _лист })
+            foreach (var узел in где.GetChildren())
+            {
+                где.RemoveChild(узел);
+                узел.QueueFree();
+            }
+    }
+
+    /// <summary>
+    /// Клавишами тоже: цифра — вариант, пробел — развернуть и свернуть.
+    /// Мышь для тридцати вариантов в день — это тридцать движений туда
+    /// и обратно.
     ///
     /// Повтор (<c>Echo</c>) отбрасывается, и это не мелочь. Windows шлёт
     /// зажатую клавишу десятками событий в секунду; пока они принимались,
@@ -136,7 +286,7 @@ public partial class ВопросUI : PanelContainer
             return;
         if (к.Keycode == Key.Space)
         {
-            _всё = true;
+            _всё = !_всё;
             Разложить();
             AcceptEvent();
             return;
