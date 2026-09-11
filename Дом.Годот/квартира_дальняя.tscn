@@ -243,7 +243,7 @@ transform = Transform3D(1.2, 0, 0, 0, 1, 0, -0, 0, 1, 1.15, 0, 5.65)
 transform = Transform3D(1.6, 0, 0, 0, 1, 0, -0, 0, 1, 4.4, 0, 5.65)
 
 [node name="печь" type="Marker3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 1.95, 0, 1.5)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 4.6, 0, 2.9)
 
 [node name="полка" type="Marker3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 5.8, 0, 1.4)
