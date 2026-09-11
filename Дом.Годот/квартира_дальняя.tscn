@@ -1,0 +1,255 @@
+[gd_scene load_steps=34 format=3 uid="uid://bКвартираДальняя"]
+
+[sub_resource type="BoxMesh" id="Box_0"]
+size = Vector3(6.53, 0.2, 5.18)
+
+[sub_resource type="BoxMesh" id="Box_1"]
+size = Vector3(1.1, 0.2, 4.66)
+
+[sub_resource type="BoxMesh" id="Box_2"]
+size = Vector3(6.53, 0.2, 5.18)
+
+[sub_resource type="BoxMesh" id="Box_3"]
+size = Vector3(1.1, 0.2, 4.66)
+
+[sub_resource type="BoxMesh" id="Box_4"]
+size = Vector3(0.22, 2.6, 0.76)
+
+[sub_resource type="BoxMesh" id="Box_5"]
+size = Vector3(0.22, 0.85, 1.6)
+
+[sub_resource type="BoxMesh" id="Box_6"]
+size = Vector3(0.22, 0.5, 1.6)
+
+[sub_resource type="BoxMesh" id="Box_7"]
+size = Vector3(0.22, 2.6, 2.96)
+
+[sub_resource type="BoxMesh" id="Box_8"]
+size = Vector3(0.77, 2.6, 0.22)
+
+[sub_resource type="BoxMesh" id="Box_9"]
+size = Vector3(1.2, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="Box_10"]
+size = Vector3(1.2, 0.5, 0.22)
+
+[sub_resource type="BoxMesh" id="Box_11"]
+size = Vector3(1.85, 2.6, 0.22)
+
+[sub_resource type="BoxMesh" id="Box_12"]
+size = Vector3(1.6, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="Box_13"]
+size = Vector3(1.6, 0.5, 0.22)
+
+[sub_resource type="BoxMesh" id="Box_14"]
+size = Vector3(1.55, 2.6, 0.22)
+
+[sub_resource type="BoxMesh" id="Box_15"]
+size = Vector3(0.22, 2.6, 4.88)
+
+[sub_resource type="BoxMesh" id="Box_16"]
+size = Vector3(1.1, 2.6, 0.12)
+
+[sub_resource type="BoxMesh" id="Box_17"]
+size = Vector3(0.12, 2.6, 4.36)
+
+[sub_resource type="BoxMesh" id="Box_18"]
+size = Vector3(5.43, 2.6, 0.12)
+
+[sub_resource type="BoxMesh" id="Box_19"]
+size = Vector3(0.12, 2.6, 0.24)
+
+[sub_resource type="BoxMesh" id="Box_20"]
+size = Vector3(0.12, 0.6, 0.8)
+
+[sub_resource type="BoxMesh" id="Box_21"]
+size = Vector3(0.12, 2.6, 2.3)
+
+[sub_resource type="BoxMesh" id="Box_22"]
+size = Vector3(0.12, 0.6, 0.8)
+
+[sub_resource type="BoxMesh" id="Box_23"]
+size = Vector3(0.12, 2.6, 0.74)
+
+[sub_resource type="BoxMesh" id="Box_24"]
+size = Vector3(1.1, 2.6, 0.12)
+
+[sub_resource type="BoxMesh" id="Box_25"]
+size = Vector3(0.8, 0.6, 0.12)
+
+[sub_resource type="BoxMesh" id="Box_26"]
+size = Vector3(0.4, 2.6, 0.12)
+
+[sub_resource type="BoxMesh" id="Box_27"]
+size = Vector3(1.1, 2.6, 0.12)
+
+[sub_resource type="BoxMesh" id="Box_28"]
+size = Vector3(0.8, 0.6, 0.12)
+
+[sub_resource type="BoxMesh" id="Box_29"]
+size = Vector3(0.4, 2.6, 0.12)
+
+[sub_resource type="BoxMesh" id="Box_30"]
+size = Vector3(0.5, 2.6, 0.12)
+
+[sub_resource type="BoxMesh" id="Box_31"]
+size = Vector3(0.8, 0.6, 0.12)
+
+[sub_resource type="BoxMesh" id="Box_32"]
+size = Vector3(2.93, 2.6, 0.12)
+
+[node name="КвартираДальняя" type="Node3D"]
+
+[node name="пол0" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 3.265, -0.1, 2.95)
+mesh = SubResource("Box_0")
+
+[node name="пол1" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0.55, -0.1, -1.37)
+mesh = SubResource("Box_1")
+
+[node name="обои2" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 3.265, 2.7, 2.95)
+mesh = SubResource("Box_2")
+
+[node name="обои3" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0.55, 2.7, -1.37)
+mesh = SubResource("Box_3")
+
+[node name="стена_торец4" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 6.64, 1.3, 0.82)
+mesh = SubResource("Box_4")
+
+[node name="стена_торец5" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 6.64, 0.425, 2)
+mesh = SubResource("Box_5")
+
+[node name="стена_торец6" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 6.64, 2.35, 2)
+mesh = SubResource("Box_6")
+
+[node name="стена_торец7" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 6.64, 1.3, 4.28)
+mesh = SubResource("Box_7")
+
+[node name="стена_фасад8" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0.165, 1.3, 5.65)
+mesh = SubResource("Box_8")
+
+[node name="стена_фасад9" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 1.15, 0.425, 5.65)
+mesh = SubResource("Box_9")
+
+[node name="стена_фасад10" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 1.15, 2.35, 5.65)
+mesh = SubResource("Box_10")
+
+[node name="стена_фасад11" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 2.675, 1.3, 5.65)
+mesh = SubResource("Box_11")
+
+[node name="стена_фасад12" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 4.4, 0.425, 5.65)
+mesh = SubResource("Box_12")
+
+[node name="стена_фасад13" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 4.4, 2.35, 5.65)
+mesh = SubResource("Box_13")
+
+[node name="стена_фасад14" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 5.975, 1.3, 5.65)
+mesh = SubResource("Box_14")
+
+[node name="стена_шахта15" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -0.11, 1.3, 3.1)
+mesh = SubResource("Box_15")
+
+[node name="стена_сосед16" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0.55, 1.3, -3.76)
+mesh = SubResource("Box_16")
+
+[node name="стена_коридор17" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 1.16, 1.3, -1.52)
+mesh = SubResource("Box_17")
+
+[node name="стена_перед18" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 3.815, 1.3, 0.6)
+mesh = SubResource("Box_18")
+
+[node name="обои_быт19" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 2.3, 1.3, 0.78)
+mesh = SubResource("Box_19")
+
+[node name="обои_быт20" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 2.3, 2.3, 1.3)
+mesh = SubResource("Box_20")
+
+[node name="обои_быт21" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 2.3, 1.3, 2.85)
+mesh = SubResource("Box_21")
+
+[node name="обои_быт22" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 2.3, 2.3, 4.4)
+mesh = SubResource("Box_22")
+
+[node name="обои_быт23" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 2.3, 1.3, 5.17)
+mesh = SubResource("Box_23")
+
+[node name="обои_прихожая24" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0.55, 1.3, 1.9)
+mesh = SubResource("Box_24")
+
+[node name="обои_прихожая25" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 1.5, 2.3, 1.9)
+mesh = SubResource("Box_25")
+
+[node name="обои_прихожая26" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 2.1, 1.3, 1.9)
+mesh = SubResource("Box_26")
+
+[node name="обои_санузел27" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0.55, 1.3, 3.3)
+mesh = SubResource("Box_27")
+
+[node name="обои_санузел28" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 1.5, 2.3, 3.3)
+mesh = SubResource("Box_28")
+
+[node name="обои_санузел29" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 2.1, 1.3, 3.3)
+mesh = SubResource("Box_29")
+
+[node name="обои_комнаты30" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 2.55, 1.3, 3.3)
+mesh = SubResource("Box_30")
+
+[node name="обои_комнаты31" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 3.2, 2.3, 3.3)
+mesh = SubResource("Box_31")
+
+[node name="обои_комнаты32" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 5.065, 1.3, 3.3)
+mesh = SubResource("Box_32")
+
+[node name="окно_торец" type="Marker3D" parent="."]
+transform = Transform3D(9.79717e-17, 0, 1.6, 0, 1, 0, -1, 0, 6.12323e-17, 6.64, 0, 2)
+
+[node name="окно_кухня" type="Marker3D" parent="."]
+transform = Transform3D(1.2, 0, 0, 0, 1, 0, -0, 0, 1, 1.15, 0, 5.65)
+
+[node name="окно_дальняя" type="Marker3D" parent="."]
+transform = Transform3D(1.6, 0, 0, 0, 1, 0, -0, 0, 1, 4.4, 0, 5.65)
+
+[node name="печь" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 1.95, 0, 1.5)
+
+[node name="полка" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 5.8, 0, 1.4)
+
+[node name="матрас" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 4.6, 0, 4.6)
+
+[node name="лопата" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0.3, 0, -1.4)

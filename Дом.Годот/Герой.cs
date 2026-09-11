@@ -46,6 +46,13 @@ public partial class Герой : CharacterBody3D
 	/// <summary>На какую кладовую смотрит — во дворе их пять.</summary>
 	public string? Перед_кладовой { get; private set; }
 
+	/// <summary>Обо что упёрся в этом кадре — имя узла, если упёрся.
+	///
+	/// Заведено потому, что трижды за перенос «герой не идёт» разбиралось
+	/// по кадрам и трижды неверно, а `GetSlideCollision` называл виновника
+	/// с первого раза. Читается при включённой слежке.</summary>
+	public string Помеха { get; private set; } = "";
+
 	public Camera3D глаза => _глаза;
 
 	public override void _Ready()
@@ -160,6 +167,19 @@ public partial class Герой : CharacterBody3D
 		UpDirection = Vector3.Up;
 		FloorMaxAngle = Mathf.DegToRad(60);            // по ступеням лезем сами
 		MoveAndSlide();
+
+		// Пол под ногами — тоже касание, и в списке он всегда. Помеха —
+		// это то, что стоит поперёк: у него нормаль почти горизонтальна.
+		Помеха = "";
+		for (int i = 0; i < GetSlideCollisionCount(); i++)
+		{
+			var с = GetSlideCollision(i);
+			if (Mathf.Abs(с.GetNormal().Y) > 0.7f)
+				continue;
+			if (с.GetCollider() is Node кто)
+				Помеха = Помеха.Length == 0 ? кто.Name.ToString()
+										   : Помеха + "," + кто.Name;
+		}
 
 		// взгляд качает от холода и паники: мелко и медленно, не тряской
 		float кач = (float)Дрожь * 0.012f;
