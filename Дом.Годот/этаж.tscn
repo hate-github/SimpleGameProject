@@ -1,0 +1,97 @@
+[gd_scene load_steps=11 format=3 uid="uid://betazh15sosed"]
+
+[sub_resource type="BoxMesh" id="Box_0"]
+size = Vector3(2.9, 0.2, 2.86)
+
+[sub_resource type="BoxMesh" id="Box_1"]
+size = Vector3(0.2, 0.7, 6.32)
+
+[sub_resource type="BoxMesh" id="Box_2"]
+size = Vector3(0.2, 2.18, 0.31)
+
+[sub_resource type="BoxMesh" id="Box_3"]
+size = Vector3(0.2, 2.18, 0.6)
+
+[sub_resource type="BoxMesh" id="Box_4"]
+size = Vector3(0.2, 2.18, 3.41)
+
+[sub_resource type="BoxMesh" id="Box_5"]
+size = Vector3(0.2, 0.7, 6.32)
+
+[sub_resource type="BoxMesh" id="Box_6"]
+size = Vector3(0.2, 2.18, 0.31)
+
+[sub_resource type="BoxMesh" id="Box_7"]
+size = Vector3(0.2, 2.18, 0.6)
+
+[sub_resource type="BoxMesh" id="Box_8"]
+size = Vector3(0.2, 2.18, 3.41)
+
+[sub_resource type="BoxMesh" id="Box_9"]
+size = Vector3(3.3, 2.8, 0.2)
+
+[node name="Этаж" type="Node3D"]
+
+[node name="пол_площадка" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0, -0.1, -4.13)
+mesh = SubResource("Box_0")
+
+[node name="стена_бок_верхл" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -1.55, 2.45, -2.5)
+mesh = SubResource("Box_1")
+
+[node name="стена_бокл0" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -1.55, 1.01, -5.505)
+mesh = SubResource("Box_2")
+
+[node name="стена_бокл1" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -1.55, 1.01, -4.05)
+mesh = SubResource("Box_3")
+
+[node name="стена_бокл2" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -1.55, 1.01, -1.045)
+mesh = SubResource("Box_4")
+
+[node name="стена_бок_верхп" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 1.55, 2.45, -2.5)
+mesh = SubResource("Box_5")
+
+[node name="стена_бокп0" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 1.55, 1.01, -5.505)
+mesh = SubResource("Box_6")
+
+[node name="стена_бокп1" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 1.55, 1.01, -4.05)
+mesh = SubResource("Box_7")
+
+[node name="стена_бокп2" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 1.55, 1.01, -1.045)
+mesh = SubResource("Box_8")
+
+[node name="стена_перед" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0, 1.4, 0.66)
+mesh = SubResource("Box_9")
+
+[node name="дверь0" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -1.38, 0, -4.85)
+
+[node name="дверь1" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -1.38, 0, -3.25)
+
+[node name="дверь2" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 1.38, 0, -4.85)
+
+[node name="дверь3" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 1.38, 0, -3.25)
+
+[node name="лампа" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0, 2.35, -4.16)
+
+[node name="выход" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0, 0, -5.56)
+
+[node name="марш1" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 2.16, -0.775, 0, -2.7)
+
+[node name="марш2" type="Marker3D" parent="."]
+transform = Transform3D(-1, 0, 1.22465e-16, 0, 1, 0, -2.64524e-16, 0, -2.16, 0.775, 0, -0.54)
