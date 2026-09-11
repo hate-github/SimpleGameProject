@@ -43,6 +43,9 @@ public partial class Герой : CharacterBody3D
 	/// <summary>Смотрит ли на входную дверь подъезда.</summary>
 	public bool Перед_выходом { get; private set; }
 
+	/// <summary>На какую кладовую смотрит — во дворе их пять.</summary>
+	public string? Перед_кладовой { get; private set; }
+
 	public Camera3D глаза => _глаза;
 
 	public override void _Ready()
@@ -167,6 +170,7 @@ public partial class Герой : CharacterBody3D
 
 		Перед_дверью = null;
 		Перед_выходом = false;
+		Перед_кладовой = null;
 		if (_луч.IsColliding() && _луч.GetCollider() is Node узел)
 		{
 			string имя = узел.Name.ToString();
@@ -175,6 +179,8 @@ public partial class Герой : CharacterBody3D
 				Перед_дверью = кв;
 			else if (имя == "выход")
 				Перед_выходом = true;
+			else if (имя.StartsWith("кладовая", StringComparison.Ordinal))
+				Перед_кладовой = имя[8..];
 		}
 	}
 }
