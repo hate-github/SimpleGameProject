@@ -4,13 +4,13 @@
 size = Vector3(6.53, 0.2, 2.14)
 
 [sub_resource type="BoxMesh" id="Box_1"]
-size = Vector3(4.93, 0.2, 3.6)
+size = Vector3(4.93, 0.2, 4.6)
 
 [sub_resource type="BoxMesh" id="Box_2"]
 size = Vector3(6.53, 0.2, 2.14)
 
 [sub_resource type="BoxMesh" id="Box_3"]
-size = Vector3(4.93, 0.2, 3.6)
+size = Vector3(4.93, 0.2, 4.6)
 
 [sub_resource type="BoxMesh" id="Box_4"]
 size = Vector3(0.22, 2.6, 2.96)
@@ -22,7 +22,7 @@ size = Vector3(0.22, 0.85, 1.6)
 size = Vector3(0.22, 0.5, 1.6)
 
 [sub_resource type="BoxMesh" id="Box_7"]
-size = Vector3(0.22, 2.6, 0.8)
+size = Vector3(0.22, 2.6, 1.8)
 
 [sub_resource type="BoxMesh" id="Box_8"]
 size = Vector3(2.82, 2.6, 0.22)
@@ -37,7 +37,7 @@ size = Vector3(1.6, 0.5, 0.22)
 size = Vector3(2.55, 2.6, 0.22)
 
 [sub_resource type="BoxMesh" id="Box_12"]
-size = Vector3(0.12, 2.6, 3.3)
+size = Vector3(0.12, 2.6, 4.3)
 
 [sub_resource type="BoxMesh" id="Box_13"]
 size = Vector3(4.93, 2.6, 0.12)
@@ -85,7 +85,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 3.265, -0.1, -4.47)
 mesh = SubResource("Box_0")
 
 [node name="пол1" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 4.065, -0.1, -2.2)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 4.065, -0.1, -1.7)
 mesh = SubResource("Box_1")
 
 [node name="обои2" type="MeshInstance3D" parent="."]
@@ -93,7 +93,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 3.265, 2.7, -4.47)
 mesh = SubResource("Box_2")
 
 [node name="обои3" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 4.065, 2.7, -2.2)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 4.065, 2.7, -1.7)
 mesh = SubResource("Box_3")
 
 [node name="стена_торец4" type="MeshInstance3D" parent="."]
@@ -109,7 +109,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 6.64, 2.35, -2)
 mesh = SubResource("Box_6")
 
 [node name="стена_торец7" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 6.64, 1.3, -0.8)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 6.64, 1.3, -0.3)
 mesh = SubResource("Box_7")
 
 [node name="стена_зад8" type="MeshInstance3D" parent="."]
@@ -129,11 +129,11 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 5.475, 1.3, -5.65)
 mesh = SubResource("Box_11")
 
 [node name="стена_шахта212" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 1.54, 1.3, -2.05)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 1.54, 1.3, -1.55)
 mesh = SubResource("Box_12")
 
 [node name="стена_перед13" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 4.065, 1.3, -0.34)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 4.065, 1.3, 0.66)
 mesh = SubResource("Box_13")
 
 [node name="обои_быт14" type="MeshInstance3D" parent="."]
