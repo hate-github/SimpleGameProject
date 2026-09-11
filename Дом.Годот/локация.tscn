@@ -1,25 +1,25 @@
-[gd_scene load_steps=487 format=3 uid="uid://bdom15celik"]
+[gd_scene load_steps=969 format=3 uid="uid://bdom15celik"]
 
 [sub_resource type="BoxMesh" id="B0"]
-size = Vector3(2.9, 0.2, 6.12)
+size = Vector3(16.38, 0.2, 6.32)
 
 [sub_resource type="BoxMesh" id="B1"]
-size = Vector3(0.2, 2.8, 6.12)
+size = Vector3(0.2, 2.8, 6.32)
 
 [sub_resource type="BoxMesh" id="B2"]
-size = Vector3(0.2, 2.8, 6.12)
+size = Vector3(0.2, 2.8, 6.32)
 
 [sub_resource type="BoxMesh" id="B3"]
-size = Vector3(3.3, 2.8, 0.2)
+size = Vector3(14.14, 2.8, 0.2)
 
 [sub_resource type="BoxMesh" id="B4"]
-size = Vector3(2.05, 2.8, 0.2)
-
-[sub_resource type="BoxMesh" id="B5"]
 size = Vector3(1, 0.8, 0.2)
 
+[sub_resource type="BoxMesh" id="B5"]
+size = Vector3(1.24, 2.8, 0.2)
+
 [sub_resource type="BoxMesh" id="B6"]
-size = Vector3(0.25, 2.8, 0.2)
+size = Vector3(16.78, 2.8, 0.2)
 
 [sub_resource type="BoxMesh" id="B7"]
 size = Vector3(1.1, 0.2, 4.84)
@@ -1234,25 +1234,25 @@ size = Vector3(6.75, 0.24, 11.3)
 size = Vector3(6.75, 0.24, 11.3)
 
 [sub_resource type="BoxMesh" id="B411"]
-size = Vector3(80, 0.2, 29.5)
+size = Vector3(120, 0.2, 49.5)
 
 [sub_resource type="BoxMesh" id="B412"]
-size = Vector3(80, 0.2, 39.14)
+size = Vector3(120, 0.2, 59.14)
 
 [sub_resource type="BoxMesh" id="B413"]
-size = Vector3(38.25, 0.2, 11.36)
+size = Vector3(51.51, 0.2, 11.36)
 
 [sub_resource type="BoxMesh" id="B414"]
-size = Vector3(38.25, 0.2, 11.36)
+size = Vector3(51.51, 0.2, 11.36)
 
 [sub_resource type="BoxMesh" id="B415"]
-size = Vector3(0.15, 0.2, 4.74)
+size = Vector3(1.34, 0.2, 4.74)
 
 [sub_resource type="BoxMesh" id="B416"]
-size = Vector3(1.95, 0.2, 4.74)
+size = Vector3(14.24, 0.2, 4.74)
 
 [sub_resource type="BoxMesh" id="B417"]
-size = Vector3(2.6, 0.1, 2.6)
+size = Vector3(3, 0.1, 2.6)
 
 [sub_resource type="BoxMesh" id="B418"]
 size = Vector3(4.4, 1.7, 2.6)
@@ -1261,34 +1261,34 @@ size = Vector3(4.4, 1.7, 2.6)
 size = Vector3(4.4, 2.26, 2.6)
 
 [sub_resource type="BoxMesh" id="B420"]
-size = Vector3(2.6, 1.98, 4.4)
+size = Vector3(4.4, 1.98, 2.6)
 
 [sub_resource type="BoxMesh" id="B421"]
-size = Vector3(2.6, 1.98, 4.4)
+size = Vector3(4.4, 1.98, 2.6)
 
 [sub_resource type="BoxMesh" id="B422"]
-size = Vector3(4.4, 1.98, 2.6)
-
-[sub_resource type="BoxMesh" id="B423"]
-size = Vector3(4.4, 1.98, 2.6)
-
-[sub_resource type="BoxMesh" id="B424"]
-size = Vector3(2.6, 1.98, 4.4)
-
-[sub_resource type="BoxMesh" id="B425"]
-size = Vector3(2.6, 1.98, 4.4)
-
-[sub_resource type="BoxMesh" id="B426"]
 size = Vector3(4.4, 2.26, 2.6)
 
-[sub_resource type="BoxMesh" id="B427"]
+[sub_resource type="BoxMesh" id="B423"]
 size = Vector3(4.4, 1.7, 2.6)
 
+[sub_resource type="BoxMesh" id="B424"]
+size = Vector3(4.4, 1.7, 2.6)
+
+[sub_resource type="BoxMesh" id="B425"]
+size = Vector3(4.4, 2.26, 2.6)
+
+[sub_resource type="BoxMesh" id="B426"]
+size = Vector3(4.4, 1.98, 2.6)
+
+[sub_resource type="BoxMesh" id="B427"]
+size = Vector3(4.4, 1.98, 2.6)
+
 [sub_resource type="BoxMesh" id="B428"]
-size = Vector3(2.6, 1.98, 4.4)
+size = Vector3(4.4, 2.26, 2.6)
 
 [sub_resource type="BoxMesh" id="B429"]
-size = Vector3(2.6, 1.98, 4.4)
+size = Vector3(4.4, 1.7, 2.6)
 
 [sub_resource type="BoxMesh" id="B430"]
 size = Vector3(4.4, 1.7, 2.6)
@@ -1297,61 +1297,61 @@ size = Vector3(4.4, 1.7, 2.6)
 size = Vector3(4.4, 2.26, 2.6)
 
 [sub_resource type="BoxMesh" id="B432"]
-size = Vector3(2.6, 1.98, 4.4)
-
-[sub_resource type="BoxMesh" id="B433"]
-size = Vector3(2.6, 1.98, 4.4)
-
-[sub_resource type="BoxMesh" id="B434"]
 size = Vector3(4.4, 1.98, 2.6)
 
+[sub_resource type="BoxMesh" id="B433"]
+size = Vector3(4.4, 1.98, 2.6)
+
+[sub_resource type="BoxMesh" id="B434"]
+size = Vector3(4.4, 2.26, 2.6)
+
 [sub_resource type="BoxMesh" id="B435"]
-size = Vector3(2.6, 1.98, 4.4)
-
-[sub_resource type="BoxMesh" id="B436"]
-size = Vector3(2.6, 1.98, 4.4)
-
-[sub_resource type="BoxMesh" id="B437"]
 size = Vector3(4.4, 1.7, 2.6)
 
+[sub_resource type="BoxMesh" id="B436"]
+size = Vector3(4.4, 1.7, 2.6)
+
+[sub_resource type="BoxMesh" id="B437"]
+size = Vector3(4.4, 2.26, 2.6)
+
 [sub_resource type="BoxMesh" id="B438"]
-size = Vector3(2.6, 1.98, 4.4)
+size = Vector3(4.4, 1.98, 2.6)
 
 [sub_resource type="BoxMesh" id="B439"]
-size = Vector3(2.6, 1.98, 4.4)
+size = Vector3(4.4, 1.7, 2.6)
 
 [sub_resource type="BoxMesh" id="B440"]
 size = Vector3(4.4, 2.26, 2.6)
 
 [sub_resource type="BoxMesh" id="B441"]
-size = Vector3(2.6, 1.98, 4.4)
+size = Vector3(4.4, 1.98, 2.6)
 
 [sub_resource type="BoxMesh" id="B442"]
-size = Vector3(2.6, 1.98, 4.4)
+size = Vector3(4.4, 1.98, 2.6)
 
 [sub_resource type="BoxMesh" id="B443"]
-size = Vector3(4.4, 1.98, 2.6)
-
-[sub_resource type="BoxMesh" id="B444"]
-size = Vector3(4.4, 1.98, 2.6)
-
-[sub_resource type="BoxMesh" id="B445"]
-size = Vector3(2.6, 1.98, 4.4)
-
-[sub_resource type="BoxMesh" id="B446"]
-size = Vector3(2.6, 1.98, 4.4)
-
-[sub_resource type="BoxMesh" id="B447"]
 size = Vector3(4.4, 2.26, 2.6)
 
-[sub_resource type="BoxMesh" id="B448"]
+[sub_resource type="BoxMesh" id="B444"]
 size = Vector3(4.4, 1.7, 2.6)
 
+[sub_resource type="BoxMesh" id="B445"]
+size = Vector3(4.4, 1.7, 2.6)
+
+[sub_resource type="BoxMesh" id="B446"]
+size = Vector3(4.4, 2.26, 2.6)
+
+[sub_resource type="BoxMesh" id="B447"]
+size = Vector3(4.4, 1.98, 2.6)
+
+[sub_resource type="BoxMesh" id="B448"]
+size = Vector3(4.4, 1.98, 2.6)
+
 [sub_resource type="BoxMesh" id="B449"]
-size = Vector3(2.6, 1.98, 4.4)
+size = Vector3(4.4, 2.26, 2.6)
 
 [sub_resource type="BoxMesh" id="B450"]
-size = Vector3(2.6, 1.98, 4.4)
+size = Vector3(4.4, 1.7, 2.6)
 
 [sub_resource type="BoxMesh" id="B451"]
 size = Vector3(4.4, 1.7, 2.6)
@@ -1360,94 +1360,94 @@ size = Vector3(4.4, 1.7, 2.6)
 size = Vector3(4.4, 2.26, 2.6)
 
 [sub_resource type="BoxMesh" id="B453"]
-size = Vector3(2.6, 1.98, 4.4)
+size = Vector3(4.4, 1.98, 2.6)
 
 [sub_resource type="BoxMesh" id="B454"]
-size = Vector3(2.6, 1.98, 4.4)
+size = Vector3(4.4, 1.98, 2.6)
 
 [sub_resource type="BoxMesh" id="B455"]
-size = Vector3(4.4, 1.98, 2.6)
+size = Vector3(4.4, 2.26, 2.6)
 
 [sub_resource type="BoxMesh" id="B456"]
-size = Vector3(4.4, 1.98, 2.6)
+size = Vector3(4.4, 1.7, 2.6)
 
 [sub_resource type="BoxMesh" id="B457"]
-size = Vector3(2.6, 1.98, 4.4)
+size = Vector3(4.4, 1.7, 2.6)
 
 [sub_resource type="BoxMesh" id="B458"]
-size = Vector3(2.6, 1.98, 4.4)
+size = Vector3(4.4, 2.26, 2.6)
 
 [sub_resource type="BoxMesh" id="B459"]
-size = Vector3(3.14, 2.6, 6)
+size = Vector3(4.4, 1.98, 2.6)
 
 [sub_resource type="BoxMesh" id="B460"]
-size = Vector3(3.3, 0.2, 6.2)
+size = Vector3(4.4, 1.98, 2.6)
 
 [sub_resource type="BoxMesh" id="B461"]
-size = Vector3(2.35, 2.1, 0.1)
+size = Vector3(2.6, 1.98, 4.4)
 
 [sub_resource type="BoxMesh" id="B462"]
-size = Vector3(3.14, 2.6, 6)
+size = Vector3(2.6, 1.98, 4.4)
 
 [sub_resource type="BoxMesh" id="B463"]
-size = Vector3(3.3, 0.2, 6.2)
+size = Vector3(2.6, 1.98, 4.4)
 
 [sub_resource type="BoxMesh" id="B464"]
-size = Vector3(2.35, 2.1, 0.1)
+size = Vector3(2.6, 1.98, 4.4)
 
 [sub_resource type="BoxMesh" id="B465"]
-size = Vector3(3.14, 2.6, 6)
+size = Vector3(2.6, 1.98, 4.4)
 
 [sub_resource type="BoxMesh" id="B466"]
-size = Vector3(3.3, 0.2, 6.2)
+size = Vector3(2.6, 1.98, 4.4)
 
 [sub_resource type="BoxMesh" id="B467"]
-size = Vector3(2.35, 2.1, 0.1)
+size = Vector3(2.6, 1.98, 4.4)
 
 [sub_resource type="BoxMesh" id="B468"]
-size = Vector3(3.14, 2.6, 6)
+size = Vector3(2.6, 1.98, 4.4)
 
 [sub_resource type="BoxMesh" id="B469"]
-size = Vector3(3.3, 0.2, 6.2)
+size = Vector3(2.6, 1.98, 4.4)
 
 [sub_resource type="BoxMesh" id="B470"]
-size = Vector3(2.35, 2.1, 0.1)
+size = Vector3(2.6, 1.98, 4.4)
 
 [sub_resource type="BoxMesh" id="B471"]
-size = Vector3(3.14, 2.6, 6)
+size = Vector3(2.6, 1.98, 4.4)
 
 [sub_resource type="BoxMesh" id="B472"]
-size = Vector3(3.3, 0.2, 6.2)
+size = Vector3(2.6, 1.98, 4.4)
 
 [sub_resource type="BoxMesh" id="B473"]
-size = Vector3(2.35, 2.1, 0.1)
+size = Vector3(2.6, 1.98, 4.4)
 
 [sub_resource type="BoxMesh" id="B474"]
-size = Vector3(3.14, 2.6, 6)
+size = Vector3(2.6, 1.98, 4.4)
 
 [sub_resource type="BoxMesh" id="B475"]
-size = Vector3(3.3, 0.2, 6.2)
+size = Vector3(2.6, 1.98, 4.4)
 
 [sub_resource type="BoxMesh" id="B476"]
-size = Vector3(2.35, 2.1, 0.1)
+size = Vector3(2.6, 1.98, 4.4)
 
 [sub_resource type="BoxMesh" id="B477"]
-size = Vector3(3.14, 2.6, 6)
+size = Vector3(2.6, 1.98, 4.4)
 
 [sub_resource type="BoxMesh" id="B478"]
-size = Vector3(3.3, 0.2, 6.2)
+size = Vector3(2.6, 1.98, 4.4)
 
 [sub_resource type="BoxMesh" id="B479"]
-size = Vector3(2.35, 2.1, 0.1)
+size = Vector3(2.6, 1.98, 4.4)
 
 [sub_resource type="BoxMesh" id="B480"]
-size = Vector3(3.14, 2.6, 6)
+size = Vector3(2.6, 1.98, 4.4)
 
 [sub_resource type="BoxMesh" id="B481"]
-size = Vector3(3.3, 0.2, 6.2)
+size = Vector3(2.6, 1.98, 4.4)
 
 [sub_resource type="BoxMesh" id="B482"]
-size = Vector3(2.35, 2.1, 0.1)
+size = Vector3(2.6, 1.98, 4.4)
 
 [sub_resource type="BoxMesh" id="B483"]
 size = Vector3(3.14, 2.6, 6)
@@ -1458,6 +1458,1452 @@ size = Vector3(3.3, 0.2, 6.2)
 [sub_resource type="BoxMesh" id="B485"]
 size = Vector3(2.35, 2.1, 0.1)
 
+[sub_resource type="BoxMesh" id="B486"]
+size = Vector3(3.14, 2.6, 6)
+
+[sub_resource type="BoxMesh" id="B487"]
+size = Vector3(3.3, 0.2, 6.2)
+
+[sub_resource type="BoxMesh" id="B488"]
+size = Vector3(2.35, 2.1, 0.1)
+
+[sub_resource type="BoxMesh" id="B489"]
+size = Vector3(3.14, 2.6, 6)
+
+[sub_resource type="BoxMesh" id="B490"]
+size = Vector3(3.3, 0.2, 6.2)
+
+[sub_resource type="BoxMesh" id="B491"]
+size = Vector3(2.35, 2.1, 0.1)
+
+[sub_resource type="BoxMesh" id="B492"]
+size = Vector3(3.14, 2.6, 6)
+
+[sub_resource type="BoxMesh" id="B493"]
+size = Vector3(3.3, 0.2, 6.2)
+
+[sub_resource type="BoxMesh" id="B494"]
+size = Vector3(2.35, 2.1, 0.1)
+
+[sub_resource type="BoxMesh" id="B495"]
+size = Vector3(3.14, 2.6, 6)
+
+[sub_resource type="BoxMesh" id="B496"]
+size = Vector3(3.3, 0.2, 6.2)
+
+[sub_resource type="BoxMesh" id="B497"]
+size = Vector3(2.35, 2.1, 0.1)
+
+[sub_resource type="BoxMesh" id="B498"]
+size = Vector3(3.14, 2.6, 6)
+
+[sub_resource type="BoxMesh" id="B499"]
+size = Vector3(3.3, 0.2, 6.2)
+
+[sub_resource type="BoxMesh" id="B500"]
+size = Vector3(2.35, 2.1, 0.1)
+
+[sub_resource type="BoxMesh" id="B501"]
+size = Vector3(3.14, 2.6, 6)
+
+[sub_resource type="BoxMesh" id="B502"]
+size = Vector3(3.3, 0.2, 6.2)
+
+[sub_resource type="BoxMesh" id="B503"]
+size = Vector3(2.35, 2.1, 0.1)
+
+[sub_resource type="BoxMesh" id="B504"]
+size = Vector3(3.14, 2.6, 6)
+
+[sub_resource type="BoxMesh" id="B505"]
+size = Vector3(3.3, 0.2, 6.2)
+
+[sub_resource type="BoxMesh" id="B506"]
+size = Vector3(2.35, 2.1, 0.1)
+
+[sub_resource type="BoxMesh" id="B507"]
+size = Vector3(3.14, 2.6, 6)
+
+[sub_resource type="BoxMesh" id="B508"]
+size = Vector3(3.3, 0.2, 6.2)
+
+[sub_resource type="BoxMesh" id="B509"]
+size = Vector3(2.35, 2.1, 0.1)
+
+[sub_resource type="BoxMesh" id="B510"]
+size = Vector3(3.14, 2.6, 6)
+
+[sub_resource type="BoxMesh" id="B511"]
+size = Vector3(3.3, 0.2, 6.2)
+
+[sub_resource type="BoxMesh" id="B512"]
+size = Vector3(2.35, 2.1, 0.1)
+
+[sub_resource type="BoxMesh" id="B513"]
+size = Vector3(3.14, 2.6, 6)
+
+[sub_resource type="BoxMesh" id="B514"]
+size = Vector3(3.3, 0.2, 6.2)
+
+[sub_resource type="BoxMesh" id="B515"]
+size = Vector3(2.35, 2.1, 0.1)
+
+[sub_resource type="BoxMesh" id="B516"]
+size = Vector3(16.8, 0.2, 11.08)
+
+[sub_resource type="BoxMesh" id="B517"]
+size = Vector3(1.7, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B518"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B519"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B520"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B521"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B522"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B523"]
+size = Vector3(1.7, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B524"]
+size = Vector3(1.2, 0.65, 0.22)
+
+[sub_resource type="BoxMesh" id="B525"]
+size = Vector3(1.7, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B526"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B527"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B528"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B529"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B530"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B531"]
+size = Vector3(1.7, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B532"]
+size = Vector3(1.7, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B533"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B534"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B535"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B536"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B537"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B538"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B539"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B540"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B541"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B542"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B543"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B544"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B545"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B546"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B547"]
+size = Vector3(1.7, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B548"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B549"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B550"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B551"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B552"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B553"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B554"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B555"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B556"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B557"]
+size = Vector3(0.22, 2.8, 11.3)
+
+[sub_resource type="BoxMesh" id="B558"]
+size = Vector3(0.22, 2.8, 11.3)
+
+[sub_resource type="BoxMesh" id="B559"]
+size = Vector3(16.8, 0.2, 11.08)
+
+[sub_resource type="BoxMesh" id="B560"]
+size = Vector3(1.7, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B561"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B562"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B563"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B564"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B565"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B566"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B567"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B568"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B569"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B570"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B571"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B572"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B573"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B574"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B575"]
+size = Vector3(1.7, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B576"]
+size = Vector3(1.7, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B577"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B578"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B579"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B580"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B581"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B582"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B583"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B584"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B585"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B586"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B587"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B588"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B589"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B590"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B591"]
+size = Vector3(1.7, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B592"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B593"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B594"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B595"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B596"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B597"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B598"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B599"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B600"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B601"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B602"]
+size = Vector3(0.22, 2.8, 11.3)
+
+[sub_resource type="BoxMesh" id="B603"]
+size = Vector3(0.22, 2.8, 11.3)
+
+[sub_resource type="BoxMesh" id="B604"]
+size = Vector3(16.8, 0.2, 11.08)
+
+[sub_resource type="BoxMesh" id="B605"]
+size = Vector3(1.7, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B606"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B607"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B608"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B609"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B610"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B611"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B612"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B613"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B614"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B615"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B616"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B617"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B618"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B619"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B620"]
+size = Vector3(1.7, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B621"]
+size = Vector3(1.7, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B622"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B623"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B624"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B625"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B626"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B627"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B628"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B629"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B630"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B631"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B632"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B633"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B634"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B635"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B636"]
+size = Vector3(1.7, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B637"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B638"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B639"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B640"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B641"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B642"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B643"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B644"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B645"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B646"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B647"]
+size = Vector3(0.22, 2.8, 11.3)
+
+[sub_resource type="BoxMesh" id="B648"]
+size = Vector3(0.22, 2.8, 11.3)
+
+[sub_resource type="BoxMesh" id="B649"]
+size = Vector3(16.8, 0.2, 11.08)
+
+[sub_resource type="BoxMesh" id="B650"]
+size = Vector3(1.7, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B651"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B652"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B653"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B654"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B655"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B656"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B657"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B658"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B659"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B660"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B661"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B662"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B663"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B664"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B665"]
+size = Vector3(1.7, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B666"]
+size = Vector3(1.7, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B667"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B668"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B669"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B670"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B671"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B672"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B673"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B674"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B675"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B676"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B677"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B678"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B679"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B680"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B681"]
+size = Vector3(1.7, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B682"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B683"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B684"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B685"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B686"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B687"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B688"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B689"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B690"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B691"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B692"]
+size = Vector3(0.22, 2.8, 11.3)
+
+[sub_resource type="BoxMesh" id="B693"]
+size = Vector3(0.22, 2.8, 11.3)
+
+[sub_resource type="BoxMesh" id="B694"]
+size = Vector3(16.8, 0.2, 11.08)
+
+[sub_resource type="BoxMesh" id="B695"]
+size = Vector3(1.7, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B696"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B697"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B698"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B699"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B700"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B701"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B702"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B703"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B704"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B705"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B706"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B707"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B708"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B709"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B710"]
+size = Vector3(1.7, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B711"]
+size = Vector3(1.7, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B712"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B713"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B714"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B715"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B716"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B717"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B718"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B719"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B720"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B721"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B722"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B723"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B724"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B725"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B726"]
+size = Vector3(1.7, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B727"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B728"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B729"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B730"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B731"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B732"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B733"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B734"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B735"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B736"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B737"]
+size = Vector3(0.22, 2.8, 11.3)
+
+[sub_resource type="BoxMesh" id="B738"]
+size = Vector3(0.22, 2.8, 11.3)
+
+[sub_resource type="BoxMesh" id="B739"]
+size = Vector3(17.24, 0.24, 11.52)
+
+[sub_resource type="BoxMesh" id="B740"]
+size = Vector3(2.6, 0.14, 1.5)
+
+[sub_resource type="BoxMesh" id="B741"]
+size = Vector3(1.1, 2.1, 0.1)
+
+[sub_resource type="BoxMesh" id="B742"]
+size = Vector3(16.8, 0.2, 11.08)
+
+[sub_resource type="BoxMesh" id="B743"]
+size = Vector3(1.7, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B744"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B745"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B746"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B747"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B748"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B749"]
+size = Vector3(1.7, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B750"]
+size = Vector3(1.2, 0.65, 0.22)
+
+[sub_resource type="BoxMesh" id="B751"]
+size = Vector3(1.7, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B752"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B753"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B754"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B755"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B756"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B757"]
+size = Vector3(1.7, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B758"]
+size = Vector3(1.7, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B759"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B760"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B761"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B762"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B763"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B764"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B765"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B766"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B767"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B768"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B769"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B770"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B771"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B772"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B773"]
+size = Vector3(1.7, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B774"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B775"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B776"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B777"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B778"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B779"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B780"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B781"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B782"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B783"]
+size = Vector3(0.22, 2.8, 11.3)
+
+[sub_resource type="BoxMesh" id="B784"]
+size = Vector3(0.22, 2.8, 11.3)
+
+[sub_resource type="BoxMesh" id="B785"]
+size = Vector3(16.8, 0.2, 11.08)
+
+[sub_resource type="BoxMesh" id="B786"]
+size = Vector3(1.7, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B787"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B788"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B789"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B790"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B791"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B792"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B793"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B794"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B795"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B796"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B797"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B798"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B799"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B800"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B801"]
+size = Vector3(1.7, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B802"]
+size = Vector3(1.7, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B803"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B804"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B805"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B806"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B807"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B808"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B809"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B810"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B811"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B812"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B813"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B814"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B815"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B816"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B817"]
+size = Vector3(1.7, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B818"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B819"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B820"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B821"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B822"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B823"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B824"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B825"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B826"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B827"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B828"]
+size = Vector3(0.22, 2.8, 11.3)
+
+[sub_resource type="BoxMesh" id="B829"]
+size = Vector3(0.22, 2.8, 11.3)
+
+[sub_resource type="BoxMesh" id="B830"]
+size = Vector3(16.8, 0.2, 11.08)
+
+[sub_resource type="BoxMesh" id="B831"]
+size = Vector3(1.7, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B832"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B833"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B834"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B835"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B836"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B837"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B838"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B839"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B840"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B841"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B842"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B843"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B844"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B845"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B846"]
+size = Vector3(1.7, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B847"]
+size = Vector3(1.7, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B848"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B849"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B850"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B851"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B852"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B853"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B854"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B855"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B856"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B857"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B858"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B859"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B860"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B861"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B862"]
+size = Vector3(1.7, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B863"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B864"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B865"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B866"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B867"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B868"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B869"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B870"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B871"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B872"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B873"]
+size = Vector3(0.22, 2.8, 11.3)
+
+[sub_resource type="BoxMesh" id="B874"]
+size = Vector3(0.22, 2.8, 11.3)
+
+[sub_resource type="BoxMesh" id="B875"]
+size = Vector3(16.8, 0.2, 11.08)
+
+[sub_resource type="BoxMesh" id="B876"]
+size = Vector3(1.7, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B877"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B878"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B879"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B880"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B881"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B882"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B883"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B884"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B885"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B886"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B887"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B888"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B889"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B890"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B891"]
+size = Vector3(1.7, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B892"]
+size = Vector3(1.7, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B893"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B894"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B895"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B896"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B897"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B898"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B899"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B900"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B901"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B902"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B903"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B904"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B905"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B906"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B907"]
+size = Vector3(1.7, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B908"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B909"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B910"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B911"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B912"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B913"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B914"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B915"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B916"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B917"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B918"]
+size = Vector3(0.22, 2.8, 11.3)
+
+[sub_resource type="BoxMesh" id="B919"]
+size = Vector3(0.22, 2.8, 11.3)
+
+[sub_resource type="BoxMesh" id="B920"]
+size = Vector3(16.8, 0.2, 11.08)
+
+[sub_resource type="BoxMesh" id="B921"]
+size = Vector3(1.7, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B922"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B923"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B924"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B925"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B926"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B927"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B928"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B929"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B930"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B931"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B932"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B933"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B934"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B935"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B936"]
+size = Vector3(1.7, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B937"]
+size = Vector3(1.7, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B938"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B939"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B940"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B941"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B942"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B943"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B944"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B945"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B946"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B947"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B948"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B949"]
+size = Vector3(1.6, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B950"]
+size = Vector3(1.4, 0.85, 0.22)
+
+[sub_resource type="BoxMesh" id="B951"]
+size = Vector3(1.4, 0.7, 0.22)
+
+[sub_resource type="BoxMesh" id="B952"]
+size = Vector3(1.7, 2.8, 0.22)
+
+[sub_resource type="BoxMesh" id="B953"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B954"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B955"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B956"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B957"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B958"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B959"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B960"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B961"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B962"]
+size = Vector3(1.4, 1.25, 0.05)
+
+[sub_resource type="BoxMesh" id="B963"]
+size = Vector3(0.22, 2.8, 11.3)
+
+[sub_resource type="BoxMesh" id="B964"]
+size = Vector3(0.22, 2.8, 11.3)
+
+[sub_resource type="BoxMesh" id="B965"]
+size = Vector3(17.24, 0.24, 11.52)
+
+[sub_resource type="BoxMesh" id="B966"]
+size = Vector3(2.6, 0.14, 1.5)
+
+[sub_resource type="BoxMesh" id="B967"]
+size = Vector3(1.1, 2.1, 0.1)
+
 [node name="Дом" type="Node3D"]
 
 [node name="подвал" type="Node3D" parent="."]
@@ -1466,131 +2912,134 @@ size = Vector3(2.35, 2.1, 0.1)
 transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0, -2.9, -2.5)
 mesh = SubResource("B0")
 
-[node name="стена_бок1" type="MeshInstance3D" parent="подвал"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -1.55, -1.4, -2.5)
+[node name="стена_торец_подвал1" type="MeshInstance3D" parent="подвал"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -8.29, -1.4, -2.5)
 mesh = SubResource("B1")
 
-[node name="стена_бок2" type="MeshInstance3D" parent="подвал"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 1.55, -1.4, -2.5)
+[node name="стена_торец_подвал2" type="MeshInstance3D" parent="подвал"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 8.29, -1.4, -2.5)
 mesh = SubResource("B2")
 
-[node name="стена_перед3" type="MeshInstance3D" parent="подвал"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0, -1.4, 0.66)
+[node name="стена_зад_подвал3" type="MeshInstance3D" parent="подвал"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -1.12, -1.4, -5.66)
 mesh = SubResource("B3")
 
-[node name="стена_зад4" type="MeshInstance3D" parent="подвал"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -0.625, -1.4, -5.66)
+[node name="стена_зад_подвал4" type="MeshInstance3D" parent="подвал"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 6.45, -0.4, -5.66)
 mesh = SubResource("B4")
 
-[node name="стена_зад5" type="MeshInstance3D" parent="подвал"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0.9, -0.4, -5.66)
+[node name="стена_зад_подвал5" type="MeshInstance3D" parent="подвал"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 7.57, -1.4, -5.66)
 mesh = SubResource("B5")
 
-[node name="стена_зад6" type="MeshInstance3D" parent="подвал"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 1.525, -1.4, -5.66)
+[node name="стена_перед_подвал6" type="MeshInstance3D" parent="подвал"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0, -1.4, 0.66)
 mesh = SubResource("B6")
 
 [node name="пол_приямок7" type="MeshInstance3D" parent="подвал"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0.9, -2.9, -8.08)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 6.45, -2.9, -8.08)
 mesh = SubResource("B7")
 
 [node name="стена_приямок8" type="MeshInstance3D" parent="подвал"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0.2, -1.4, -8.08)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 5.75, -1.4, -8.08)
 mesh = SubResource("B8")
 
 [node name="стена_приямок9" type="MeshInstance3D" parent="подвал"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 1.6, -1.4, -8.08)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 7.15, -1.4, -8.08)
 mesh = SubResource("B9")
 
 [node name="стена_приямок10" type="MeshInstance3D" parent="подвал"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0.9, -1.4, -10.65)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 6.45, -1.4, -10.65)
 mesh = SubResource("B10")
 
 [node name="вид_ступень11" type="MeshInstance3D" parent="подвал"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0.9, -0.13, -10.3343)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 6.45, -0.13, -10.3343)
 mesh = SubResource("B11")
 
 [node name="вид_ступень12" type="MeshInstance3D" parent="подвал"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0.9, -0.33, -10.0029)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 6.45, -0.33, -10.0029)
 mesh = SubResource("B12")
 
 [node name="вид_ступень13" type="MeshInstance3D" parent="подвал"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0.9, -0.53, -9.67143)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 6.45, -0.53, -9.67143)
 mesh = SubResource("B13")
 
 [node name="вид_ступень14" type="MeshInstance3D" parent="подвал"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0.9, -0.73, -9.34)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 6.45, -0.73, -9.34)
 mesh = SubResource("B14")
 
 [node name="вид_ступень15" type="MeshInstance3D" parent="подвал"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0.9, -0.93, -9.00857)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 6.45, -0.93, -9.00857)
 mesh = SubResource("B15")
 
 [node name="вид_ступень16" type="MeshInstance3D" parent="подвал"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0.9, -1.13, -8.67714)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 6.45, -1.13, -8.67714)
 mesh = SubResource("B16")
 
 [node name="вид_ступень17" type="MeshInstance3D" parent="подвал"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0.9, -1.33, -8.34571)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 6.45, -1.33, -8.34571)
 mesh = SubResource("B17")
 
 [node name="вид_ступень18" type="MeshInstance3D" parent="подвал"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0.9, -1.53, -8.01429)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 6.45, -1.53, -8.01429)
 mesh = SubResource("B18")
 
 [node name="вид_ступень19" type="MeshInstance3D" parent="подвал"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0.9, -1.73, -7.68286)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 6.45, -1.73, -7.68286)
 mesh = SubResource("B19")
 
 [node name="вид_ступень20" type="MeshInstance3D" parent="подвал"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0.9, -1.93, -7.35143)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 6.45, -1.93, -7.35143)
 mesh = SubResource("B20")
 
 [node name="вид_ступень21" type="MeshInstance3D" parent="подвал"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0.9, -2.13, -7.02)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 6.45, -2.13, -7.02)
 mesh = SubResource("B21")
 
 [node name="вид_ступень22" type="MeshInstance3D" parent="подвал"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0.9, -2.33, -6.68857)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 6.45, -2.33, -6.68857)
 mesh = SubResource("B22")
 
 [node name="вид_ступень23" type="MeshInstance3D" parent="подвал"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0.9, -2.53, -6.35714)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 6.45, -2.53, -6.35714)
 mesh = SubResource("B23")
 
 [node name="вид_ступень24" type="MeshInstance3D" parent="подвал"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0.9, -2.73, -6.02571)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 6.45, -2.73, -6.02571)
 mesh = SubResource("B24")
 
 [node name="приямок" type="Marker3D" parent="подвал"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0.9, 0, -10.4)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 6.45, 0, -10.4)
 
 [node name="приямок_низ" type="Marker3D" parent="подвал"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0.9, -2.8, -6.16)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 6.45, -2.8, -6.16)
 
 [node name="лампа_подвал0" type="Marker3D" parent="подвал"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0, -0.4, -4.36)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -5, -0.4, -2.5)
 
 [node name="лампа_подвал1" type="Marker3D" parent="подвал"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0, -0.4, -2.16)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0, -0.4, -2.5)
+
+[node name="лампа_подвал2" type="Marker3D" parent="подвал"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 5, -0.4, -2.5)
 
 [node name="погреб0" type="Marker3D" parent="подвал"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -1.38, -2.8, -4.16)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -6, -2.8, 0.5)
 
 [node name="погреб1" type="Marker3D" parent="подвал"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 1.38, -2.8, -4.16)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -3.6, -2.8, 0.5)
 
 [node name="погреб2" type="Marker3D" parent="подвал"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -1.38, -2.8, -2.66)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -1.2, -2.8, 0.5)
 
 [node name="погреб3" type="Marker3D" parent="подвал"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 1.38, -2.8, -2.66)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 1.2, -2.8, 0.5)
 
 [node name="погреб4" type="Marker3D" parent="подвал"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -1.38, -2.8, -1.16)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 3.6, -2.8, 0.5)
 
 [node name="погреб5" type="Marker3D" parent="подвал"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 1.38, -2.8, -1.16)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 6, -2.8, 0.5)
 
 [node name="шахта" type="Node3D" parent="."]
 
@@ -3267,337 +4716,2269 @@ mesh = SubResource("B410")
 [node name="двор" type="Node3D" parent="."]
 
 [node name="снег_земля411" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0, -0.11, -25.25)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0, -0.11, -35.25)
 mesh = SubResource("B411")
 
 [node name="снег_земля412" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0, -0.11, 20.43)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0, -0.11, 30.43)
 mesh = SubResource("B412")
 
 [node name="снег_земля413" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -20.875, -0.11, -4.82)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -34.245, -0.11, -4.82)
 mesh = SubResource("B413")
 
 [node name="снег_земля414" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 20.875, -0.11, -4.82)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 34.245, -0.11, -4.82)
 mesh = SubResource("B414")
 
 [node name="снег_земля415" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 1.675, -0.11, -8.13)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 7.82, -0.11, -8.13)
 mesh = SubResource("B415")
 
 [node name="снег_земля416" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -0.775, -0.11, -8.13)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -1.37, -0.11, -8.13)
 mesh = SubResource("B416")
 
 [node name="пол_крыльцо417" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -1.15, -0.05, -6.86)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -0.4, -0.05, -6.86)
 mesh = SubResource("B417")
 
 [node name="снег_вал418" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -15, 0.15, -13)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -34, 0.15, -14)
 mesh = SubResource("B418")
 
 [node name="снег_вал419" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -15, 0.43, 13)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -34, 0.43, 14)
 mesh = SubResource("B419")
 
 [node name="снег_вал420" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -13, 0.29, -15)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -31, 0.29, -14)
 mesh = SubResource("B420")
 
 [node name="снег_вал421" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 13, 0.29, -15)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -31, 0.29, 14)
 mesh = SubResource("B421")
 
 [node name="снег_вал422" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -12, 0.29, -13)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -28, 0.43, -14)
 mesh = SubResource("B422")
 
 [node name="снег_вал423" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -12, 0.29, 13)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -28, 0.15, 14)
 mesh = SubResource("B423")
 
 [node name="снег_вал424" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -13, 0.29, -12)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -25, 0.15, -14)
 mesh = SubResource("B424")
 
 [node name="снег_вал425" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 13, 0.29, -12)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -25, 0.43, 14)
 mesh = SubResource("B425")
 
 [node name="снег_вал426" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -9, 0.43, -13)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -22, 0.29, -14)
 mesh = SubResource("B426")
 
 [node name="снег_вал427" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -9, 0.15, 13)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -22, 0.29, 14)
 mesh = SubResource("B427")
 
 [node name="снег_вал428" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -13, 0.29, -9)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -19, 0.43, -14)
 mesh = SubResource("B428")
 
 [node name="снег_вал429" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 13, 0.29, -9)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -19, 0.15, 14)
 mesh = SubResource("B429")
 
 [node name="снег_вал430" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -6, 0.15, -13)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -16, 0.15, -14)
 mesh = SubResource("B430")
 
 [node name="снег_вал431" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -6, 0.43, 13)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -16, 0.43, 14)
 mesh = SubResource("B431")
 
 [node name="снег_вал432" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -13, 0.29, -6)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -13, 0.29, -14)
 mesh = SubResource("B432")
 
 [node name="снег_вал433" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 13, 0.29, -6)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -13, 0.29, 14)
 mesh = SubResource("B433")
 
 [node name="снег_вал434" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -3, 0.29, 13)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -10, 0.43, -14)
 mesh = SubResource("B434")
 
 [node name="снег_вал435" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -13, 0.29, -3)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -10, 0.15, 14)
 mesh = SubResource("B435")
 
 [node name="снег_вал436" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 13, 0.29, -3)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -7, 0.15, -14)
 mesh = SubResource("B436")
 
 [node name="снег_вал437" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0, 0.15, 13)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -7, 0.43, 14)
 mesh = SubResource("B437")
 
 [node name="снег_вал438" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -13, 0.29, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -4, 0.29, 14)
 mesh = SubResource("B438")
 
 [node name="снег_вал439" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 13, 0.29, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -1, 0.15, 14)
 mesh = SubResource("B439")
 
 [node name="снег_вал440" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 3, 0.43, 13)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 2, 0.43, 14)
 mesh = SubResource("B440")
 
 [node name="снег_вал441" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -13, 0.29, 3)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 5, 0.29, -14)
 mesh = SubResource("B441")
 
 [node name="снег_вал442" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 13, 0.29, 3)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 5, 0.29, 14)
 mesh = SubResource("B442")
 
 [node name="снег_вал443" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 6, 0.29, -13)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 8, 0.43, -14)
 mesh = SubResource("B443")
 
 [node name="снег_вал444" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 6, 0.29, 13)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 8, 0.15, 14)
 mesh = SubResource("B444")
 
 [node name="снег_вал445" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -13, 0.29, 6)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 11, 0.15, -14)
 mesh = SubResource("B445")
 
 [node name="снег_вал446" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 13, 0.29, 6)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 11, 0.43, 14)
 mesh = SubResource("B446")
 
 [node name="снег_вал447" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 9, 0.43, -13)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 14, 0.29, -14)
 mesh = SubResource("B447")
 
 [node name="снег_вал448" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 9, 0.15, 13)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 14, 0.29, 14)
 mesh = SubResource("B448")
 
 [node name="снег_вал449" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -13, 0.29, 9)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 17, 0.43, -14)
 mesh = SubResource("B449")
 
 [node name="снег_вал450" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 13, 0.29, 9)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 17, 0.15, 14)
 mesh = SubResource("B450")
 
 [node name="снег_вал451" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 12, 0.15, -13)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 20, 0.15, -14)
 mesh = SubResource("B451")
 
 [node name="снег_вал452" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 12, 0.43, 13)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 20, 0.43, 14)
 mesh = SubResource("B452")
 
 [node name="снег_вал453" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -13, 0.29, 12)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 23, 0.29, -14)
 mesh = SubResource("B453")
 
 [node name="снег_вал454" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 13, 0.29, 12)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 23, 0.29, 14)
 mesh = SubResource("B454")
 
 [node name="снег_вал455" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 15, 0.29, -13)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 26, 0.43, -14)
 mesh = SubResource("B455")
 
 [node name="снег_вал456" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 15, 0.29, 13)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 26, 0.15, 14)
 mesh = SubResource("B456")
 
 [node name="снег_вал457" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -13, 0.29, 15)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 29, 0.15, -14)
 mesh = SubResource("B457")
 
 [node name="снег_вал458" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 13, 0.29, 15)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 29, 0.43, 14)
 mesh = SubResource("B458")
 
-[node name="вид_гараж459" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -12.8, 1.3, -18.5)
+[node name="снег_вал459" type="MeshInstance3D" parent="двор"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 32, 0.29, -14)
 mesh = SubResource("B459")
 
-[node name="вид_снег_гараж460" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -12.8, 2.7, -18.5)
+[node name="снег_вал460" type="MeshInstance3D" parent="двор"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 32, 0.29, 14)
 mesh = SubResource("B460")
 
-[node name="вид_доска_ворота461" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -12.8, 1.05, -15.44)
+[node name="снег_вал461" type="MeshInstance3D" parent="двор"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -32, 0.29, -16)
 mesh = SubResource("B461")
 
-[node name="вид_гараж462" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -9.6, 1.3, -18.5)
+[node name="снег_вал462" type="MeshInstance3D" parent="двор"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 32, 0.29, -16)
 mesh = SubResource("B462")
 
-[node name="вид_снег_гараж463" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -9.6, 2.7, -18.5)
+[node name="снег_вал463" type="MeshInstance3D" parent="двор"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -32, 0.29, -13)
 mesh = SubResource("B463")
 
-[node name="вид_доска_ворота464" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -9.6, 1.05, -15.44)
+[node name="снег_вал464" type="MeshInstance3D" parent="двор"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 32, 0.29, -13)
 mesh = SubResource("B464")
 
-[node name="вид_гараж465" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -6.4, 1.3, -18.5)
+[node name="снег_вал465" type="MeshInstance3D" parent="двор"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -32, 0.29, -10)
 mesh = SubResource("B465")
 
-[node name="вид_снег_гараж466" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -6.4, 2.7, -18.5)
+[node name="снег_вал466" type="MeshInstance3D" parent="двор"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 32, 0.29, -10)
 mesh = SubResource("B466")
 
-[node name="вид_доска_ворота467" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -6.4, 1.05, -15.44)
+[node name="снег_вал467" type="MeshInstance3D" parent="двор"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -32, 0.29, -7)
 mesh = SubResource("B467")
 
-[node name="вид_гараж468" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -3.2, 1.3, -18.5)
+[node name="снег_вал468" type="MeshInstance3D" parent="двор"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 32, 0.29, -7)
 mesh = SubResource("B468")
 
-[node name="вид_снег_гараж469" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -3.2, 2.7, -18.5)
+[node name="снег_вал469" type="MeshInstance3D" parent="двор"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -32, 0.29, -4)
 mesh = SubResource("B469")
 
-[node name="вид_доска_ворота470" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -3.2, 1.05, -15.44)
+[node name="снег_вал470" type="MeshInstance3D" parent="двор"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 32, 0.29, -4)
 mesh = SubResource("B470")
 
-[node name="вид_гараж471" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0, 1.3, -18.5)
+[node name="снег_вал471" type="MeshInstance3D" parent="двор"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -32, 0.29, -1)
 mesh = SubResource("B471")
 
-[node name="вид_снег_гараж472" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0, 2.7, -18.5)
+[node name="снег_вал472" type="MeshInstance3D" parent="двор"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 32, 0.29, -1)
 mesh = SubResource("B472")
 
-[node name="вид_доска_ворота473" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0, 1.05, -15.44)
+[node name="снег_вал473" type="MeshInstance3D" parent="двор"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -32, 0.29, 2)
 mesh = SubResource("B473")
 
-[node name="вид_гараж474" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 3.2, 1.3, -18.5)
+[node name="снег_вал474" type="MeshInstance3D" parent="двор"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 32, 0.29, 2)
 mesh = SubResource("B474")
 
-[node name="вид_снег_гараж475" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 3.2, 2.7, -18.5)
+[node name="снег_вал475" type="MeshInstance3D" parent="двор"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -32, 0.29, 5)
 mesh = SubResource("B475")
 
-[node name="вид_доска_ворота476" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 3.2, 1.05, -15.44)
+[node name="снег_вал476" type="MeshInstance3D" parent="двор"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 32, 0.29, 5)
 mesh = SubResource("B476")
 
-[node name="вид_гараж477" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 6.4, 1.3, -18.5)
+[node name="снег_вал477" type="MeshInstance3D" parent="двор"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -32, 0.29, 8)
 mesh = SubResource("B477")
 
-[node name="вид_снег_гараж478" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 6.4, 2.7, -18.5)
+[node name="снег_вал478" type="MeshInstance3D" parent="двор"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 32, 0.29, 8)
 mesh = SubResource("B478")
 
-[node name="вид_доска_ворота479" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 6.4, 1.05, -15.44)
+[node name="снег_вал479" type="MeshInstance3D" parent="двор"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -32, 0.29, 11)
 mesh = SubResource("B479")
 
-[node name="вид_гараж480" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 9.6, 1.3, -18.5)
+[node name="снег_вал480" type="MeshInstance3D" parent="двор"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 32, 0.29, 11)
 mesh = SubResource("B480")
 
-[node name="вид_снег_гараж481" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 9.6, 2.7, -18.5)
+[node name="снег_вал481" type="MeshInstance3D" parent="двор"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -32, 0.29, 14)
 mesh = SubResource("B481")
 
-[node name="вид_доска_ворота482" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 9.6, 1.05, -15.44)
+[node name="снег_вал482" type="MeshInstance3D" parent="двор"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 32, 0.29, 14)
 mesh = SubResource("B482")
 
 [node name="вид_гараж483" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 12.8, 1.3, -18.5)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -16, 1.3, -21)
 mesh = SubResource("B483")
 
 [node name="вид_снег_гараж484" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 12.8, 2.7, -18.5)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -16, 2.7, -21)
 mesh = SubResource("B484")
 
 [node name="вид_доска_ворота485" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 12.8, 1.05, -15.44)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -16, 1.05, -17.94)
 mesh = SubResource("B485")
 
+[node name="вид_гараж486" type="MeshInstance3D" parent="двор"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -12.8, 1.3, -21)
+mesh = SubResource("B486")
+
+[node name="вид_снег_гараж487" type="MeshInstance3D" parent="двор"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -12.8, 2.7, -21)
+mesh = SubResource("B487")
+
+[node name="вид_доска_ворота488" type="MeshInstance3D" parent="двор"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -12.8, 1.05, -17.94)
+mesh = SubResource("B488")
+
+[node name="вид_гараж489" type="MeshInstance3D" parent="двор"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -9.6, 1.3, -21)
+mesh = SubResource("B489")
+
+[node name="вид_снег_гараж490" type="MeshInstance3D" parent="двор"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -9.6, 2.7, -21)
+mesh = SubResource("B490")
+
+[node name="вид_доска_ворота491" type="MeshInstance3D" parent="двор"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -9.6, 1.05, -17.94)
+mesh = SubResource("B491")
+
+[node name="вид_гараж492" type="MeshInstance3D" parent="двор"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -6.4, 1.3, -21)
+mesh = SubResource("B492")
+
+[node name="вид_снег_гараж493" type="MeshInstance3D" parent="двор"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -6.4, 2.7, -21)
+mesh = SubResource("B493")
+
+[node name="вид_доска_ворота494" type="MeshInstance3D" parent="двор"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -6.4, 1.05, -17.94)
+mesh = SubResource("B494")
+
+[node name="вид_гараж495" type="MeshInstance3D" parent="двор"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -3.2, 1.3, -21)
+mesh = SubResource("B495")
+
+[node name="вид_снег_гараж496" type="MeshInstance3D" parent="двор"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -3.2, 2.7, -21)
+mesh = SubResource("B496")
+
+[node name="вид_доска_ворота497" type="MeshInstance3D" parent="двор"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -3.2, 1.05, -17.94)
+mesh = SubResource("B497")
+
+[node name="вид_гараж498" type="MeshInstance3D" parent="двор"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0, 1.3, -21)
+mesh = SubResource("B498")
+
+[node name="вид_снег_гараж499" type="MeshInstance3D" parent="двор"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0, 2.7, -21)
+mesh = SubResource("B499")
+
+[node name="вид_доска_ворота500" type="MeshInstance3D" parent="двор"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 0, 1.05, -17.94)
+mesh = SubResource("B500")
+
+[node name="вид_гараж501" type="MeshInstance3D" parent="двор"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 3.2, 1.3, -21)
+mesh = SubResource("B501")
+
+[node name="вид_снег_гараж502" type="MeshInstance3D" parent="двор"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 3.2, 2.7, -21)
+mesh = SubResource("B502")
+
+[node name="вид_доска_ворота503" type="MeshInstance3D" parent="двор"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 3.2, 1.05, -17.94)
+mesh = SubResource("B503")
+
+[node name="вид_гараж504" type="MeshInstance3D" parent="двор"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 6.4, 1.3, -21)
+mesh = SubResource("B504")
+
+[node name="вид_снег_гараж505" type="MeshInstance3D" parent="двор"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 6.4, 2.7, -21)
+mesh = SubResource("B505")
+
+[node name="вид_доска_ворота506" type="MeshInstance3D" parent="двор"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 6.4, 1.05, -17.94)
+mesh = SubResource("B506")
+
+[node name="вид_гараж507" type="MeshInstance3D" parent="двор"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 9.6, 1.3, -21)
+mesh = SubResource("B507")
+
+[node name="вид_снег_гараж508" type="MeshInstance3D" parent="двор"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 9.6, 2.7, -21)
+mesh = SubResource("B508")
+
+[node name="вид_доска_ворота509" type="MeshInstance3D" parent="двор"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 9.6, 1.05, -17.94)
+mesh = SubResource("B509")
+
+[node name="вид_гараж510" type="MeshInstance3D" parent="двор"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 12.8, 1.3, -21)
+mesh = SubResource("B510")
+
+[node name="вид_снег_гараж511" type="MeshInstance3D" parent="двор"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 12.8, 2.7, -21)
+mesh = SubResource("B511")
+
+[node name="вид_доска_ворота512" type="MeshInstance3D" parent="двор"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 12.8, 1.05, -17.94)
+mesh = SubResource("B512")
+
+[node name="вид_гараж513" type="MeshInstance3D" parent="двор"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 16, 1.3, -21)
+mesh = SubResource("B513")
+
+[node name="вид_снег_гараж514" type="MeshInstance3D" parent="двор"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 16, 2.7, -21)
+mesh = SubResource("B514")
+
+[node name="вид_доска_ворота515" type="MeshInstance3D" parent="двор"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 16, 1.05, -17.94)
+mesh = SubResource("B515")
+
 [node name="дерево0" type="Marker3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 4, 0, 17)
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -24, 0, -9.5)
 
 [node name="дерево1" type="Marker3D" parent="двор"]
-transform = Transform3D(0.798636, 0, 0.601815, 0, 1.16667, 0, -0.601815, 0, 0.798636, -8, 0, 21)
+transform = Transform3D(0.798636, 0, 0.601815, 0, 1.16667, 0, -0.601815, 0, 0.798636, -13, 0, -10.5)
 
 [node name="дерево2" type="Marker3D" parent="двор"]
-transform = Transform3D(0.275637, 0, 0.961262, 0, 1.33333, 0, -0.961262, 0, 0.275637, 15, 0, 14)
+transform = Transform3D(0.275637, 0, 0.961262, 0, 1.33333, 0, -0.961262, 0, 0.275637, -4, 0, -12)
 
 [node name="дерево3" type="Marker3D" parent="двор"]
-transform = Transform3D(-0.358368, 0, 0.93358, 0, 1, 0, -0.93358, 0, -0.358368, -17, 0, 12)
+transform = Transform3D(-0.358368, 0, 0.93358, 0, 1, 0, -0.93358, 0, -0.358368, 10, 0, -11)
 
 [node name="дерево4" type="Marker3D" parent="двор"]
-transform = Transform3D(-0.848048, 0, 0.529919, 0, 1.16667, 0, -0.529919, 0, -0.848048, -6, 0, -18)
+transform = Transform3D(-0.848048, 0, 0.529919, 0, 1.16667, 0, -0.529919, 0, -0.848048, 22, 0, -9)
 
 [node name="дерево5" type="Marker3D" parent="двор"]
-transform = Transform3D(-0.996195, 0, -0.0871557, 0, 1.33333, 0, 0.0871557, 0, -0.996195, 13, 0, -17)
+transform = Transform3D(-0.996195, 0, -0.0871557, 0, 1.33333, 0, 0.0871557, 0, -0.996195, -20, 0, 10)
 
 [node name="дерево6" type="Marker3D" parent="двор"]
-transform = Transform3D(-0.743145, 0, -0.669131, 0, 1, 0, 0.669131, 0, -0.743145, 21, 0, 2)
+transform = Transform3D(-0.743145, 0, -0.669131, 0, 1, 0, 0.669131, 0, -0.743145, -2, 0, 11.5)
 
 [node name="дерево7" type="Marker3D" parent="двор"]
-transform = Transform3D(-0.190809, 0, -0.981627, 0, 1.16667, 0, 0.981627, 0, -0.190809, -21, 0, -5)
+transform = Transform3D(-0.190809, 0, -0.981627, 0, 1.16667, 0, 0.981627, 0, -0.190809, 18, 0, 10.5)
 
 [node name="сугроб0" type="Marker3D" parent="двор"]
 transform = Transform3D(3.37466, 0, 0.414356, 0, 1.3, 0, -0.194991, 0, 1.58807, -4.2, -0.25, -6.66)
 
 [node name="сугроб1" type="Marker3D" parent="двор"]
-transform = Transform3D(3.37466, 0, 0.414356, 0, 1.1, 0, -0.194991, 0, 1.58807, 4.2, -0.25, -6.66)
+transform = Transform3D(2.38211, 0, 0.292486, 0, 1.1, 0, -0.194991, 0, 1.58807, 2.6, -0.25, -6.66)
 
 [node name="сугроб2" type="Marker3D" parent="двор"]
-transform = Transform3D(1.58807, 0, 0.194991, 0, 0.6, 0, -0.194991, 0, 1.58807, 3.6, -0.25, -8.36)
+transform = Transform3D(2.58062, 0, 0.31686, 0, 0.9, 0, -0.194991, 0, 1.58807, -9, -0.25, -7.56)
 
 [node name="сугроб3" type="Marker3D" parent="двор"]
-transform = Transform3D(1.38956, 0, 0.170617, 0, 0.5, 0, -0.194991, 0, 1.58807, -3.9, -0.25, -8.96)
+transform = Transform3D(2.38211, 0, 0.292486, 0, 0.8, 0, -0.194991, 0, 1.58807, 9.5, -0.25, -7.96)
+
+[node name="секция0" type="Node3D" parent="."]
+
+[node name="пол516" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -16.8, -0.1, 0)
+mesh = SubResource("B516")
+
+[node name="стена_зад517" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -24.35, 1.4, -5.65)
+mesh = SubResource("B517")
+
+[node name="стена_зад518" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -22.8, 0.425, -5.65)
+mesh = SubResource("B518")
+
+[node name="стена_зад519" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -22.8, 2.45, -5.65)
+mesh = SubResource("B519")
+
+[node name="стена_зад520" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -21.3, 1.4, -5.65)
+mesh = SubResource("B520")
+
+[node name="стена_зад521" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -19.8, 0.425, -5.65)
+mesh = SubResource("B521")
+
+[node name="стена_зад522" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -19.8, 2.45, -5.65)
+mesh = SubResource("B522")
+
+[node name="стена_зад523" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -18.25, 1.4, -5.65)
+mesh = SubResource("B523")
+
+[node name="стена_зад524" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -16.8, 2.475, -5.65)
+mesh = SubResource("B524")
+
+[node name="стена_зад525" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -15.35, 1.4, -5.65)
+mesh = SubResource("B525")
+
+[node name="стена_зад526" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -13.8, 0.425, -5.65)
+mesh = SubResource("B526")
+
+[node name="стена_зад527" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -13.8, 2.45, -5.65)
+mesh = SubResource("B527")
+
+[node name="стена_зад528" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -12.3, 1.4, -5.65)
+mesh = SubResource("B528")
+
+[node name="стена_зад529" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -10.8, 0.425, -5.65)
+mesh = SubResource("B529")
+
+[node name="стена_зад530" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -10.8, 2.45, -5.65)
+mesh = SubResource("B530")
+
+[node name="стена_зад531" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -9.25, 1.4, -5.65)
+mesh = SubResource("B531")
+
+[node name="стена_фасад532" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -24.35, 1.4, 5.65)
+mesh = SubResource("B532")
+
+[node name="стена_фасад533" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -22.8, 0.425, 5.65)
+mesh = SubResource("B533")
+
+[node name="стена_фасад534" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -22.8, 2.45, 5.65)
+mesh = SubResource("B534")
+
+[node name="стена_фасад535" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -21.3, 1.4, 5.65)
+mesh = SubResource("B535")
+
+[node name="стена_фасад536" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -19.8, 0.425, 5.65)
+mesh = SubResource("B536")
+
+[node name="стена_фасад537" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -19.8, 2.45, 5.65)
+mesh = SubResource("B537")
+
+[node name="стена_фасад538" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -18.3, 1.4, 5.65)
+mesh = SubResource("B538")
+
+[node name="стена_фасад539" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -16.8, 0.425, 5.65)
+mesh = SubResource("B539")
+
+[node name="стена_фасад540" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -16.8, 2.45, 5.65)
+mesh = SubResource("B540")
+
+[node name="стена_фасад541" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -15.3, 1.4, 5.65)
+mesh = SubResource("B541")
+
+[node name="стена_фасад542" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -13.8, 0.425, 5.65)
+mesh = SubResource("B542")
+
+[node name="стена_фасад543" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -13.8, 2.45, 5.65)
+mesh = SubResource("B543")
+
+[node name="стена_фасад544" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -12.3, 1.4, 5.65)
+mesh = SubResource("B544")
+
+[node name="стена_фасад545" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -10.8, 0.425, 5.65)
+mesh = SubResource("B545")
+
+[node name="стена_фасад546" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -10.8, 2.45, 5.65)
+mesh = SubResource("B546")
+
+[node name="стена_фасад547" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -9.25, 1.4, 5.65)
+mesh = SubResource("B547")
+
+[node name="стекло_чужое548" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -22.8, 1.475, -5.65)
+mesh = SubResource("B548")
+
+[node name="стекло_чужое549" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -22.8, 1.475, 5.65)
+mesh = SubResource("B549")
+
+[node name="стекло_чужое550" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -19.8, 1.475, -5.65)
+mesh = SubResource("B550")
+
+[node name="стекло_чужое551" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -19.8, 1.475, 5.65)
+mesh = SubResource("B551")
+
+[node name="стекло_чужое552" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -16.8, 1.475, 5.65)
+mesh = SubResource("B552")
+
+[node name="стекло_чужое553" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -13.8, 1.475, -5.65)
+mesh = SubResource("B553")
+
+[node name="стекло_чужое554" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -13.8, 1.475, 5.65)
+mesh = SubResource("B554")
+
+[node name="стекло_чужое555" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -10.8, 1.475, -5.65)
+mesh = SubResource("B555")
+
+[node name="стекло_чужое556" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -10.8, 1.475, 5.65)
+mesh = SubResource("B556")
+
+[node name="стена_торец557" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -25.31, 1.4, 0)
+mesh = SubResource("B557")
+
+[node name="стена_торец558" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -8.29, 1.4, 0)
+mesh = SubResource("B558")
+
+[node name="пол559" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -16.8, 2.7, 0)
+mesh = SubResource("B559")
+
+[node name="стена_зад560" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -24.35, 4.2, -5.65)
+mesh = SubResource("B560")
+
+[node name="стена_зад561" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -22.8, 3.225, -5.65)
+mesh = SubResource("B561")
+
+[node name="стена_зад562" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -22.8, 5.25, -5.65)
+mesh = SubResource("B562")
+
+[node name="стена_зад563" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -21.3, 4.2, -5.65)
+mesh = SubResource("B563")
+
+[node name="стена_зад564" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -19.8, 3.225, -5.65)
+mesh = SubResource("B564")
+
+[node name="стена_зад565" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -19.8, 5.25, -5.65)
+mesh = SubResource("B565")
+
+[node name="стена_зад566" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -18.3, 4.2, -5.65)
+mesh = SubResource("B566")
+
+[node name="стена_зад567" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -16.8, 3.225, -5.65)
+mesh = SubResource("B567")
+
+[node name="стена_зад568" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -16.8, 5.25, -5.65)
+mesh = SubResource("B568")
+
+[node name="стена_зад569" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -15.3, 4.2, -5.65)
+mesh = SubResource("B569")
+
+[node name="стена_зад570" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -13.8, 3.225, -5.65)
+mesh = SubResource("B570")
+
+[node name="стена_зад571" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -13.8, 5.25, -5.65)
+mesh = SubResource("B571")
+
+[node name="стена_зад572" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -12.3, 4.2, -5.65)
+mesh = SubResource("B572")
+
+[node name="стена_зад573" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -10.8, 3.225, -5.65)
+mesh = SubResource("B573")
+
+[node name="стена_зад574" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -10.8, 5.25, -5.65)
+mesh = SubResource("B574")
+
+[node name="стена_зад575" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -9.25, 4.2, -5.65)
+mesh = SubResource("B575")
+
+[node name="стена_фасад576" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -24.35, 4.2, 5.65)
+mesh = SubResource("B576")
+
+[node name="стена_фасад577" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -22.8, 3.225, 5.65)
+mesh = SubResource("B577")
+
+[node name="стена_фасад578" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -22.8, 5.25, 5.65)
+mesh = SubResource("B578")
+
+[node name="стена_фасад579" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -21.3, 4.2, 5.65)
+mesh = SubResource("B579")
+
+[node name="стена_фасад580" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -19.8, 3.225, 5.65)
+mesh = SubResource("B580")
+
+[node name="стена_фасад581" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -19.8, 5.25, 5.65)
+mesh = SubResource("B581")
+
+[node name="стена_фасад582" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -18.3, 4.2, 5.65)
+mesh = SubResource("B582")
+
+[node name="стена_фасад583" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -16.8, 3.225, 5.65)
+mesh = SubResource("B583")
+
+[node name="стена_фасад584" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -16.8, 5.25, 5.65)
+mesh = SubResource("B584")
+
+[node name="стена_фасад585" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -15.3, 4.2, 5.65)
+mesh = SubResource("B585")
+
+[node name="стена_фасад586" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -13.8, 3.225, 5.65)
+mesh = SubResource("B586")
+
+[node name="стена_фасад587" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -13.8, 5.25, 5.65)
+mesh = SubResource("B587")
+
+[node name="стена_фасад588" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -12.3, 4.2, 5.65)
+mesh = SubResource("B588")
+
+[node name="стена_фасад589" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -10.8, 3.225, 5.65)
+mesh = SubResource("B589")
+
+[node name="стена_фасад590" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -10.8, 5.25, 5.65)
+mesh = SubResource("B590")
+
+[node name="стена_фасад591" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -9.25, 4.2, 5.65)
+mesh = SubResource("B591")
+
+[node name="стекло_чужое592" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -22.8, 4.275, -5.65)
+mesh = SubResource("B592")
+
+[node name="стекло_чужое593" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -22.8, 4.275, 5.65)
+mesh = SubResource("B593")
+
+[node name="стекло_чужое594" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -19.8, 4.275, -5.65)
+mesh = SubResource("B594")
+
+[node name="стекло_чужое595" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -19.8, 4.275, 5.65)
+mesh = SubResource("B595")
+
+[node name="стекло_чужое596" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -16.8, 4.275, -5.65)
+mesh = SubResource("B596")
+
+[node name="стекло_чужое597" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -16.8, 4.275, 5.65)
+mesh = SubResource("B597")
+
+[node name="стекло_чужое598" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -13.8, 4.275, -5.65)
+mesh = SubResource("B598")
+
+[node name="стекло_чужое599" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -13.8, 4.275, 5.65)
+mesh = SubResource("B599")
+
+[node name="стекло_чужое600" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -10.8, 4.275, -5.65)
+mesh = SubResource("B600")
+
+[node name="стекло_чужое601" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -10.8, 4.275, 5.65)
+mesh = SubResource("B601")
+
+[node name="стена_торец602" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -25.31, 4.2, 0)
+mesh = SubResource("B602")
+
+[node name="стена_торец603" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -8.29, 4.2, 0)
+mesh = SubResource("B603")
+
+[node name="пол604" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -16.8, 5.5, 0)
+mesh = SubResource("B604")
+
+[node name="стена_зад605" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -24.35, 7, -5.65)
+mesh = SubResource("B605")
+
+[node name="стена_зад606" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -22.8, 6.025, -5.65)
+mesh = SubResource("B606")
+
+[node name="стена_зад607" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -22.8, 8.05, -5.65)
+mesh = SubResource("B607")
+
+[node name="стена_зад608" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -21.3, 7, -5.65)
+mesh = SubResource("B608")
+
+[node name="стена_зад609" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -19.8, 6.025, -5.65)
+mesh = SubResource("B609")
+
+[node name="стена_зад610" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -19.8, 8.05, -5.65)
+mesh = SubResource("B610")
+
+[node name="стена_зад611" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -18.3, 7, -5.65)
+mesh = SubResource("B611")
+
+[node name="стена_зад612" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -16.8, 6.025, -5.65)
+mesh = SubResource("B612")
+
+[node name="стена_зад613" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -16.8, 8.05, -5.65)
+mesh = SubResource("B613")
+
+[node name="стена_зад614" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -15.3, 7, -5.65)
+mesh = SubResource("B614")
+
+[node name="стена_зад615" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -13.8, 6.025, -5.65)
+mesh = SubResource("B615")
+
+[node name="стена_зад616" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -13.8, 8.05, -5.65)
+mesh = SubResource("B616")
+
+[node name="стена_зад617" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -12.3, 7, -5.65)
+mesh = SubResource("B617")
+
+[node name="стена_зад618" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -10.8, 6.025, -5.65)
+mesh = SubResource("B618")
+
+[node name="стена_зад619" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -10.8, 8.05, -5.65)
+mesh = SubResource("B619")
+
+[node name="стена_зад620" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -9.25, 7, -5.65)
+mesh = SubResource("B620")
+
+[node name="стена_фасад621" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -24.35, 7, 5.65)
+mesh = SubResource("B621")
+
+[node name="стена_фасад622" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -22.8, 6.025, 5.65)
+mesh = SubResource("B622")
+
+[node name="стена_фасад623" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -22.8, 8.05, 5.65)
+mesh = SubResource("B623")
+
+[node name="стена_фасад624" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -21.3, 7, 5.65)
+mesh = SubResource("B624")
+
+[node name="стена_фасад625" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -19.8, 6.025, 5.65)
+mesh = SubResource("B625")
+
+[node name="стена_фасад626" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -19.8, 8.05, 5.65)
+mesh = SubResource("B626")
+
+[node name="стена_фасад627" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -18.3, 7, 5.65)
+mesh = SubResource("B627")
+
+[node name="стена_фасад628" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -16.8, 6.025, 5.65)
+mesh = SubResource("B628")
+
+[node name="стена_фасад629" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -16.8, 8.05, 5.65)
+mesh = SubResource("B629")
+
+[node name="стена_фасад630" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -15.3, 7, 5.65)
+mesh = SubResource("B630")
+
+[node name="стена_фасад631" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -13.8, 6.025, 5.65)
+mesh = SubResource("B631")
+
+[node name="стена_фасад632" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -13.8, 8.05, 5.65)
+mesh = SubResource("B632")
+
+[node name="стена_фасад633" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -12.3, 7, 5.65)
+mesh = SubResource("B633")
+
+[node name="стена_фасад634" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -10.8, 6.025, 5.65)
+mesh = SubResource("B634")
+
+[node name="стена_фасад635" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -10.8, 8.05, 5.65)
+mesh = SubResource("B635")
+
+[node name="стена_фасад636" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -9.25, 7, 5.65)
+mesh = SubResource("B636")
+
+[node name="стекло_чужое637" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -22.8, 7.075, -5.65)
+mesh = SubResource("B637")
+
+[node name="стекло_чужое638" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -22.8, 7.075, 5.65)
+mesh = SubResource("B638")
+
+[node name="стекло_чужое639" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -19.8, 7.075, -5.65)
+mesh = SubResource("B639")
+
+[node name="стекло_чужое640" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -19.8, 7.075, 5.65)
+mesh = SubResource("B640")
+
+[node name="стекло_чужое641" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -16.8, 7.075, -5.65)
+mesh = SubResource("B641")
+
+[node name="стекло_чужое642" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -16.8, 7.075, 5.65)
+mesh = SubResource("B642")
+
+[node name="стекло_чужое643" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -13.8, 7.075, -5.65)
+mesh = SubResource("B643")
+
+[node name="стекло_чужое644" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -13.8, 7.075, 5.65)
+mesh = SubResource("B644")
+
+[node name="стекло_чужое645" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -10.8, 7.075, -5.65)
+mesh = SubResource("B645")
+
+[node name="стекло_чужое646" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -10.8, 7.075, 5.65)
+mesh = SubResource("B646")
+
+[node name="стена_торец647" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -25.31, 7, 0)
+mesh = SubResource("B647")
+
+[node name="стена_торец648" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -8.29, 7, 0)
+mesh = SubResource("B648")
+
+[node name="пол649" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -16.8, 8.3, 0)
+mesh = SubResource("B649")
+
+[node name="стена_зад650" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -24.35, 9.8, -5.65)
+mesh = SubResource("B650")
+
+[node name="стена_зад651" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -22.8, 8.825, -5.65)
+mesh = SubResource("B651")
+
+[node name="стена_зад652" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -22.8, 10.85, -5.65)
+mesh = SubResource("B652")
+
+[node name="стена_зад653" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -21.3, 9.8, -5.65)
+mesh = SubResource("B653")
+
+[node name="стена_зад654" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -19.8, 8.825, -5.65)
+mesh = SubResource("B654")
+
+[node name="стена_зад655" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -19.8, 10.85, -5.65)
+mesh = SubResource("B655")
+
+[node name="стена_зад656" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -18.3, 9.8, -5.65)
+mesh = SubResource("B656")
+
+[node name="стена_зад657" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -16.8, 8.825, -5.65)
+mesh = SubResource("B657")
+
+[node name="стена_зад658" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -16.8, 10.85, -5.65)
+mesh = SubResource("B658")
+
+[node name="стена_зад659" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -15.3, 9.8, -5.65)
+mesh = SubResource("B659")
+
+[node name="стена_зад660" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -13.8, 8.825, -5.65)
+mesh = SubResource("B660")
+
+[node name="стена_зад661" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -13.8, 10.85, -5.65)
+mesh = SubResource("B661")
+
+[node name="стена_зад662" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -12.3, 9.8, -5.65)
+mesh = SubResource("B662")
+
+[node name="стена_зад663" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -10.8, 8.825, -5.65)
+mesh = SubResource("B663")
+
+[node name="стена_зад664" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -10.8, 10.85, -5.65)
+mesh = SubResource("B664")
+
+[node name="стена_зад665" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -9.25, 9.8, -5.65)
+mesh = SubResource("B665")
+
+[node name="стена_фасад666" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -24.35, 9.8, 5.65)
+mesh = SubResource("B666")
+
+[node name="стена_фасад667" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -22.8, 8.825, 5.65)
+mesh = SubResource("B667")
+
+[node name="стена_фасад668" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -22.8, 10.85, 5.65)
+mesh = SubResource("B668")
+
+[node name="стена_фасад669" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -21.3, 9.8, 5.65)
+mesh = SubResource("B669")
+
+[node name="стена_фасад670" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -19.8, 8.825, 5.65)
+mesh = SubResource("B670")
+
+[node name="стена_фасад671" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -19.8, 10.85, 5.65)
+mesh = SubResource("B671")
+
+[node name="стена_фасад672" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -18.3, 9.8, 5.65)
+mesh = SubResource("B672")
+
+[node name="стена_фасад673" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -16.8, 8.825, 5.65)
+mesh = SubResource("B673")
+
+[node name="стена_фасад674" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -16.8, 10.85, 5.65)
+mesh = SubResource("B674")
+
+[node name="стена_фасад675" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -15.3, 9.8, 5.65)
+mesh = SubResource("B675")
+
+[node name="стена_фасад676" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -13.8, 8.825, 5.65)
+mesh = SubResource("B676")
+
+[node name="стена_фасад677" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -13.8, 10.85, 5.65)
+mesh = SubResource("B677")
+
+[node name="стена_фасад678" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -12.3, 9.8, 5.65)
+mesh = SubResource("B678")
+
+[node name="стена_фасад679" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -10.8, 8.825, 5.65)
+mesh = SubResource("B679")
+
+[node name="стена_фасад680" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -10.8, 10.85, 5.65)
+mesh = SubResource("B680")
+
+[node name="стена_фасад681" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -9.25, 9.8, 5.65)
+mesh = SubResource("B681")
+
+[node name="стекло_чужое682" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -22.8, 9.875, -5.65)
+mesh = SubResource("B682")
+
+[node name="стекло_чужое683" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -22.8, 9.875, 5.65)
+mesh = SubResource("B683")
+
+[node name="стекло_чужое684" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -19.8, 9.875, -5.65)
+mesh = SubResource("B684")
+
+[node name="стекло_чужое685" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -19.8, 9.875, 5.65)
+mesh = SubResource("B685")
+
+[node name="стекло_чужое686" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -16.8, 9.875, -5.65)
+mesh = SubResource("B686")
+
+[node name="стекло_чужое687" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -16.8, 9.875, 5.65)
+mesh = SubResource("B687")
+
+[node name="стекло_чужое688" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -13.8, 9.875, -5.65)
+mesh = SubResource("B688")
+
+[node name="стекло_чужое689" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -13.8, 9.875, 5.65)
+mesh = SubResource("B689")
+
+[node name="стекло_чужое690" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -10.8, 9.875, -5.65)
+mesh = SubResource("B690")
+
+[node name="стекло_чужое691" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -10.8, 9.875, 5.65)
+mesh = SubResource("B691")
+
+[node name="стена_торец692" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -25.31, 9.8, 0)
+mesh = SubResource("B692")
+
+[node name="стена_торец693" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -8.29, 9.8, 0)
+mesh = SubResource("B693")
+
+[node name="пол694" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -16.8, 11.1, 0)
+mesh = SubResource("B694")
+
+[node name="стена_зад695" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -24.35, 12.6, -5.65)
+mesh = SubResource("B695")
+
+[node name="стена_зад696" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -22.8, 11.625, -5.65)
+mesh = SubResource("B696")
+
+[node name="стена_зад697" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -22.8, 13.65, -5.65)
+mesh = SubResource("B697")
+
+[node name="стена_зад698" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -21.3, 12.6, -5.65)
+mesh = SubResource("B698")
+
+[node name="стена_зад699" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -19.8, 11.625, -5.65)
+mesh = SubResource("B699")
+
+[node name="стена_зад700" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -19.8, 13.65, -5.65)
+mesh = SubResource("B700")
+
+[node name="стена_зад701" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -18.3, 12.6, -5.65)
+mesh = SubResource("B701")
+
+[node name="стена_зад702" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -16.8, 11.625, -5.65)
+mesh = SubResource("B702")
+
+[node name="стена_зад703" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -16.8, 13.65, -5.65)
+mesh = SubResource("B703")
+
+[node name="стена_зад704" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -15.3, 12.6, -5.65)
+mesh = SubResource("B704")
+
+[node name="стена_зад705" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -13.8, 11.625, -5.65)
+mesh = SubResource("B705")
+
+[node name="стена_зад706" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -13.8, 13.65, -5.65)
+mesh = SubResource("B706")
+
+[node name="стена_зад707" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -12.3, 12.6, -5.65)
+mesh = SubResource("B707")
+
+[node name="стена_зад708" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -10.8, 11.625, -5.65)
+mesh = SubResource("B708")
+
+[node name="стена_зад709" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -10.8, 13.65, -5.65)
+mesh = SubResource("B709")
+
+[node name="стена_зад710" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -9.25, 12.6, -5.65)
+mesh = SubResource("B710")
+
+[node name="стена_фасад711" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -24.35, 12.6, 5.65)
+mesh = SubResource("B711")
+
+[node name="стена_фасад712" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -22.8, 11.625, 5.65)
+mesh = SubResource("B712")
+
+[node name="стена_фасад713" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -22.8, 13.65, 5.65)
+mesh = SubResource("B713")
+
+[node name="стена_фасад714" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -21.3, 12.6, 5.65)
+mesh = SubResource("B714")
+
+[node name="стена_фасад715" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -19.8, 11.625, 5.65)
+mesh = SubResource("B715")
+
+[node name="стена_фасад716" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -19.8, 13.65, 5.65)
+mesh = SubResource("B716")
+
+[node name="стена_фасад717" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -18.3, 12.6, 5.65)
+mesh = SubResource("B717")
+
+[node name="стена_фасад718" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -16.8, 11.625, 5.65)
+mesh = SubResource("B718")
+
+[node name="стена_фасад719" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -16.8, 13.65, 5.65)
+mesh = SubResource("B719")
+
+[node name="стена_фасад720" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -15.3, 12.6, 5.65)
+mesh = SubResource("B720")
+
+[node name="стена_фасад721" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -13.8, 11.625, 5.65)
+mesh = SubResource("B721")
+
+[node name="стена_фасад722" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -13.8, 13.65, 5.65)
+mesh = SubResource("B722")
+
+[node name="стена_фасад723" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -12.3, 12.6, 5.65)
+mesh = SubResource("B723")
+
+[node name="стена_фасад724" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -10.8, 11.625, 5.65)
+mesh = SubResource("B724")
+
+[node name="стена_фасад725" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -10.8, 13.65, 5.65)
+mesh = SubResource("B725")
+
+[node name="стена_фасад726" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -9.25, 12.6, 5.65)
+mesh = SubResource("B726")
+
+[node name="стекло_чужое727" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -22.8, 12.675, -5.65)
+mesh = SubResource("B727")
+
+[node name="стекло_чужое728" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -22.8, 12.675, 5.65)
+mesh = SubResource("B728")
+
+[node name="стекло_чужое729" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -19.8, 12.675, -5.65)
+mesh = SubResource("B729")
+
+[node name="стекло_чужое730" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -19.8, 12.675, 5.65)
+mesh = SubResource("B730")
+
+[node name="стекло_чужое731" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -16.8, 12.675, -5.65)
+mesh = SubResource("B731")
+
+[node name="стекло_чужое732" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -16.8, 12.675, 5.65)
+mesh = SubResource("B732")
+
+[node name="стекло_чужое733" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -13.8, 12.675, -5.65)
+mesh = SubResource("B733")
+
+[node name="стекло_чужое734" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -13.8, 12.675, 5.65)
+mesh = SubResource("B734")
+
+[node name="стекло_чужое735" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -10.8, 12.675, -5.65)
+mesh = SubResource("B735")
+
+[node name="стекло_чужое736" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -10.8, 12.675, 5.65)
+mesh = SubResource("B736")
+
+[node name="стена_торец737" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -25.31, 12.6, 0)
+mesh = SubResource("B737")
+
+[node name="стена_торец738" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -8.29, 12.6, 0)
+mesh = SubResource("B738")
+
+[node name="пол_крыша739" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -16.8, 14.12, 0)
+mesh = SubResource("B739")
+
+[node name="вид_козырёк740" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -16.8, 2.65, -6.39)
+mesh = SubResource("B740")
+
+[node name="доска_дверь741" type="MeshInstance3D" parent="секция0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -16.8, 1.05, -5.82)
+mesh = SubResource("B741")
+
+[node name="секция1" type="Node3D" parent="."]
+
+[node name="пол742" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 16.8, -0.1, 0)
+mesh = SubResource("B742")
+
+[node name="стена_зад743" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 9.25, 1.4, -5.65)
+mesh = SubResource("B743")
+
+[node name="стена_зад744" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 10.8, 0.425, -5.65)
+mesh = SubResource("B744")
+
+[node name="стена_зад745" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 10.8, 2.45, -5.65)
+mesh = SubResource("B745")
+
+[node name="стена_зад746" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 12.3, 1.4, -5.65)
+mesh = SubResource("B746")
+
+[node name="стена_зад747" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 13.8, 0.425, -5.65)
+mesh = SubResource("B747")
+
+[node name="стена_зад748" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 13.8, 2.45, -5.65)
+mesh = SubResource("B748")
+
+[node name="стена_зад749" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 15.35, 1.4, -5.65)
+mesh = SubResource("B749")
+
+[node name="стена_зад750" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 16.8, 2.475, -5.65)
+mesh = SubResource("B750")
+
+[node name="стена_зад751" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 18.25, 1.4, -5.65)
+mesh = SubResource("B751")
+
+[node name="стена_зад752" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 19.8, 0.425, -5.65)
+mesh = SubResource("B752")
+
+[node name="стена_зад753" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 19.8, 2.45, -5.65)
+mesh = SubResource("B753")
+
+[node name="стена_зад754" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 21.3, 1.4, -5.65)
+mesh = SubResource("B754")
+
+[node name="стена_зад755" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 22.8, 0.425, -5.65)
+mesh = SubResource("B755")
+
+[node name="стена_зад756" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 22.8, 2.45, -5.65)
+mesh = SubResource("B756")
+
+[node name="стена_зад757" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 24.35, 1.4, -5.65)
+mesh = SubResource("B757")
+
+[node name="стена_фасад758" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 9.25, 1.4, 5.65)
+mesh = SubResource("B758")
+
+[node name="стена_фасад759" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 10.8, 0.425, 5.65)
+mesh = SubResource("B759")
+
+[node name="стена_фасад760" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 10.8, 2.45, 5.65)
+mesh = SubResource("B760")
+
+[node name="стена_фасад761" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 12.3, 1.4, 5.65)
+mesh = SubResource("B761")
+
+[node name="стена_фасад762" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 13.8, 0.425, 5.65)
+mesh = SubResource("B762")
+
+[node name="стена_фасад763" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 13.8, 2.45, 5.65)
+mesh = SubResource("B763")
+
+[node name="стена_фасад764" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 15.3, 1.4, 5.65)
+mesh = SubResource("B764")
+
+[node name="стена_фасад765" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 16.8, 0.425, 5.65)
+mesh = SubResource("B765")
+
+[node name="стена_фасад766" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 16.8, 2.45, 5.65)
+mesh = SubResource("B766")
+
+[node name="стена_фасад767" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 18.3, 1.4, 5.65)
+mesh = SubResource("B767")
+
+[node name="стена_фасад768" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 19.8, 0.425, 5.65)
+mesh = SubResource("B768")
+
+[node name="стена_фасад769" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 19.8, 2.45, 5.65)
+mesh = SubResource("B769")
+
+[node name="стена_фасад770" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 21.3, 1.4, 5.65)
+mesh = SubResource("B770")
+
+[node name="стена_фасад771" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 22.8, 0.425, 5.65)
+mesh = SubResource("B771")
+
+[node name="стена_фасад772" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 22.8, 2.45, 5.65)
+mesh = SubResource("B772")
+
+[node name="стена_фасад773" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 24.35, 1.4, 5.65)
+mesh = SubResource("B773")
+
+[node name="стекло_чужое774" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 10.8, 1.475, -5.65)
+mesh = SubResource("B774")
+
+[node name="стекло_чужое775" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 10.8, 1.475, 5.65)
+mesh = SubResource("B775")
+
+[node name="стекло_чужое776" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 13.8, 1.475, -5.65)
+mesh = SubResource("B776")
+
+[node name="стекло_чужое777" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 13.8, 1.475, 5.65)
+mesh = SubResource("B777")
+
+[node name="стекло_чужое778" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 16.8, 1.475, 5.65)
+mesh = SubResource("B778")
+
+[node name="стекло_чужое779" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 19.8, 1.475, -5.65)
+mesh = SubResource("B779")
+
+[node name="стекло_чужое780" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 19.8, 1.475, 5.65)
+mesh = SubResource("B780")
+
+[node name="стекло_чужое781" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 22.8, 1.475, -5.65)
+mesh = SubResource("B781")
+
+[node name="стекло_чужое782" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 22.8, 1.475, 5.65)
+mesh = SubResource("B782")
+
+[node name="стена_торец783" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 8.29, 1.4, 0)
+mesh = SubResource("B783")
+
+[node name="стена_торец784" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 25.31, 1.4, 0)
+mesh = SubResource("B784")
+
+[node name="пол785" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 16.8, 2.7, 0)
+mesh = SubResource("B785")
+
+[node name="стена_зад786" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 9.25, 4.2, -5.65)
+mesh = SubResource("B786")
+
+[node name="стена_зад787" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 10.8, 3.225, -5.65)
+mesh = SubResource("B787")
+
+[node name="стена_зад788" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 10.8, 5.25, -5.65)
+mesh = SubResource("B788")
+
+[node name="стена_зад789" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 12.3, 4.2, -5.65)
+mesh = SubResource("B789")
+
+[node name="стена_зад790" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 13.8, 3.225, -5.65)
+mesh = SubResource("B790")
+
+[node name="стена_зад791" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 13.8, 5.25, -5.65)
+mesh = SubResource("B791")
+
+[node name="стена_зад792" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 15.3, 4.2, -5.65)
+mesh = SubResource("B792")
+
+[node name="стена_зад793" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 16.8, 3.225, -5.65)
+mesh = SubResource("B793")
+
+[node name="стена_зад794" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 16.8, 5.25, -5.65)
+mesh = SubResource("B794")
+
+[node name="стена_зад795" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 18.3, 4.2, -5.65)
+mesh = SubResource("B795")
+
+[node name="стена_зад796" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 19.8, 3.225, -5.65)
+mesh = SubResource("B796")
+
+[node name="стена_зад797" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 19.8, 5.25, -5.65)
+mesh = SubResource("B797")
+
+[node name="стена_зад798" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 21.3, 4.2, -5.65)
+mesh = SubResource("B798")
+
+[node name="стена_зад799" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 22.8, 3.225, -5.65)
+mesh = SubResource("B799")
+
+[node name="стена_зад800" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 22.8, 5.25, -5.65)
+mesh = SubResource("B800")
+
+[node name="стена_зад801" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 24.35, 4.2, -5.65)
+mesh = SubResource("B801")
+
+[node name="стена_фасад802" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 9.25, 4.2, 5.65)
+mesh = SubResource("B802")
+
+[node name="стена_фасад803" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 10.8, 3.225, 5.65)
+mesh = SubResource("B803")
+
+[node name="стена_фасад804" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 10.8, 5.25, 5.65)
+mesh = SubResource("B804")
+
+[node name="стена_фасад805" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 12.3, 4.2, 5.65)
+mesh = SubResource("B805")
+
+[node name="стена_фасад806" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 13.8, 3.225, 5.65)
+mesh = SubResource("B806")
+
+[node name="стена_фасад807" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 13.8, 5.25, 5.65)
+mesh = SubResource("B807")
+
+[node name="стена_фасад808" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 15.3, 4.2, 5.65)
+mesh = SubResource("B808")
+
+[node name="стена_фасад809" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 16.8, 3.225, 5.65)
+mesh = SubResource("B809")
+
+[node name="стена_фасад810" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 16.8, 5.25, 5.65)
+mesh = SubResource("B810")
+
+[node name="стена_фасад811" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 18.3, 4.2, 5.65)
+mesh = SubResource("B811")
+
+[node name="стена_фасад812" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 19.8, 3.225, 5.65)
+mesh = SubResource("B812")
+
+[node name="стена_фасад813" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 19.8, 5.25, 5.65)
+mesh = SubResource("B813")
+
+[node name="стена_фасад814" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 21.3, 4.2, 5.65)
+mesh = SubResource("B814")
+
+[node name="стена_фасад815" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 22.8, 3.225, 5.65)
+mesh = SubResource("B815")
+
+[node name="стена_фасад816" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 22.8, 5.25, 5.65)
+mesh = SubResource("B816")
+
+[node name="стена_фасад817" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 24.35, 4.2, 5.65)
+mesh = SubResource("B817")
+
+[node name="стекло_чужое818" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 10.8, 4.275, -5.65)
+mesh = SubResource("B818")
+
+[node name="стекло_чужое819" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 10.8, 4.275, 5.65)
+mesh = SubResource("B819")
+
+[node name="стекло_чужое820" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 13.8, 4.275, -5.65)
+mesh = SubResource("B820")
+
+[node name="стекло_чужое821" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 13.8, 4.275, 5.65)
+mesh = SubResource("B821")
+
+[node name="стекло_чужое822" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 16.8, 4.275, -5.65)
+mesh = SubResource("B822")
+
+[node name="стекло_чужое823" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 16.8, 4.275, 5.65)
+mesh = SubResource("B823")
+
+[node name="стекло_чужое824" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 19.8, 4.275, -5.65)
+mesh = SubResource("B824")
+
+[node name="стекло_чужое825" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 19.8, 4.275, 5.65)
+mesh = SubResource("B825")
+
+[node name="стекло_чужое826" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 22.8, 4.275, -5.65)
+mesh = SubResource("B826")
+
+[node name="стекло_чужое827" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 22.8, 4.275, 5.65)
+mesh = SubResource("B827")
+
+[node name="стена_торец828" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 8.29, 4.2, 0)
+mesh = SubResource("B828")
+
+[node name="стена_торец829" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 25.31, 4.2, 0)
+mesh = SubResource("B829")
+
+[node name="пол830" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 16.8, 5.5, 0)
+mesh = SubResource("B830")
+
+[node name="стена_зад831" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 9.25, 7, -5.65)
+mesh = SubResource("B831")
+
+[node name="стена_зад832" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 10.8, 6.025, -5.65)
+mesh = SubResource("B832")
+
+[node name="стена_зад833" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 10.8, 8.05, -5.65)
+mesh = SubResource("B833")
+
+[node name="стена_зад834" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 12.3, 7, -5.65)
+mesh = SubResource("B834")
+
+[node name="стена_зад835" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 13.8, 6.025, -5.65)
+mesh = SubResource("B835")
+
+[node name="стена_зад836" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 13.8, 8.05, -5.65)
+mesh = SubResource("B836")
+
+[node name="стена_зад837" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 15.3, 7, -5.65)
+mesh = SubResource("B837")
+
+[node name="стена_зад838" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 16.8, 6.025, -5.65)
+mesh = SubResource("B838")
+
+[node name="стена_зад839" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 16.8, 8.05, -5.65)
+mesh = SubResource("B839")
+
+[node name="стена_зад840" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 18.3, 7, -5.65)
+mesh = SubResource("B840")
+
+[node name="стена_зад841" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 19.8, 6.025, -5.65)
+mesh = SubResource("B841")
+
+[node name="стена_зад842" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 19.8, 8.05, -5.65)
+mesh = SubResource("B842")
+
+[node name="стена_зад843" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 21.3, 7, -5.65)
+mesh = SubResource("B843")
+
+[node name="стена_зад844" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 22.8, 6.025, -5.65)
+mesh = SubResource("B844")
+
+[node name="стена_зад845" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 22.8, 8.05, -5.65)
+mesh = SubResource("B845")
+
+[node name="стена_зад846" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 24.35, 7, -5.65)
+mesh = SubResource("B846")
+
+[node name="стена_фасад847" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 9.25, 7, 5.65)
+mesh = SubResource("B847")
+
+[node name="стена_фасад848" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 10.8, 6.025, 5.65)
+mesh = SubResource("B848")
+
+[node name="стена_фасад849" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 10.8, 8.05, 5.65)
+mesh = SubResource("B849")
+
+[node name="стена_фасад850" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 12.3, 7, 5.65)
+mesh = SubResource("B850")
+
+[node name="стена_фасад851" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 13.8, 6.025, 5.65)
+mesh = SubResource("B851")
+
+[node name="стена_фасад852" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 13.8, 8.05, 5.65)
+mesh = SubResource("B852")
+
+[node name="стена_фасад853" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 15.3, 7, 5.65)
+mesh = SubResource("B853")
+
+[node name="стена_фасад854" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 16.8, 6.025, 5.65)
+mesh = SubResource("B854")
+
+[node name="стена_фасад855" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 16.8, 8.05, 5.65)
+mesh = SubResource("B855")
+
+[node name="стена_фасад856" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 18.3, 7, 5.65)
+mesh = SubResource("B856")
+
+[node name="стена_фасад857" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 19.8, 6.025, 5.65)
+mesh = SubResource("B857")
+
+[node name="стена_фасад858" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 19.8, 8.05, 5.65)
+mesh = SubResource("B858")
+
+[node name="стена_фасад859" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 21.3, 7, 5.65)
+mesh = SubResource("B859")
+
+[node name="стена_фасад860" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 22.8, 6.025, 5.65)
+mesh = SubResource("B860")
+
+[node name="стена_фасад861" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 22.8, 8.05, 5.65)
+mesh = SubResource("B861")
+
+[node name="стена_фасад862" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 24.35, 7, 5.65)
+mesh = SubResource("B862")
+
+[node name="стекло_чужое863" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 10.8, 7.075, -5.65)
+mesh = SubResource("B863")
+
+[node name="стекло_чужое864" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 10.8, 7.075, 5.65)
+mesh = SubResource("B864")
+
+[node name="стекло_чужое865" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 13.8, 7.075, -5.65)
+mesh = SubResource("B865")
+
+[node name="стекло_чужое866" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 13.8, 7.075, 5.65)
+mesh = SubResource("B866")
+
+[node name="стекло_чужое867" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 16.8, 7.075, -5.65)
+mesh = SubResource("B867")
+
+[node name="стекло_чужое868" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 16.8, 7.075, 5.65)
+mesh = SubResource("B868")
+
+[node name="стекло_чужое869" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 19.8, 7.075, -5.65)
+mesh = SubResource("B869")
+
+[node name="стекло_чужое870" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 19.8, 7.075, 5.65)
+mesh = SubResource("B870")
+
+[node name="стекло_чужое871" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 22.8, 7.075, -5.65)
+mesh = SubResource("B871")
+
+[node name="стекло_чужое872" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 22.8, 7.075, 5.65)
+mesh = SubResource("B872")
+
+[node name="стена_торец873" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 8.29, 7, 0)
+mesh = SubResource("B873")
+
+[node name="стена_торец874" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 25.31, 7, 0)
+mesh = SubResource("B874")
+
+[node name="пол875" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 16.8, 8.3, 0)
+mesh = SubResource("B875")
+
+[node name="стена_зад876" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 9.25, 9.8, -5.65)
+mesh = SubResource("B876")
+
+[node name="стена_зад877" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 10.8, 8.825, -5.65)
+mesh = SubResource("B877")
+
+[node name="стена_зад878" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 10.8, 10.85, -5.65)
+mesh = SubResource("B878")
+
+[node name="стена_зад879" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 12.3, 9.8, -5.65)
+mesh = SubResource("B879")
+
+[node name="стена_зад880" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 13.8, 8.825, -5.65)
+mesh = SubResource("B880")
+
+[node name="стена_зад881" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 13.8, 10.85, -5.65)
+mesh = SubResource("B881")
+
+[node name="стена_зад882" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 15.3, 9.8, -5.65)
+mesh = SubResource("B882")
+
+[node name="стена_зад883" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 16.8, 8.825, -5.65)
+mesh = SubResource("B883")
+
+[node name="стена_зад884" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 16.8, 10.85, -5.65)
+mesh = SubResource("B884")
+
+[node name="стена_зад885" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 18.3, 9.8, -5.65)
+mesh = SubResource("B885")
+
+[node name="стена_зад886" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 19.8, 8.825, -5.65)
+mesh = SubResource("B886")
+
+[node name="стена_зад887" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 19.8, 10.85, -5.65)
+mesh = SubResource("B887")
+
+[node name="стена_зад888" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 21.3, 9.8, -5.65)
+mesh = SubResource("B888")
+
+[node name="стена_зад889" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 22.8, 8.825, -5.65)
+mesh = SubResource("B889")
+
+[node name="стена_зад890" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 22.8, 10.85, -5.65)
+mesh = SubResource("B890")
+
+[node name="стена_зад891" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 24.35, 9.8, -5.65)
+mesh = SubResource("B891")
+
+[node name="стена_фасад892" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 9.25, 9.8, 5.65)
+mesh = SubResource("B892")
+
+[node name="стена_фасад893" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 10.8, 8.825, 5.65)
+mesh = SubResource("B893")
+
+[node name="стена_фасад894" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 10.8, 10.85, 5.65)
+mesh = SubResource("B894")
+
+[node name="стена_фасад895" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 12.3, 9.8, 5.65)
+mesh = SubResource("B895")
+
+[node name="стена_фасад896" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 13.8, 8.825, 5.65)
+mesh = SubResource("B896")
+
+[node name="стена_фасад897" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 13.8, 10.85, 5.65)
+mesh = SubResource("B897")
+
+[node name="стена_фасад898" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 15.3, 9.8, 5.65)
+mesh = SubResource("B898")
+
+[node name="стена_фасад899" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 16.8, 8.825, 5.65)
+mesh = SubResource("B899")
+
+[node name="стена_фасад900" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 16.8, 10.85, 5.65)
+mesh = SubResource("B900")
+
+[node name="стена_фасад901" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 18.3, 9.8, 5.65)
+mesh = SubResource("B901")
+
+[node name="стена_фасад902" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 19.8, 8.825, 5.65)
+mesh = SubResource("B902")
+
+[node name="стена_фасад903" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 19.8, 10.85, 5.65)
+mesh = SubResource("B903")
+
+[node name="стена_фасад904" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 21.3, 9.8, 5.65)
+mesh = SubResource("B904")
+
+[node name="стена_фасад905" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 22.8, 8.825, 5.65)
+mesh = SubResource("B905")
+
+[node name="стена_фасад906" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 22.8, 10.85, 5.65)
+mesh = SubResource("B906")
+
+[node name="стена_фасад907" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 24.35, 9.8, 5.65)
+mesh = SubResource("B907")
+
+[node name="стекло_чужое908" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 10.8, 9.875, -5.65)
+mesh = SubResource("B908")
+
+[node name="стекло_чужое909" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 10.8, 9.875, 5.65)
+mesh = SubResource("B909")
+
+[node name="стекло_чужое910" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 13.8, 9.875, -5.65)
+mesh = SubResource("B910")
+
+[node name="стекло_чужое911" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 13.8, 9.875, 5.65)
+mesh = SubResource("B911")
+
+[node name="стекло_чужое912" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 16.8, 9.875, -5.65)
+mesh = SubResource("B912")
+
+[node name="стекло_чужое913" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 16.8, 9.875, 5.65)
+mesh = SubResource("B913")
+
+[node name="стекло_чужое914" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 19.8, 9.875, -5.65)
+mesh = SubResource("B914")
+
+[node name="стекло_чужое915" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 19.8, 9.875, 5.65)
+mesh = SubResource("B915")
+
+[node name="стекло_чужое916" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 22.8, 9.875, -5.65)
+mesh = SubResource("B916")
+
+[node name="стекло_чужое917" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 22.8, 9.875, 5.65)
+mesh = SubResource("B917")
+
+[node name="стена_торец918" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 8.29, 9.8, 0)
+mesh = SubResource("B918")
+
+[node name="стена_торец919" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 25.31, 9.8, 0)
+mesh = SubResource("B919")
+
+[node name="пол920" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 16.8, 11.1, 0)
+mesh = SubResource("B920")
+
+[node name="стена_зад921" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 9.25, 12.6, -5.65)
+mesh = SubResource("B921")
+
+[node name="стена_зад922" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 10.8, 11.625, -5.65)
+mesh = SubResource("B922")
+
+[node name="стена_зад923" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 10.8, 13.65, -5.65)
+mesh = SubResource("B923")
+
+[node name="стена_зад924" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 12.3, 12.6, -5.65)
+mesh = SubResource("B924")
+
+[node name="стена_зад925" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 13.8, 11.625, -5.65)
+mesh = SubResource("B925")
+
+[node name="стена_зад926" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 13.8, 13.65, -5.65)
+mesh = SubResource("B926")
+
+[node name="стена_зад927" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 15.3, 12.6, -5.65)
+mesh = SubResource("B927")
+
+[node name="стена_зад928" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 16.8, 11.625, -5.65)
+mesh = SubResource("B928")
+
+[node name="стена_зад929" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 16.8, 13.65, -5.65)
+mesh = SubResource("B929")
+
+[node name="стена_зад930" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 18.3, 12.6, -5.65)
+mesh = SubResource("B930")
+
+[node name="стена_зад931" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 19.8, 11.625, -5.65)
+mesh = SubResource("B931")
+
+[node name="стена_зад932" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 19.8, 13.65, -5.65)
+mesh = SubResource("B932")
+
+[node name="стена_зад933" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 21.3, 12.6, -5.65)
+mesh = SubResource("B933")
+
+[node name="стена_зад934" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 22.8, 11.625, -5.65)
+mesh = SubResource("B934")
+
+[node name="стена_зад935" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 22.8, 13.65, -5.65)
+mesh = SubResource("B935")
+
+[node name="стена_зад936" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 24.35, 12.6, -5.65)
+mesh = SubResource("B936")
+
+[node name="стена_фасад937" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 9.25, 12.6, 5.65)
+mesh = SubResource("B937")
+
+[node name="стена_фасад938" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 10.8, 11.625, 5.65)
+mesh = SubResource("B938")
+
+[node name="стена_фасад939" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 10.8, 13.65, 5.65)
+mesh = SubResource("B939")
+
+[node name="стена_фасад940" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 12.3, 12.6, 5.65)
+mesh = SubResource("B940")
+
+[node name="стена_фасад941" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 13.8, 11.625, 5.65)
+mesh = SubResource("B941")
+
+[node name="стена_фасад942" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 13.8, 13.65, 5.65)
+mesh = SubResource("B942")
+
+[node name="стена_фасад943" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 15.3, 12.6, 5.65)
+mesh = SubResource("B943")
+
+[node name="стена_фасад944" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 16.8, 11.625, 5.65)
+mesh = SubResource("B944")
+
+[node name="стена_фасад945" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 16.8, 13.65, 5.65)
+mesh = SubResource("B945")
+
+[node name="стена_фасад946" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 18.3, 12.6, 5.65)
+mesh = SubResource("B946")
+
+[node name="стена_фасад947" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 19.8, 11.625, 5.65)
+mesh = SubResource("B947")
+
+[node name="стена_фасад948" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 19.8, 13.65, 5.65)
+mesh = SubResource("B948")
+
+[node name="стена_фасад949" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 21.3, 12.6, 5.65)
+mesh = SubResource("B949")
+
+[node name="стена_фасад950" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 22.8, 11.625, 5.65)
+mesh = SubResource("B950")
+
+[node name="стена_фасад951" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 22.8, 13.65, 5.65)
+mesh = SubResource("B951")
+
+[node name="стена_фасад952" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 24.35, 12.6, 5.65)
+mesh = SubResource("B952")
+
+[node name="стекло_чужое953" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 10.8, 12.675, -5.65)
+mesh = SubResource("B953")
+
+[node name="стекло_чужое954" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 10.8, 12.675, 5.65)
+mesh = SubResource("B954")
+
+[node name="стекло_чужое955" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 13.8, 12.675, -5.65)
+mesh = SubResource("B955")
+
+[node name="стекло_чужое956" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 13.8, 12.675, 5.65)
+mesh = SubResource("B956")
+
+[node name="стекло_чужое957" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 16.8, 12.675, -5.65)
+mesh = SubResource("B957")
+
+[node name="стекло_чужое958" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 16.8, 12.675, 5.65)
+mesh = SubResource("B958")
+
+[node name="стекло_чужое959" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 19.8, 12.675, -5.65)
+mesh = SubResource("B959")
+
+[node name="стекло_чужое960" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 19.8, 12.675, 5.65)
+mesh = SubResource("B960")
+
+[node name="стекло_чужое961" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 22.8, 12.675, -5.65)
+mesh = SubResource("B961")
+
+[node name="стекло_чужое962" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 22.8, 12.675, 5.65)
+mesh = SubResource("B962")
+
+[node name="стена_торец963" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 8.29, 12.6, 0)
+mesh = SubResource("B963")
+
+[node name="стена_торец964" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 25.31, 12.6, 0)
+mesh = SubResource("B964")
+
+[node name="пол_крыша965" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 16.8, 14.12, 0)
+mesh = SubResource("B965")
+
+[node name="вид_козырёк966" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 16.8, 2.65, -6.39)
+mesh = SubResource("B966")
+
+[node name="доска_дверь967" type="MeshInstance3D" parent="секция1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 16.8, 1.05, -5.82)
+mesh = SubResource("B967")

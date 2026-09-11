@@ -81,6 +81,9 @@ public partial class Мир : Node3D
     // вчетверо меньше по площади этажа, и квартиры выходили по 25 м²
     // вместо хрущёвских сорока.
     private const float ДЛИНА = 8.4f;        // полдлины секции по X
+
+    /// <summary>Длина секции: соседние стоят через неё.</summary>
+    private const float СЕКЦИЯ = 16.8f;
     private const float ГЛУБИНА = 5.76f;     // полглубины секции по Z
 
     private const float ШИРИНА = 1.45f;      // полширины шахты
@@ -238,8 +241,7 @@ public partial class Мир : Node3D
                             + $"а их в доме {погреба.Count}");
                 break;
             }
-            var где = места[i].где.Origin;
-            ДверьПогреба(погреба[i], Mathf.Sign(где.X), где.Y, где.Z);
+            ДверьПогреба(погреба[i], места[i].где);
         }
     }
 
@@ -283,11 +285,19 @@ public partial class Мир : Node3D
     /// луч её узнаёт. Ключ от неё у хозяина, и это решает симуляция,
     /// а не дверь: подойти можно к любой, откроется своя.
     /// </summary>
-    private void ДверьПогреба(Кладовая к, float с, float y, float z)
+    private void ДверьПогреба(Кладовая к, Transform3D гнездо)
     {
+        // Поворот гнезда говорит, в какой стене дверь: ноль — в стене
+        // вдоль X (створка широкая), девяносто — в стене вдоль Z.
+        // Раньше створка всегда стояла в боковой стене, потому что подвал
+        // был узким коридором под шахтой; теперь он во всю секцию.
+        float угол = Mathf.RadToDeg(гнездо.Basis.GetEuler().Y);
+        bool вдоль_z = Mathf.Abs(Mathf.Sin(гнездо.Basis.GetEuler().Y)) > 0.5f;
+        var размер = вдоль_z ? new Vector3(0.12f, 1.9f, 0.8f)
+                             : new Vector3(0.8f, 1.9f, 0.12f);
         var доска = Материал(new Color("#5a4a36"), 0.9f);
-        var место = new Vector3(с * (ШИРИНА - 0.07f), y + 0.95f, z);
-        var узел = Коробка(доска, new Vector3(0.12f, 1.9f, 0.8f), место);
+        var место = гнездо.Origin with { Y = гнездо.Origin.Y + 0.95f };
+        var узел = Коробка(доска, размер, место);
         узел.Name = $"кладовая{к.id}";
 
         узел.AddChild(new Label3D
@@ -297,8 +307,9 @@ public partial class Мир : Node3D
             PixelSize = 0.0026f,
             Modulate = new Color("#cfc6b0"),
             Billboard = BaseMaterial3D.BillboardModeEnum.Disabled,
-            Position = new Vector3(-с * 0.09f, 0.62f, 0),
-            RotationDegrees = new Vector3(0, -с * 90, 0),
+            Position = вдоль_z ? new Vector3(-Mathf.Sign(место.X) * 0.09f, 0.62f, 0)
+                               : new Vector3(0, 0.62f, -0.09f),
+            RotationDegrees = new Vector3(0, угол, 0),
             DoubleSided = true,
             Shaded = false,
         });
@@ -743,10 +754,15 @@ public partial class Мир : Node3D
     public static IReadOnlyList<(Vector3 размер, Vector3 где)> Габариты(int этажей)
     {
         float h = ЭТАЖ * этажей;
-        return new List<(Vector3, Vector3)>
+        var @out = new List<(Vector3, Vector3)>
         {
             (new Vector3(ДЛИНА * 2, h, ГЛУБИНА * 2), new Vector3(0, h / 2, 0)),
         };
+        // соседние секции: в них не заходят, но габариты дома они задают
+        foreach (float сдвиг in new[] { -СЕКЦИЯ, СЕКЦИЯ })
+            @out.Add((new Vector3(СЕКЦИЯ, h, ГЛУБИНА * 2),
+                      new Vector3(сдвиг, h / 2, 0)));
+        return @out;
     }
 
     /// <summary>Устье приямка: там, откуда спускаются в подвал.
@@ -768,12 +784,13 @@ public partial class Мир : Node3D
     /// </summary>
     public bool ВоДворе(Vector3 где)
     {
-        if (где.Z > ЗАД - 0.3f)
-            return false;
-        bool в_квартире = Math.Abs(где.X) > ШИРИНА
-                          && где.X * Сторона(_своя) > 0
-                          && где.Z > ЗАДЬ - 0.3f;
-        return !в_квартире;
+        // Не «дальше задней стены», а «вне обвода своей секции»: дом
+        // стал длиннее, двор обошёл его кругом, и прежняя проверка
+        // считала домом всё, что перед фасадом. Соседние секции глухие,
+        // внутри них оказаться нельзя, и потому их можно не вычитать.
+        bool внутри = Math.Abs(где.X) < ДЛИНА
+                      && где.Z > -ГЛУБИНА && где.Z < ГЛУБИНА;
+        return !внутри;
     }
 
     /// <summary>
