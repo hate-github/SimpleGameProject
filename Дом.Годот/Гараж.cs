@@ -18,8 +18,11 @@
 // скелет и разлеталась веером), здесь не грозит.
 //
 // Масштаб приходит из гнезда: модель сделана без оглядки на метры
-// (ворота 5.6 единицы в высоту), и множитель подобран так, чтобы
-// в яму под полом можно было спуститься в рост.
+// (ворота 5.6 единицы в высоту).
+//
+// Подпол закрыт. Настил в модели накрывает яму не целиком — у лестницы
+// оставлен проём; здесь настил растянут на весь проём, под ним плита,
+// в которую упираются, а лестница и коробка на дне спрятаны.
 
 using Godot;
 using Дом.Ядро;
@@ -40,8 +43,6 @@ public partial class Гараж : Node3D
     public System.Func<bool> МожноМенять { get; set; } = () => false;
     public System.Action<string> Сказать { get; set; } = _ => { };
     public System.Action ОткрытьВерстак { get; set; } = () => { };
-    public System.Action<Vector3> Перенести { get; set; } = _ => { };
-    public System.Func<Vector3> ГдеГерой { get; set; } = () => Vector3.Zero;
 
     /// <summary>Какая кладовая дома — этот гараж.</summary>
     public Кладовая? кладовая { get; set; }
@@ -61,8 +62,7 @@ public partial class Гараж : Node3D
     // Поэтому подсказка смотрит сюда, а в дом ходят только действия —
     // и только пока он спит на вопросе.
     private bool _доступ, _вскрыта;
-    private Vector3 _низ, _верх;     // куда ставит лестница
-    private Aabb _пол;               // габарит пола — под ним яма
+    private Aabb _пол;               // габарит пола вместе с ямой
     private float _крыша = 4;        // высота стен: выше — уже не в гараже
 
     private const float РАСПАХ = 100f;   // на сколько градусов открываются створки
@@ -120,18 +120,32 @@ public partial class Гараж : Node3D
         MeshInstance3D? Часть(string имя) => части.GetValueOrDefault(имя);
         Aabb Габарит(MeshInstance3D м) => _модель.Transform * (м.Transform * м.GetAabb());
 
-        // ---- стены, пол, настил: форма, в которую упираются ----
-        foreach (var имя in new[] { "garage walls", "floor", "plywood" })
+        // ---- стены и пол: форма, в которую упираются ----
+        foreach (var имя in new[] { "garage walls", "floor" })
             if (Часть(имя) is { } м)
                 Форма(м, 1, выпуклая: false);
         foreach (var имя in new[] { "workbench", "shelf" })
             if (Часть(имя) is { } м)
                 Форма(м, СЛОЙ_МЕБЕЛИ, выпуклая: false);
 
-        if (Часть("floor") is { } пол)
+        var пол = Часть("floor");
+        if (пол is not null)
             _пол = Габарит(пол);
         if (Часть("garage walls") is { } стены)
             _крыша = Габарит(стены).End.Y;
+
+        // ---- подпол закрыт: настил на весь проём, под ним плита ----
+        // Форма — плитой, а не по сетке настила: сетку растягивают неровно,
+        // а растянутая так форма ведёт себя плохо.
+        var настил = Часть("plywood");
+        if (пол is not null && Проём(пол) is Aabb проём)
+        {
+            if (настил is not null)
+                Растянуть(настил, проём);
+            Плита(проём, настил is not null ? (настил.Transform * настил.GetAabb()).End.Y : 0f);
+        }
+        if (Часть("ladder") is { } лестница)
+            лестница.Visible = false;
 
         // ---- ворота: вращаются вокруг своих петель ----
         _лево = Часть("garage door left");
@@ -176,6 +190,16 @@ public partial class Гараж : Node3D
             if (полная) к.полная = м;
             else к.пустая = м;
         }
+        // коробка на дне ямы — под настилом, её не достать и не видно
+        _коробки.RemoveAll(к =>
+        {
+            var г = к.полная is not null ? Габарит(к.полная) : Габарит(к.пустая!);
+            if (г.End.Y > -0.05f)
+                return false;
+            if (к.полная is not null) к.полная.Visible = false;
+            if (к.пустая is not null) к.пустая.Visible = false;
+            return true;
+        });
         _коробки.Sort((а, б) => string.CompareOrdinal(а.имя, б.имя));
         for (int i = 0; i < _коробки.Count; i++)
         {
@@ -208,7 +232,8 @@ public partial class Гараж : Node3D
             {
                 Position = г.GetCenter() - new Vector3(0, г.Size.Y * 0.6f, 0),
                 LightColor = new Color("#ffe2b0"),
-                OmniRange = 8.0f,
+                // на весь гараж и не дальше: при 0.37 — пять с половиной метров
+                OmniRange = 14.5f * масштаб,
                 // без тени лампа светит сквозь стены — на снег вокруг
                 ShadowEnabled = true,
                 Name = "лампа_гаража",
@@ -226,29 +251,72 @@ public partial class Гараж : Node3D
             цель.Действие = Щёлкнуть;
         }
 
-        // ---- лестница в яму ----
-        // Ставит не к самой лестнице: у её подножия стоит коробка, и
-        // человек оказывался в ней по пояс. Вниз — за край настила,
-        // под него, где яма уже свободна; наверх — на настил над тем же
-        // местом.
-        if (Часть("ladder") is { } лестница)
-        {
-            var г = Габарит(лестница);
-            float к_середине = _пол.GetCenter().Z > г.GetCenter().Z ? 1 : -1;
-            float край = Часть("plywood") is { } настил
-                ? (к_середине > 0 ? Габарит(настил).Position.Z : Габарит(настил).End.Z)
-                : г.GetCenter().Z + к_середине * 1.1f;
-            _низ = new Vector3(г.GetCenter().X, г.Position.Y + 0.05f,
-                               край + к_середине * 0.5f);
-            _верх = new Vector3(г.GetCenter().X, 0.08f, край + к_середине * 0.5f);
-            var цель = Предмет.Вокруг(this, г, 0.1f, "лестница_гаража");
-            цель.Подсказка = () => (ВЯме() ? "лестница наверх" : "лестница в яму")
-                                   + "\n[E]  " + (ВЯме() ? "подняться" : "спуститься");
-            цель.Действие = () => Перенести(ToGlobal(ВЯме() ? _верх : _низ));
-        }
-
         Показать();
         return true;
+    }
+
+    /// <summary>
+    /// Проём ямы в полу, в осях модели. Верх пола — кольцо: снаружи углы
+    /// блока, внутри углы проёма; внутренние и есть проём. Ямы нет —
+    /// нет и проёма.
+    /// </summary>
+    private static Aabb? Проём(MeshInstance3D пол)
+    {
+        var блок = пол.Transform * пол.GetAabb();
+        Aabb? проём = null;
+        var сетка = пол.Mesh;
+        for (int s = 0; s < сетка.GetSurfaceCount(); s++)
+            foreach (var в in сетка.SurfaceGetArrays(s)[(int)Mesh.ArrayType.Vertex].AsVector3Array())
+            {
+                var т = пол.Transform * в;
+                bool на_верху = Mathf.Abs(т.Y - блок.End.Y) < 0.01f;
+                bool внутри = т.X > блок.Position.X + 0.01f && т.X < блок.End.X - 0.01f
+                              && т.Z > блок.Position.Z + 0.01f && т.Z < блок.End.Z - 0.01f;
+                if (на_верху && внутри)
+                    проём = проём is Aabb п ? п.Expand(т) : new Aabb(т, Vector3.Zero);
+            }
+        return проём;
+    }
+
+    /// <summary>Растянуть настил на весь проём, с запасом на края, —
+    /// вширь и вдоль, не в толщину. Только вид: формы у настила нет.</summary>
+    private static void Растянуть(MeshInstance3D настил, Aabb проём)
+    {
+        const float ЗАПАС = 0.1f;
+        var был = настил.Transform * настил.GetAabb();
+        float kx = Mathf.Max(1f, (проём.Size.X + 2 * ЗАПАС) / был.Size.X);
+        float kz = Mathf.Max(1f, (проём.Size.Z + 2 * ЗАПАС) / был.Size.Z);
+        var ц_был = был.GetCenter();
+        var ц = проём.GetCenter();
+        var доп = new Transform3D(Basis.FromScale(new Vector3(kx, 1, kz)),
+                                  new Vector3(ц.X - kx * ц_был.X, 0, ц.Z - kz * ц_был.Z));
+        настил.Transform = доп * настил.Transform;
+    }
+
+    /// <summary>Плита над ямой: в неё упираются вместо проёма. Верх —
+    /// вровень с настилом, толщина — полметра модели вниз, чтобы с ходу
+    /// сквозь неё не проскочить.</summary>
+    private void Плита(Aabb проём, float верх)
+    {
+        const float ЗАПАС = 0.1f;
+        const float ТОЛЩИНА = 0.5f;
+        var тело = new StaticBody3D
+        {
+            Name = "плита_над_ямой",
+            CollisionLayer = 1,
+            CollisionMask = 0,
+        };
+        тело.AddChild(new CollisionShape3D
+        {
+            Shape = new BoxShape3D
+            {
+                Size = new Vector3(проём.Size.X + 2 * ЗАПАС, ТОЛЩИНА,
+                                   проём.Size.Z + 2 * ЗАПАС),
+            },
+            Position = new Vector3(проём.GetCenter().X, верх - ТОЛЩИНА / 2,
+                                   проём.GetCenter().Z),
+        });
+        _модель!.AddChild(тело);
     }
 
     /// <summary>Поставить форму по мешу. Выпуклая — для створок: они
@@ -266,8 +334,6 @@ public partial class Гараж : Node3D
                 тело.CollisionMask = 0;
             }
     }
-
-    private bool ВЯме() => ToLocal(ГдеГерой()).Y < -0.8f;
 
     /// <summary>
     /// Сверить гараж с домом. Зовётся на каждом вопросе, пока дом спит:
