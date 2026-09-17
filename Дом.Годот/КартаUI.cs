@@ -1,4 +1,4 @@
-// Карта мест (ГДД 20): открывается клавишей M.
+// Карта мест (ГДД 20): открывается своей клавишей (по умолчанию M).
 //
 // Четыре места — и это не список равноценных кнопок, а очередь, которую
 // разбирают сверху. Порядок задаёт не удобство, а то, насколько дико туда
@@ -26,6 +26,7 @@ public partial class КартаUI : PanelContainer
 {
     private VBoxContainer _столбец = null!;
     private Label _заголовок = null!;
+    private Button _закрыть = null!;
 
     /// <summary>Откуда брать. Ставится корневым узлом.</summary>
     public Сеанс? Сеанс { get; set; }
@@ -53,9 +54,9 @@ public partial class КартаUI : PanelContainer
         _столбец = new VBoxContainer();
         всё.AddChild(_столбец);
 
-        var закрыть = new Button { Text = "закрыть (M)" };
-        закрыть.Pressed += Убрать;
-        всё.AddChild(закрыть);
+        _закрыть = new Button();
+        _закрыть.Pressed += Убрать;
+        всё.AddChild(_закрыть);
     }
 
     public void Показать()
@@ -63,6 +64,8 @@ public partial class КартаUI : PanelContainer
         if (Сеанс is null)
             return;
         Visible = true;
+        // клавишу назначает игрок — кнопка зовёт её по имени
+        _закрыть.Text = $"закрыть ({Управление.Имя(Клавиши.КАРТА)})";
         Обновить();
     }
 
@@ -124,12 +127,11 @@ public partial class КартаUI : PanelContainer
         куда.AddChild(l);
     }
 
-    /// <summary>M открывает и закрывает; повтор клавиши отбрасывается.</summary>
+    /// <summary>Клавиша карты открывает и закрывает, Esc закрывает;
+    /// повтор клавиши отбрасывается.</summary>
     public override void _UnhandledInput(InputEvent e)
     {
-        if (e is not InputEventKey к || !к.Pressed || к.Echo)
-            return;
-        if (к.Keycode == Key.M)
+        if (Управление.Нажато(e, Клавиши.КАРТА))
         {
             if (Visible)
                 Убрать();
@@ -137,7 +139,7 @@ public partial class КартаUI : PanelContainer
                 Показать();
             AcceptEvent();
         }
-        else if (Visible && к.Keycode == Key.Escape)
+        else if (Visible && e is InputEventKey { Pressed: true, Echo: false, Keycode: Key.Escape })
         {
             Убрать();
             AcceptEvent();

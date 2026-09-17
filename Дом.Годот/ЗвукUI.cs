@@ -36,6 +36,14 @@
 // бьётся стекло, кто-то переезжает — двигают мебель. Это не громкость
 // из симуляции, а сам факт из потока событий, и звучит он у той двери,
 // где было.
+//
+// Каждый звук идёт на шину своего канала настроек (`Шины`): метель —
+// на свою, гул — на фон, события — на «шаги и вещи». Узел не замирает,
+// пока открыты настройки: метель и фон там крутят на слух.
+//
+// Во дворе метель на треть тише записи (множитель 2/3, минус 3.5 дБ):
+// автор услышал, что за порогом она перекрывает всё остальное. Дома —
+// по-прежнему 0.6 и стены: там её глушит фильтр, а не громкость.
 
 using Godot;
 using Дом.Ядро;
@@ -51,9 +59,13 @@ public partial class ЗвукUI : Node
     private AudioEffectLowPassFilter _стены = null!;
     private double _ветер_сила;
 
-    private const string ШИНА_ВЕТРА = "Ветер";
-    private const float ЧАСТОТА_ДОМА = 650f;      // что пропускают стены
+    internal const float ЧАСТОТА_ДОМА = 650f;     // что пропускают стены
     private const float ЧАСТОТА_ДВОРА = 9000f;
+
+    // доля записанной громкости: во дворе — на треть тише записи,
+    // дома — тише и глуше (стены)
+    private const double МЕТЕЛЬ_ВО_ДВОРЕ = 2.0 / 3.0;
+    private const double МЕТЕЛЬ_ДОМА = 0.6;
 
     /// <summary>Гул на квартиру: свой источник, своя фаза, своё место.</summary>
     private sealed class Гудит
@@ -72,21 +84,15 @@ public partial class ЗвукUI : Node
 
     public override void _Ready()
     {
+        // метель и фон звучат и в настройках: их там и крутят
+        ProcessMode = ProcessModeEnum.Always;
+
         // своя шина для ветра: на ней стены — фильтр низких частот
-        int шина = AudioServer.GetBusIndex(ШИНА_ВЕТРА);
-        if (шина < 0)
-        {
-            AudioServer.AddBus();
-            шина = AudioServer.BusCount - 1;
-            AudioServer.SetBusName(шина, ШИНА_ВЕТРА);
-            AudioServer.SetBusSend(шина, "Master");
-            AudioServer.AddBusEffect(шина, new AudioEffectLowPassFilter { CutoffHz = ЧАСТОТА_ДОМА });
-        }
-        _стены = (AudioEffectLowPassFilter)AudioServer.GetBusEffect(шина, 0);
+        _стены = Шины.Стены();
         _ветер = new AudioStreamPlayer
         {
             Stream = Звуки.Взять("вьюга", петля: true),
-            Bus = ШИНА_ВЕТРА,
+            Bus = Шины.МЕТЕЛЬ,
             VolumeDb = -80f,
         };
         AddChild(_ветер);
@@ -134,6 +140,7 @@ public partial class ЗвукUI : Node
             // затухание считает симуляция, а не движок: см. шапку файла
             AttenuationModel = AudioStreamPlayer3D.AttenuationModelEnum.Disabled,
             Autoplay = false,
+            Bus = Шины.ФОН,
         };
         AddChild(игрок);
         игрок.Play();
@@ -159,11 +166,12 @@ public partial class ЗвукUI : Node
     /// <summary>
     /// Ветер: запись вьюги. Громкость считает симуляция (буран громче
     /// метели); здесь только стены — дома запись глушится и тише,
-    /// во дворе звучит как есть. Меняется плавно: шаг за порог не щелчок.
+    /// во дворе звучит без фильтра и на треть тише записи. Меняется
+    /// плавно: шаг за порог не щелчок.
     /// </summary>
     private void Ветер(double delta)
     {
-        double сила = _ветер_сила * (_на_улице ? 1.0 : 0.6);
+        double сила = _ветер_сила * (_на_улице ? МЕТЕЛЬ_ВО_ДВОРЕ : МЕТЕЛЬ_ДОМА);
         float громкость = сила < Порог ? -80f : Mathf.LinearToDb((float)сила) - 4f;
         float к = (float)System.Math.Min(1.0, delta * 3.0);
         _ветер.VolumeDb = Mathf.Lerp(_ветер.VolumeDb, громкость, к);

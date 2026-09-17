@@ -127,7 +127,7 @@ public partial class ПереходUI : PanelContainer
         if (!Visible || _поле.Visible || e is not InputEventKey к
             || !к.Pressed || к.Echo)
             return;
-        if (к.Keycode is Key.Space or Key.Enter or Key.KpEnter)
+        if (к.Keycode is Key.Space or Key.Enter or Key.KpEnter)   // клавиша: «дальше» между жизнями — не действие игры
         {
             Дальше("");
             AcceptEvent();

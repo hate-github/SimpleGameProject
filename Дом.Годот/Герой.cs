@@ -12,11 +12,17 @@
 // `Поверхность`). Поверхность приходит от тела под ногами — того же
 // касания, которое цикл столкновений раньше просто пропускал.
 //
-// Мышь захватывается, пока никакой экран не открыт: телефон, карта
-// и развёрнутый список вариантов отпускают её обратно, потому что в них
-// тыкают курсором. Свёрнутый лист вопроса — не отпускает: при нём ходят.
+// Мышь захватывается, пока никакой экран не открыт: телефон, карта,
+// настройки и развёрнутый список вариантов отпускают её обратно, потому
+// что в них тыкают курсором. Свёрнутый лист вопроса — не отпускает:
+// при нём ходят.
+//
+// Ходьба — действия из настроек (`Управление`), а не буквы: какие клавиши
+// ведут вперёд, решает игрок. Чувствительность мыши и инверсию ставит
+// корневой узел — тоже из настроек.
 
 using Godot;
+using Дом.Экран;
 
 namespace Дом.Годот;
 
@@ -26,6 +32,11 @@ public partial class Герой : CharacterBody3D
 	[Export] public float Шаг { get; set; } = 2.4f;
 
 	[Export] public float Чувствительность { get; set; } = 0.0022f;
+
+	/// <summary>Множитель к чувствительности и инверсия взгляда по вертикали —
+	/// из настроек (Esc).</summary>
+	public float Множитель_мыши { get; set; } = 1f;
+	public bool Инверсия_мыши { get; set; }
 
 	private Camera3D _глаза = null!;
 	private double _часы;
@@ -146,21 +157,16 @@ public partial class Герой : CharacterBody3D
 
 	public override void _UnhandledInput(InputEvent e)
 	{
+		// Esc мышь здесь больше не отпускает: он открывает настройки
+		// (корневой узел), и выйти из игры можно оттуда
 		if (e is InputEventMouseMotion м && Свободен && _с_захвата > 0.25
 			&& Input.MouseMode == Input.MouseModeEnum.Captured)
 		{
-			RotateY(-м.Relative.X * Чувствительность);
-			_глаза.RotateX(-м.Relative.Y * Чувствительность);
+			float к = Чувствительность * Множитель_мыши;
+			RotateY(-м.Relative.X * к);
+			_глаза.RotateX((Инверсия_мыши ? 1f : -1f) * м.Relative.Y * к);
 			_глаза.Rotation = new Vector3(
 				Mathf.Clamp(_глаза.Rotation.X, -1.4f, 1.4f), 0, 0);
-		}
-		else if (e is InputEventKey к && к.Pressed && !к.Echo
-				 && к.Keycode == Key.Escape)
-		{
-			// Escape отпускает мышь — иначе окно не закрыть
-			Input.MouseMode = Input.MouseMode == Input.MouseModeEnum.Captured
-				? Input.MouseModeEnum.Visible
-				: Input.MouseModeEnum.Captured;
 		}
 	}
 
@@ -175,10 +181,10 @@ public partial class Герой : CharacterBody3D
 		if (Свободен)
 		{
 			var куда = Vector2.Zero;
-			if (Input.IsPhysicalKeyPressed(Key.W)) куда.Y -= 1;
-			if (Input.IsPhysicalKeyPressed(Key.S)) куда.Y += 1;
-			if (Input.IsPhysicalKeyPressed(Key.A)) куда.X -= 1;
-			if (Input.IsPhysicalKeyPressed(Key.D)) куда.X += 1;
+			if (Управление.Зажато(Клавиши.ВПЕРЁД)) куда.Y -= 1;
+			if (Управление.Зажато(Клавиши.НАЗАД)) куда.Y += 1;
+			if (Управление.Зажато(Клавиши.ВЛЕВО)) куда.X -= 1;
+			if (Управление.Зажато(Клавиши.ВПРАВО)) куда.X += 1;
 			куда = куда.Normalized();
 
 			// замёрзший и усталый идёт медленнее — это и есть «замедление»

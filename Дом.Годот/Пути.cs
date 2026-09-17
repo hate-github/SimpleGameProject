@@ -39,6 +39,12 @@ public static class Пути
 
     public static bool ЕстьНаследие => System.IO.File.Exists(Наследие);
 
+    /// <summary>Файл настроек (Esc): рядом с наследием, но отдельно —
+    /// настройки не часть петли и не обнуляются вместе с ней.</summary>
+    public static string Настройки
+        => System.IO.Path.Combine(
+               ProjectSettings.GlobalizePath("user://"), "настройки.json");
+
     private static string Найти()
     {
         string корень = ProjectSettings.GlobalizePath("res://");

@@ -1,4 +1,5 @@
-// Карман вне времени (ГДД 9): открывается клавишей I, время стоит.
+// Карман вне времени (ГДД 9): открывается своей клавишей (по умолчанию I),
+// время стоит.
 //
 // «Время стоит» здесь не режим, который надо было заводить, а то, как оно
 // и так устроено: карман открывается только пока дом спит на вопросе.
@@ -26,6 +27,7 @@ public partial class КарманUI : PanelContainer
     private VBoxContainer _внутри = null!;
     private Label _заголовок = null!;
     private Label _свидетели = null!;
+    private Button _закрыть = null!;
 
     /// <summary>Откуда брать. Ставится корневым узлом.</summary>
     public Сеанс? Сеанс { get; set; }
@@ -65,9 +67,9 @@ public partial class КарманUI : PanelContainer
         _шкаф = Колонка(две, "в шкафу — положить");
         _внутри = Колонка(две, "в кармане — достать");
 
-        var закрыть = new Button { Text = "закрыть (I)" };
-        закрыть.Pressed += Убрать;
-        столбец.AddChild(закрыть);
+        _закрыть = new Button();
+        _закрыть.Pressed += Убрать;
+        столбец.AddChild(_закрыть);
     }
 
     private static VBoxContainer Колонка(HBoxContainer куда, string имя)
@@ -88,6 +90,8 @@ public partial class КарманUI : PanelContainer
         if (Сеанс?.я.карман is null)
             return;                     // кармана нет — нечего и открывать
         Visible = true;
+        // клавишу назначает игрок — кнопка зовёт её по имени
+        _закрыть.Text = $"закрыть ({Управление.Имя(Клавиши.КАРМАН)})";
         Обновить();
     }
 
@@ -145,13 +149,11 @@ public partial class КарманUI : PanelContainer
         Обновить();
     }
 
-    /// <summary>I открывает и закрывает. Повтор клавиши отбрасывается —
-    /// зажатая «I» иначе мигала бы экраном.</summary>
+    /// <summary>Клавиша кармана открывает и закрывает, Esc закрывает.
+    /// Повтор клавиши отбрасывается — зажатая иначе мигала бы экраном.</summary>
     public override void _UnhandledInput(InputEvent e)
     {
-        if (e is not InputEventKey к || !к.Pressed || к.Echo)
-            return;
-        if (к.Keycode == Key.I)
+        if (Управление.Нажато(e, Клавиши.КАРМАН))
         {
             if (Visible)
                 Убрать();
@@ -159,7 +161,7 @@ public partial class КарманUI : PanelContainer
                 Показать();
             AcceptEvent();
         }
-        else if (Visible && к.Keycode == Key.Escape)
+        else if (Visible && e is InputEventKey { Pressed: true, Echo: false, Keycode: Key.Escape })
         {
             Убрать();
             AcceptEvent();

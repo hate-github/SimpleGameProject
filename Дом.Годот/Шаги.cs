@@ -46,10 +46,15 @@ public partial class Шаги : Node
     {
         for (int i = 0; i < _ноги.Length; i++)
         {
-            _ноги[i] = new AudioStreamPlayer { Name = $"нога{i}" };
+            _ноги[i] = new AudioStreamPlayer { Name = $"нога{i}", Bus = Шины.ШАГИ };
             AddChild(_ноги[i]);
         }
-        _скрип = new AudioStreamPlayer { Name = "скрип", Stream = Звуки.Взять("шаги_скрип") };
+        _скрип = new AudioStreamPlayer
+        {
+            Name = "скрип",
+            Stream = Звуки.Взять("шаги_скрип"),
+            Bus = Шины.ШАГИ,
+        };
         AddChild(_скрип);
         _кость.Randomize();
     }

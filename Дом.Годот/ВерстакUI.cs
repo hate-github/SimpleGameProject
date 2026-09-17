@@ -8,6 +8,7 @@
 // собрать из запасов героя.
 
 using Godot;
+using Дом.Экран;
 
 namespace Дом.Годот;
 
@@ -68,11 +69,13 @@ public partial class ВерстакUI : PanelContainer
         Закрыт();
     }
 
+    /// <summary>Отойти — Esc или та же клавиша, которой подошли.</summary>
     public override void _UnhandledInput(InputEvent e)
     {
-        if (!Visible || e is not InputEventKey к || !к.Pressed || к.Echo)
+        if (!Visible)
             return;
-        if (к.Keycode is Key.Escape or Key.E)
+        if (Управление.Нажато(e, Клавиши.ДЕЙСТВИЕ)
+            || e is InputEventKey { Pressed: true, Echo: false, Keycode: Key.Escape })
         {
             Убрать();
             AcceptEvent();
