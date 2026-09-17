@@ -287,8 +287,14 @@ public sealed class Человек : Решающий
                                     k < подписи.Count ? подписи[k] : ""));
 
         int i = спросить(new ВопросИгроку(h.day, npc.id, вопрос, шапка, в, чувства, корзина));
+        if (i == ВопросИгроку.САМ && вопрос == Вопрос.ЧТО_ДЕЛАТЬ)
+            return _сам;
         return порядок[Math.Max(0, Math.Min(i, порядок.Count - 1))].что;
     }
+
+    /// <summary>Ответ «сделал своё сам» изнутри: отличим по ссылке,
+    /// а не по значению, и потому с вариантом не спутается.</summary>
+    private static readonly object _сам = new();
 
     public override (string key, object? target)? день(
         House h, NPC npc, IReadOnlyList<((string key, object? target) что, double вес)> варианты,
@@ -296,8 +302,10 @@ public sealed class Человек : Решающий
     {
         if (варианты.Count == 0)
             return null;
-        var о = (ValueTuple<string, object?>?)_выбрать(
-            h, npc, Вопрос.ЧТО_ДЕЛАТЬ, Решающий.Вширь(варианты), корзина);
+        var ответ = _выбрать(h, npc, Вопрос.ЧТО_ДЕЛАТЬ, Решающий.Вширь(варианты), корзина);
+        if (ReferenceEquals(ответ, _сам))
+            return (Действия.САМ, null);
+        var о = (ValueTuple<string, object?>?)ответ;
         return о is null ? null : (о.Value.Item1, о.Value.Item2);
     }
 

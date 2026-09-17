@@ -98,6 +98,16 @@ public static partial class Действия
     public static void исполняет(string key, Func<House, NPC, object?, double, object?> f)
         => исполняет(key, (h, npc, target, spent, _) => f(h, npc, target, spent));
 
+    /// <summary>
+    /// Ход, который игрок сделал сам, руками в мире: взломал замок,
+    /// обыскал коробку. Часы на это уже ушли (`Взлом.попытка`,
+    /// `Обыск.коробка`), и дом не исполняет ничего — ход пропущен,
+    /// день идёт дальше: кто на часах раньше, тот и ходит, а игрока
+    /// спросят снова, когда дойдёт его час. Соседи так не отвечают
+    /// никогда, и в прогоне без игрока этой ветки нет.
+    /// </summary>
+    public const string САМ = "сам";
+
     /// <summary>Один ход одного человека. true, если действие совершено.</summary>
     public static bool choose_and_do(House h, NPC npc)
     {
@@ -114,6 +124,8 @@ public static partial class Действия
         if (выбор is null)
             return false;
         var (key, target) = выбор.Value;
+        if (string.Equals(key, САМ, StringComparison.Ordinal))
+            return true;            // игрок сделал своё сам — день идёт дальше
         // весь ход печатается с его часами: и само действие, и то, что оно
         // за собой потянуло. Часы личные — встал он в свой час и потратил своё
         h.journal.час = npc.часы_вслух();
