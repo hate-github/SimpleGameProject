@@ -55,6 +55,31 @@ if (Test-Path $куда) { Remove-Item -Recurse -Force $куда }
 Copy-Item -Recurse $откуда $куда
 
 $сколько = (Get-ChildItem $куда -Filter *.json).Count
+
+# 4. Собранная игра заводится — и не только из своей папки: у запущенной
+#    с ярлыка рабочая папка другая. Первая сборка искала data от рабочей
+#    папки, а проверялась запуском из prototype/, где data тоже лежит, —
+#    и проверка проходила мимо ошибки. Поэтому запускаем из временной папки.
+Write-Host "— пробный запуск не из своей папки"
+$временная = [System.IO.Path]::GetTempPath()
+$журнал = Join-Path $временная "опять_здесь_запуск.log"
+Remove-Item -Force $журнал -ErrorAction SilentlyContinue
+Push-Location $временная
+# Игра пишет предупреждения в stderr, а PowerShell 5.1 при перенаправленном
+# выводе делает из них ошибки и с «Stop» обрывает скрипт. Читаем журнал.
+$было = $ErrorActionPreference
+$ErrorActionPreference = "Continue"
+try {
+  & $exe --headless --quit-after 120 --log-file $журнал 2>$null | Out-Null
+} finally {
+  $ErrorActionPreference = $было
+  Pop-Location
+}
+$лог = if (Test-Path $журнал) { Get-Content -Raw -Encoding UTF8 $журнал } else { "" }
+if ([string]::IsNullOrEmpty($лог) -or $лог -match "Exception|не найден каталог данных") {
+  throw "собранная игра не завелась:`n$лог"
+}
+
 Write-Host "готово: $exe  (данных: $сколько json)"
 
 if ($Запустить) { & $exe }
