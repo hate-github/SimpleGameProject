@@ -38,12 +38,13 @@ public partial class КарманUI : PanelContainer
     public override void _Ready()
     {
         Visible = false;
-        SetAnchorsPreset(Control.LayoutPreset.FullRect);
+        // во весь экран: SetAnchorsPreset в дереве оставил бы нулевой прямоугольник
+        SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
         var фон = new StyleBoxFlat { BgColor = new Color("#12110f") };
         AddThemeStyleboxOverride("panel", фон);
 
         var середина = new CenterContainer();
-        середина.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+        середина.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
         AddChild(середина);
 
         var столбец = new VBoxContainer { CustomMinimumSize = new Vector2(720, 0) };

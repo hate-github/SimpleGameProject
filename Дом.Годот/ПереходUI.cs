@@ -30,7 +30,8 @@ public partial class ПереходUI : PanelContainer
     public override void _Ready()
     {
         Visible = false;
-        SetAnchorsPreset(Control.LayoutPreset.FullRect);
+        // во весь экран: SetAnchorsPreset в дереве оставил бы нулевой прямоугольник
+        SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
 
         // Непрозрачная подложка. Без неё сквозь монолог просвечивает лента
         // прошлой метели — а это ровно то, чего герой уже не видит: для него
@@ -39,7 +40,7 @@ public partial class ПереходUI : PanelContainer
         AddThemeStyleboxOverride("panel", фон);
 
         var середина = new CenterContainer();
-        середина.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+        середина.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
         AddChild(середина);
 
         _столбец = new VBoxContainer { CustomMinimumSize = new Vector2(760, 0) };
