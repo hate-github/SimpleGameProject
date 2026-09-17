@@ -62,6 +62,11 @@ public partial class Герой : CharacterBody3D
 
 	public Camera3D глаза => _глаза;
 
+	/// <summary>Как звучат шаги: разброс высоты и шанс скрипа досок.
+	/// Ставятся до того, как герой встал в мир.</summary>
+	public float Разброс_шагов { get; set; } = 0.03f;
+	public float Скрип_шагов { get; set; } = 0.08f;
+
 	/// <summary>По чему он идёт — поверхность тела под ногами.</summary>
 	public string Под_ногами { get; private set; } = Поверхность.БЕТОН;
 
@@ -100,7 +105,12 @@ public partial class Герой : CharacterBody3D
 		};
 		_глаза.AddChild(_луч);
 
-		_шаги = new Шаги { Name = "шаги" };
+		_шаги = new Шаги
+		{
+			Name = "шаги",
+			Разброс = Разброс_шагов,
+			СкрипШанс = Скрип_шагов,
+		};
 		AddChild(_шаги);
 
 		Input.MouseMode = Input.MouseModeEnum.Captured;

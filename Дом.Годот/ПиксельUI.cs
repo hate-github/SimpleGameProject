@@ -6,6 +6,11 @@
 // него попадает только мир: подсказки, лист вопроса и края экрана
 // (`ПодачаUI`) рисуются поверх и остаются чёткими.
 //
+// Зерно задаётся **строками кадра**, а не точками экрана. Первая версия
+// брала три точки — и на экране 1920×1080 это 360 строк: зерно было,
+// но на пёстрых текстурах его не было видно. Двести строк — это пять точек
+// на таком экране и четыре на окне в 800, и приставка узнаётся сразу.
+//
 // Шейдер написан латиницей: кириллицу шейдеры Godot не принимают.
 
 using Godot;
@@ -14,11 +19,11 @@ namespace Дом.Годот;
 
 public partial class ПиксельUI : ColorRect
 {
-    /// <summary>Сторона пикселя в точках экрана. 1 — без зерна.</summary>
-    public int Размер { get; set; } = 3;
+    /// <summary>Строк кадра по вертикали. 0 — без зерна.</summary>
+    public int Строк { get; set; } = 200;
 
     /// <summary>Оттенков на канал. 0 — цвета как есть.</summary>
-    public int Оттенков { get; set; } = 24;
+    public int Оттенков { get; set; } = 16;
 
     public override void _Ready()
     {
@@ -30,23 +35,28 @@ public partial class ПиксельUI : ColorRect
         Обновить();
     }
 
-    /// <summary>Применить размер и оттенки. Фильтр, который ничего
+    /// <summary>Применить строки и оттенки. Фильтр, который ничего
     /// не меняет, не рисуется вовсе.</summary>
     public void Обновить()
     {
         if (Material is not ShaderMaterial м)
             return;
-        м.SetShaderParameter("pixel", (float)System.Math.Max(1, Размер));
+        м.SetShaderParameter("lines", (float)System.Math.Max(0, Строк));
         м.SetShaderParameter("levels", (float)System.Math.Max(0, Оттенков));
-        Visible = Размер > 1 || Оттенков > 0;
+        Visible = Строк > 0 || Оттенков > 0;
     }
+
+    /// <summary>Сторона зерна в точках при такой высоте кадра — та же,
+    /// что считает шейдер. Для лога.</summary>
+    public int Зерно(float высота)
+        => Строк <= 0 ? 1 : System.Math.Max(1, (int)System.Math.Floor(высота / Строк + 0.5));
 
     private const string КОД = """
         shader_type canvas_item;
 
         uniform sampler2D screen : hint_screen_texture, filter_nearest;
-        uniform float pixel = 3.0;
-        uniform float levels = 24.0;
+        uniform float lines = 200.0;
+        uniform float levels = 16.0;
 
         const float BAYER[16] = float[16](
             0.0, 8.0, 2.0, 10.0,
@@ -56,8 +66,9 @@ public partial class ПиксельUI : ColorRect
 
         void fragment() {
             vec2 size = vec2(textureSize(screen, 0));
-            vec2 cell = floor(FRAGCOORD.xy / pixel);
-            vec2 uv = (cell + 0.5) * pixel / size;
+            float px = lines > 0.0 ? max(1.0, floor(size.y / lines + 0.5)) : 1.0;
+            vec2 cell = floor(FRAGCOORD.xy / px);
+            vec2 uv = (cell + 0.5) * px / size;
             vec3 c = texture(screen, uv).rgb;
             if (levels > 0.0) {
                 int i = int(mod(cell.x, 4.0)) + int(mod(cell.y, 4.0)) * 4;
