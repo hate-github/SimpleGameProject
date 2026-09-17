@@ -133,6 +133,11 @@ public sealed partial class NPC
     /// <inheritdoc cref="умения"/>
     public Карман? карман { get; set; }
 
+    /// <summary>Что игрок несёт домой: пакет, сумка или рюкзак
+    /// (`Петля/Ноша.cs`). Только у игрока — как карман, и так же мимо
+    /// снимка и сейва.</summary>
+    public Ноша? ноша { get; set; }
+
     public string? living_with { get; set; }    // к кому переехал
     public HashSet<string> guests { get; } = new(StringComparer.Ordinal);
     public HashSet<string> allies { get; } = new(StringComparer.Ordinal);
