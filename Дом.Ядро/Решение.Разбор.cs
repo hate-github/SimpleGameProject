@@ -333,7 +333,8 @@ public sealed class Человек : Решающий
             .ToList();
         int i = спросить(new ВопросИгроку(
             h.day, npc.id, с.вопрос,
-            $"день {h.day}, {npc.@short}: {Вопросы.Текст(с.вопрос)}", в, null, null));
+            $"день {h.day}, {npc.@short}: {Вопросы.Текст(с.вопрос)}", в, null, null,
+            с.с_кем?.id, с.суть));
         return с.варианты[Math.Max(0, Math.Min(i, с.варианты.Count - 1))].ответ;
     }
 

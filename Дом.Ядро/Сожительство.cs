@@ -146,7 +146,8 @@ public static class Сожительство
     {
         var b = h.B;
         if (Решение.по_правилу(h, host, Вопрос.ПУСТИТЬ_К_СЕБЕ, "пустить", "отказать",
-                               пустит_к_себе(h, host, npc, b))
+                               пустит_к_себе(h, host, npc, b),
+                               с_кем: npc, суть: new Суть("переезд"))
             && host.guests.Count < b["переезд_максимум_гостей"])
         {
             npc.living_with = host.id;

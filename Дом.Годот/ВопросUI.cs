@@ -27,8 +27,15 @@
 // Повтор клавиши (<c>Echo</c>) отбрасывается, и это не мелочь: зажатый
 // на полсекунды «0» однажды ответил за игрока на дюжину вопросов подряд.
 // Один вопрос — одно нажатие.
+//
+// **Кто и о чём.** Первое окно показывало заголовок вопроса — «день 3,
+// Оксана: соврать» — и под ним «соврать» и «сказать правду»: с кем
+// разговор и о чём, понять было нельзя. Теперь сверху — кто перед тобой
+// («Лида, кв.9»), под ним — что происходит и о чём спрашивают, а ответы
+// подписаны словами (`Дом.Экран.Разговор`). Порядок и вес — прежние.
 
 using Godot;
+using Дом.Экран;
 using Дом.Ядро;
 
 namespace Дом.Годот;
@@ -36,6 +43,9 @@ namespace Дом.Годот;
 public partial class ВопросUI : PanelContainer
 {
     private Label _заголовок = null!;
+    private Label _что = null!;
+    private Label _подвал = null!;
+    private Сцена? _сцена;
     private ScrollContainer _окно = null!;
     private VBoxContainer _кнопки = null!;
     private System.Action<int>? _ответить;
@@ -71,9 +81,14 @@ public partial class ВопросUI : PanelContainer
         AddChild(столбец);
 
         _заголовок = new Label { AutowrapMode = TextServer.AutowrapMode.WordSmart };
-        _заголовок.AddThemeFontSizeOverride("font_size", 17);
+        _заголовок.AddThemeFontSizeOverride("font_size", 20);
         _заголовок.AddThemeColorOverride("font_color", new Color("#e8e2d0"));
         столбец.AddChild(_заголовок);
+
+        _что = new Label { AutowrapMode = TextServer.AutowrapMode.WordSmart };
+        _что.AddThemeFontSizeOverride("font_size", 16);
+        _что.AddThemeColorOverride("font_color", new Color("#e8d8a8"));
+        столбец.AddChild(_что);
 
         // Список прокручивается, а не растёт без предела: ночью вариантов
         // бывает по два на соседа
@@ -87,12 +102,19 @@ public partial class ВопросUI : PanelContainer
         _кнопки = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
         _кнопки.AddThemeConstantOverride("separation", 2);
         _окно.AddChild(_кнопки);
+
+        _подвал = new Label();
+        _подвал.AddThemeFontSizeOverride("font_size", 12);
+        _подвал.AddThemeColorOverride("font_color", new Color("#8a8474"));
+        столбец.AddChild(_подвал);
     }
 
-    /// <summary>Показать вопрос. Вопрос дня не показывается: он в телефоне.</summary>
-    public void Показать(ВопросИгроку в, System.Action<int> ответить)
+    /// <summary>Показать вопрос со словами к нему (<paramref name="сцена"/>
+    /// считается, пока дом спит). Вопрос дня не показывается: он в телефоне.</summary>
+    public void Показать(ВопросИгроку в, Сцена сцена, System.Action<int> ответить)
     {
         _текущий = в;
+        _сцена = сцена;
         _ответить = ответить;
         Visible = в.вопрос != Вопрос.ЧТО_ДЕЛАТЬ;
         Разложить();
@@ -102,6 +124,7 @@ public partial class ВопросUI : PanelContainer
     {
         Visible = false;
         _текущий = null;
+        _сцена = null;
         _ответить = null;
         Очистить();
     }
@@ -118,14 +141,19 @@ public partial class ВопросUI : PanelContainer
         Очистить();
         if (_текущий is null || !Visible)
             return;
-        _заголовок.Text = _текущий.заголовок;
+        var сцена = _сцена;
+        _заголовок.Text = сцена is { кто.Length: > 0 } ? сцена.кто : _текущий.заголовок;
+        _что.Text = сцена?.что ?? "";
+        _что.Visible = _что.Text.Length > 0;
+        _подвал.Text = $"день {_текущий.день} · ответ — щелчком или цифрой";
         for (int i = 0; i < _текущий.варианты.Count; i++)
         {
             int номер = i;                         // замыкание берёт копию
+            string строка = сцена is not null && i < сцена.ответы.Count
+                ? сцена.ответы[i] : _текущий.варианты[i].строка;
             var кнопка = new Button
             {
-                Text = i < 10 ? $"{i}.  {_текущий.варианты[i].строка}"
-                              : $"     {_текущий.варианты[i].строка}",
+                Text = i < 10 ? $"{i}.  {строка}" : $"     {строка}",
                 Alignment = HorizontalAlignment.Left,
                 FocusMode = FocusModeEnum.None,
                 CustomMinimumSize = new Vector2(0, ВЫСОТА_КНОПКИ - 2),

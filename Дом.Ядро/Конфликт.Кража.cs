@@ -128,7 +128,8 @@ public static partial class Конфликт
         // решает хозяин: выйти со стволом или не связываться. Монета та же,
         // что бросалась здесь раньше
         if (armed && Решение.монета(h, target, Вопрос.ВЫЙТИ_СО_СТВОЛОМ,
-                                    "выйти", "не выходить", scare))
+                                    "выйти", "не выходить", scare,
+                                    с_кем: thief, суть: new Суть("кража")))
         {
             h.journal.line(
                 $"{target.@short} "
@@ -146,7 +147,8 @@ public static partial class Конфликт
         bool escaped = Решение.монета(h, thief, Вопрос.БЕЖАТЬ_ОТ_ХОЗЯИНА,
             "бежать", "остаться",
             Util.Clamp(0.35 + stealth(thief) * 0.5 - target.t01("храбрость") * 0.3,
-                       0.1, 0.9));
+                       0.1, 0.9),
+            с_кем: target, суть: new Суть("кража"));
         if (escaped)
             h.journal.line($"{thief.@short} {Util.Vb(thief.sex, "вырвался")} и "
                            + $"{Util.Vb(thief.sex, "убежал")} по лестнице.", 1);
@@ -154,7 +156,8 @@ public static partial class Конфликт
         else if (Решение.по_правилу(h, target, Вопрос.ДРАТЬСЯ_С_ВОРОМ,
                      "драться", "отпустить",
                      (target.trait("вспыльчивость") >= 6
-                      || target.power() > thief.power() * 1.3) ? 1.0 : 0.0))
+                      || target.power() > thief.power() * 1.3) ? 1.0 : 0.0,
+                     с_кем: thief, суть: new Суть("кража")))
             fight(h, new[] { target }, new[] { thief }, place: $"кв.{target.apt}",
                   reason: "вор в квартире");
         var видели = h.others(target)

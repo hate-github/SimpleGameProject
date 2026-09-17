@@ -138,6 +138,10 @@ public sealed partial class NPC
     /// снимка и сейва.</summary>
     public Ноша? ноша { get; set; }
 
+    /// <summary>Героя застали у чужой кладовой, и поимка ждёт хода дома
+    /// (`Петля/Взлом.cs`). Только у игрока — как ноша, мимо снимка и сейва.</summary>
+    public Застали? застали { get; set; }
+
     public string? living_with { get; set; }    // к кому переехал
     public HashSet<string> guests { get; } = new(StringComparer.Ordinal);
     public HashSet<string> allies { get; } = new(StringComparer.Ordinal);
