@@ -98,6 +98,7 @@ public partial class Мир : Node3D
 
     private readonly List<ДверьКвартиры> _двери = new();
     private readonly List<OmniLight3D> _лампы = new();
+    private readonly List<AudioStreamPlayer3D> _гул_ламп = new();
 
     public IReadOnlyList<ДверьКвартиры> двери => _двери;
 
@@ -164,6 +165,7 @@ public partial class Мир : Node3D
     {
         _двери.Clear();
         _лампы.Clear();
+        _гул_ламп.Clear();
         _гаражи.Clear();
         _своя = своя;
         _полки.Clear();
@@ -228,6 +230,13 @@ public partial class Мир : Node3D
             AddChild(л);
             if (!подвал)
                 _лампы.Add(л);
+            // лампочка гудит — слышно, только если стоять под ней.
+            // В подвале гудят всегда: их свет от сети дома не зависит
+            var гул = Звуки.Точка(this, "лампа", где.Origin, громкость: -22f,
+                                  размер: 0.9f, дальше_не: 6f, петля: true);
+            гул.Play((float)(где.Origin.X * 3.7 % 20 + 20) % 20);   // не хором
+            if (!подвал)
+                _гул_ламп.Add(гул);
         }
     }
 
@@ -378,9 +387,12 @@ public partial class Мир : Node3D
                 GD.PrintErr($"заготовка: у «{имя}» размер {размер} — не коробка");
                 continue;
             }
-            Коробка(Краска(имя), размер,
-                    Точка(с, где.Origin.X, y + где.Origin.Y, где.Origin.Z))
-                .Name = имя;
+            var тело = Коробка(Краска(имя), размер,
+                               Точка(с, где.Origin.X, y + где.Origin.Y, где.Origin.Z));
+            тело.Name = имя;
+            // пол своей квартиры — доски, а не бетон площадки
+            Поверхность.Пометить(тело, имя.StartsWith("пол", StringComparison.Ordinal)
+                                       ? Поверхность.ДЕРЕВО : Поверхность.ПоИмени(имя));
         }
     }
 
@@ -430,8 +442,9 @@ public partial class Мир : Node3D
             var р = где.Basis.Scale;
             if (р.X <= 0 || р.Y <= 0 || р.Z <= 0)
                 continue;
-            Куча(снег, р, где.Origin with { Y = где.Origin.Y + р.Y / 2 },
-                 Mathf.RadToDeg(где.Basis.GetEuler().Y));
+            var куча = Куча(снег, р, где.Origin with { Y = где.Origin.Y + р.Y / 2 },
+                            Mathf.RadToDeg(где.Basis.GetEuler().Y));
+            Поверхность.Пометить(куча, Поверхность.СНЕГ);
         }
     }
 
@@ -969,6 +982,9 @@ public partial class Мир : Node3D
             OmniRange = 5.0f,
         };
         AddChild(_огонь);
+        // пока топится, на печи греется вода
+        _кипение = Звуки.Точка(this, "кипение", Точка(с, lx, y + 0.8f, z),
+                               громкость: -16f, размер: 1.2f, дальше_не: 9f, петля: true);
     }
 
     // Размеры квартиры. Местная система: `lx` — вглубь от лестницы,
@@ -1056,6 +1072,11 @@ public partial class Мир : Node3D
         if (_огонь is null)
             return;
         _огонь.LightEnergy = что.топится ? 2.6f : (что.печь ? 0.2f : 0.0f);
+        if (_кипение is not null && что.топится != _кипение.Playing)
+        {
+            if (что.топится) _кипение.Play();
+            else _кипение.Stop();
+        }
         if (_лампочка is not null)
             _лампочка.LightEnergy = что.свет ? 2.4f : 0.0f;
 
@@ -1075,6 +1096,7 @@ public partial class Мир : Node3D
     private int _своя = 1;
     private StaticBody3D? _печь;
     private OmniLight3D? _огонь;
+    private AudioStreamPlayer3D? _кипение;
     private OmniLight3D? _лампочка;
     private List<MeshInstance3D>? _доски;
     private readonly List<List<MeshInstance3D>> _полки = new();
@@ -1355,6 +1377,15 @@ public partial class Мир : Node3D
     {
         foreach (var л in _лампы)
             л.LightEnergy = (float)(0.20 + 1.05 * сколько);
+        // без тока лампы не гудят
+        foreach (var г in _гул_ламп)
+        {
+            bool есть = сколько >= 0.2;
+            if (есть && !г.Playing)
+                г.Play();
+            else if (!есть && г.Playing)
+                г.Stop();
+        }
     }
 
     // ---------- кирпичи ----------
