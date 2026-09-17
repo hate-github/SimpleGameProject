@@ -21,12 +21,13 @@ public partial class ВерстакUI : PanelContainer
     public override void _Ready()
     {
         Visible = false;
-        SetAnchorsPreset(Control.LayoutPreset.FullRect);
+        // во весь экран: SetAnchorsPreset в дереве оставил бы нулевой прямоугольник
+        SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
         AddThemeStyleboxOverride("panel",
             new StyleBoxFlat { BgColor = new Color(0.07f, 0.065f, 0.06f, 0.92f) });
 
         var середина = new CenterContainer();
-        середина.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+        середина.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
         AddChild(середина);
 
         var столбец = new VBoxContainer { CustomMinimumSize = new Vector2(560, 0) };

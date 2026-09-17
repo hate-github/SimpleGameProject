@@ -20,6 +20,14 @@ public partial class Предмет : Area3D
     /// <summary>Что сделать по E.</summary>
     public System.Action Действие { get; set; } = () => { };
 
+    /// <summary>Видит ли его луч. Выключенный предмет не заслоняет
+    /// того, что за ним: замок, например, пока ворота открыты.</summary>
+    public bool Активен
+    {
+        get => CollisionLayer != 0;
+        set => CollisionLayer = value ? 1u : 0u;
+    }
+
     /// <summary>
     /// Поставить область размером с габарит вещи.
     ///
