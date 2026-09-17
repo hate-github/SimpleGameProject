@@ -1,6 +1,6 @@
 [gd_scene load_steps=976 format=3 uid="uid://bdom15celik"]
 
-[ext_resource type="PackedScene" path="res://модели/гараж/garage.fbx" id="1"]
+[ext_resource type="PackedScene" uid="uid://bitd1knn4yegn" path="res://модели/гараж/garage.fbx" id="1"]
 
 [sub_resource type="BoxMesh" id="B0"]
 size = Vector3(16.38, 0.2, 6.32)
@@ -1550,6 +1550,24 @@ size = Vector3(3.3, 0.2, 6.2)
 [sub_resource type="BoxMesh" id="B515"]
 size = Vector3(2.35, 2.1, 0.1)
 
+[sub_resource type="BoxMesh" id="B968"]
+size = Vector3(2.6, 1.98, 4.4)
+
+[sub_resource type="BoxMesh" id="B969"]
+size = Vector3(2.6, 1.98, 4.4)
+
+[sub_resource type="BoxMesh" id="B970"]
+size = Vector3(2.6, 1.98, 4.4)
+
+[sub_resource type="BoxMesh" id="B971"]
+size = Vector3(2.6, 1.98, 4.4)
+
+[sub_resource type="BoxMesh" id="B972"]
+size = Vector3(2.6, 1.98, 4.4)
+
+[sub_resource type="BoxMesh" id="B973"]
+size = Vector3(2.6, 1.98, 4.4)
+
 [sub_resource type="BoxMesh" id="B516"]
 size = Vector3(16.8, 0.2, 11.08)
 
@@ -2905,24 +2923,6 @@ size = Vector3(2.6, 0.14, 1.5)
 
 [sub_resource type="BoxMesh" id="B967"]
 size = Vector3(1.1, 2.1, 0.1)
-
-[sub_resource type="BoxMesh" id="B968"]
-size = Vector3(2.6, 1.98, 4.4)
-
-[sub_resource type="BoxMesh" id="B969"]
-size = Vector3(2.6, 1.98, 4.4)
-
-[sub_resource type="BoxMesh" id="B970"]
-size = Vector3(2.6, 1.98, 4.4)
-
-[sub_resource type="BoxMesh" id="B971"]
-size = Vector3(2.6, 1.98, 4.4)
-
-[sub_resource type="BoxMesh" id="B972"]
-size = Vector3(2.6, 1.98, 4.4)
-
-[sub_resource type="BoxMesh" id="B973"]
-size = Vector3(2.6, 1.98, 4.4)
 
 [node name="Дом" type="Node3D"]
 
@@ -5199,6 +5199,30 @@ transform = Transform3D(0.55, 0, 0, 0, 0.55, 0, 0, 0, 0.55, -12, 0, -15.5)
 
 [node name="модель" parent="двор/гараж0" instance=ExtResource("1")]
 
+[node name="снег_вал968" type="MeshInstance3D" parent="двор"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -32, 0.29, -24)
+mesh = SubResource("B968")
+
+[node name="снег_вал969" type="MeshInstance3D" parent="двор"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 32, 0.29, -24)
+mesh = SubResource("B969")
+
+[node name="снег_вал970" type="MeshInstance3D" parent="двор"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -32, 0.29, -21)
+mesh = SubResource("B970")
+
+[node name="снег_вал971" type="MeshInstance3D" parent="двор"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 32, 0.29, -21)
+mesh = SubResource("B971")
+
+[node name="снег_вал972" type="MeshInstance3D" parent="двор"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -32, 0.29, -18)
+mesh = SubResource("B972")
+
+[node name="снег_вал973" type="MeshInstance3D" parent="двор"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 32, 0.29, -18)
+mesh = SubResource("B973")
+
 [node name="секция0" type="Node3D" parent="."]
 
 [node name="пол516" type="MeshInstance3D" parent="секция0"]
@@ -7010,27 +7034,3 @@ mesh = SubResource("B966")
 [node name="доска_дверь967" type="MeshInstance3D" parent="секция1"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16.8, 1.05, -5.82)
 mesh = SubResource("B967")
-
-[node name="снег_вал968" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -32, 0.29, -24)
-mesh = SubResource("B968")
-
-[node name="снег_вал969" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 32, 0.29, -24)
-mesh = SubResource("B969")
-
-[node name="снег_вал970" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -32, 0.29, -21)
-mesh = SubResource("B970")
-
-[node name="снег_вал971" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 32, 0.29, -21)
-mesh = SubResource("B971")
-
-[node name="снег_вал972" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -32, 0.29, -18)
-mesh = SubResource("B972")
-
-[node name="снег_вал973" type="MeshInstance3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 32, 0.29, -18)
-mesh = SubResource("B973")
