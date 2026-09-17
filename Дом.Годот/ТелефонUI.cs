@@ -1,4 +1,12 @@
-// Телефон (ГДД 19). Два приложения: чат подъезда и заметки.
+// Телефон (ГДД 19). Три приложения: мысли, чат подъезда и заметки.
+//
+// Мысли — это вопрос дня: что приходит в голову сделать, по весу, как дом
+// его и собрал (порядок не трогается, вес показан). Нажать мысль —
+// не сделать её, а узнать, где она делается (`Дом.Экран.Места`): делают
+// ногами, у места, клавишей действия. Выбранная мысль закрепляется
+// строкой на экране, и у своего места клавиша делает именно её, а не ту,
+// что дом взвесил выше. Раньше вопрос дня висел листом поверх подъезда;
+// автор попросил убрать его в телефон — это догадки героя, а не приказ.
 //
 // Чат — общий чат жильцов: он уже есть в симуляции и уже что-то делает
 // с домом. Реплика в нём — не украшение, а способ узнать, у кого что есть
@@ -26,6 +34,11 @@ namespace Дом.Годот;
 
 public partial class ТелефонUI : PanelContainer
 {
+    private VBoxContainer _мысли = null!;
+    private Label _мысли_шапка = null!;
+    private Label _как = null!;
+    private ВопросИгроку? _вопрос;
+    private IReadOnlyList<string> _подсказки = System.Array.Empty<string>();
     private RichTextLabel _чат = null!;
     private RichTextLabel _заметки = null!;
     private TabContainer _вкладки = null!;
@@ -38,6 +51,10 @@ public partial class ТелефонUI : PanelContainer
     /// <summary>Откуда брать заметки: они переживают жизнь.</summary>
     public Наследие? Наследие { get; set; }
 
+    /// <summary>Мысль выбрана: её номер в вопросе и строка «где». Корень
+    /// закрепляет её на экране.</summary>
+    public System.Action<int, string>? Выбрано { get; set; }
+
     public override void _Ready()
     {
         _вкладки = new TabContainer
@@ -46,9 +63,114 @@ public partial class ТелефонUI : PanelContainer
         };
         AddChild(_вкладки);
 
+        Мысли_страница();
         _чат = Страница("чат");
         _заметки = Страница("заметки");
     }
+
+    private void Мысли_страница()
+    {
+        var столбец = new VBoxContainer { Name = "мысли" };
+        столбец.AddThemeConstantOverride("separation", 6);
+        _вкладки.AddChild(столбец);
+
+        _мысли_шапка = new Label { AutowrapMode = TextServer.AutowrapMode.WordSmart };
+        _мысли_шапка.AddThemeColorOverride("font_color", new Color("#a8a294"));
+        столбец.AddChild(_мысли_шапка);
+
+        var прокрутка = new ScrollContainer
+        {
+            HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled,
+            SizeFlagsVertical = Control.SizeFlags.ExpandFill,
+        };
+        столбец.AddChild(прокрутка);
+        _мысли = new VBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+        _мысли.AddThemeConstantOverride("separation", 2);
+        прокрутка.AddChild(_мысли);
+
+        _как = new Label
+        {
+            AutowrapMode = TextServer.AutowrapMode.WordSmart,
+            CustomMinimumSize = new Vector2(0, 46),
+        };
+        _как.AddThemeColorOverride("font_color", new Color("#e8d8a8"));
+        столбец.AddChild(_как);
+        Мысли(null, System.Array.Empty<string>());
+    }
+
+    /// <summary>
+    /// Разложить мысли вопроса дня. <paramref name="как"/> — где делается
+    /// каждая, в том же порядке. Другой вопрос или никакого — мыслей нет:
+    /// дом либо считает, либо спрашивает то, на что отвечают сейчас.
+    /// </summary>
+    public void Мысли(ВопросИгроку? в, IReadOnlyList<string> как)
+    {
+        _вопрос = в;
+        _подсказки = как;
+        foreach (var узел in _мысли.GetChildren())
+        {
+            _мысли.RemoveChild(узел);
+            узел.QueueFree();
+        }
+        _как.Text = "";
+        if (в is null)
+        {
+            _мысли_шапка.Text = "время идёт — мысли придут, когда будет пора решать";
+            return;
+        }
+        if (в.вопрос != Вопрос.ЧТО_ДЕЛАТЬ)
+        {
+            _мысли_шапка.Text = "сейчас не до раздумий — ответь на то, что спрашивают";
+            return;
+        }
+        _мысли_шапка.Text = в.заголовок.Split('\n')[0]
+                            + " — нажми мысль, чтобы понять, где это делается";
+        for (int i = 0; i < в.варианты.Count; i++)
+        {
+            int номер = i;                       // замыкание берёт копию
+            var (что, вес) = Разобрать(в.варианты[i].строка);
+            var кнопка = new Button
+            {
+                Text = вес.Length > 0 ? $"{что}   · {вес}" : что,
+                Alignment = HorizontalAlignment.Left,
+                FocusMode = Control.FocusModeEnum.None,
+            };
+            кнопка.Pressed += () => Выбрать(номер);
+            _мысли.AddChild(кнопка);
+        }
+    }
+
+    /// <summary>Открыть телефон на мыслях.</summary>
+    public void К_мыслям() => _вкладки.CurrentTab = 0;
+
+    private void Выбрать(int i)
+    {
+        if (_вопрос is null || i >= _вопрос.варианты.Count)
+            return;
+        var (что, _) = Разобрать(_вопрос.варианты[i].строка);
+        string где = i < _подсказки.Count ? _подсказки[i] : "";
+        string почему = Почему(_вопрос.варианты[i].строка);
+        _как.Text = $"{что}: {где} — {Управление.В_скобках(Клавиши.ДЕЙСТВИЕ)}"
+                    + (почему.Length > 0 ? $"\nвес {почему}" : "");
+        Выбрано?.Invoke(i, $"{что} — {где}");
+    }
+
+    /// <summary>Строка варианта — «что», вес и разложение через пробелы;
+    /// мысли нужны первые два.</summary>
+    private static (string что, string вес) Разобрать(string строка)
+    {
+        var части = строка.Split("  ", System.StringSplitOptions.RemoveEmptyEntries
+                                       | System.StringSplitOptions.TrimEntries);
+        return (части.Length > 0 ? части[0] : строка, части.Length > 1 ? части[1] : "");
+    }
+
+    /// <summary>Из чего сложился вес — то, что стоит после «=».</summary>
+    private static string Почему(string строка)
+    {
+        int i = строка.IndexOf("= ", System.StringComparison.Ordinal);
+        return i < 0 ? "" : строка[(i + 2)..].Trim();
+    }
+
 
     private RichTextLabel Страница(string имя)
     {
