@@ -213,6 +213,11 @@ public static partial class Улица
         var взял = Конфликт.подобрать_оружие(h, кто, к);
         if (взял is not null)
             got[взял] = 1;
+        if (got.Count > 0)
+            h.journal.line($"{кто.@short} {Util.Vb(кто.sex, "взял")} из {к.вид.Текст()}а "
+                           + $"кв.{к.apt}: " + string.Join(", ", got.Ключи
+                               .OrderBy(р => р, StringComparer.Ordinal)
+                               .Select(р => $"{р} {Текст.G(got[р])}")) + ".", 1);
         return got;
     }
 
