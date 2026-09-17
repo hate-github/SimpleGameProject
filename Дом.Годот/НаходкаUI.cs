@@ -1,11 +1,11 @@
-// Что нашлось в коробке — и куда это положить (ГДД 7, 9).
+// Что нашлось в коробке, ящике или на полке — и куда это положить (ГДД 7, 9).
 //
-// Найденное не переносится само: игрок видит, что в коробке, и решает,
+// Найденное не переносится само: игрок видит, что нашлось, и решает,
 // в чём нести. Карман вне времени — тихо, но мало и вещь исчезает
 // из мира; пакеты, сумка, рюкзак — ноша (`Дом.Ядро.Ноша`), и чем громче
 // тара, тем больше в неё влезает. Начатую тару на другую не меняют:
 // другие кнопки гаснут и говорят почему. «Оставить» — всё обратно
-// в коробку; часы на обыск всё равно ушли.
+// туда, где лежало; часы на обыск всё равно ушли.
 //
 // Окно небольшое и посередине: мир за ним виден, но ходить, пока оно
 // открыто, нельзя — мышь нужна кнопкам. Esc — то же, что «оставить».
@@ -17,6 +17,7 @@ namespace Дом.Годот;
 
 public partial class НаходкаUI : PanelContainer
 {
+    private Label _заголовок = null!;
     private Label _что = null!;
     private Label _часы = null!;
     private VBoxContainer _кнопки = null!;
@@ -51,10 +52,10 @@ public partial class НаходкаUI : PanelContainer
         столбец.AddThemeConstantOverride("separation", 8);
         AddChild(столбец);
 
-        var заголовок = new Label { Text = "В КОРОБКЕ", HorizontalAlignment = HorizontalAlignment.Center };
-        заголовок.AddThemeFontSizeOverride("font_size", 20);
-        заголовок.AddThemeColorOverride("font_color", СВЕТЛО);
-        столбец.AddChild(заголовок);
+        _заголовок = new Label { Text = "В КОРОБКЕ", HorizontalAlignment = HorizontalAlignment.Center };
+        _заголовок.AddThemeFontSizeOverride("font_size", 20);
+        _заголовок.AddThemeColorOverride("font_color", СВЕТЛО);
+        столбец.AddChild(_заголовок);
 
         _что = new Label
         {
@@ -87,13 +88,16 @@ public partial class НаходкаUI : PanelContainer
     /// <summary>
     /// Показать находку. <paramref name="взять"/> зовётся с тарой или
     /// с null — «в карман вне времени»; <paramref name="оставить"/> —
-    /// если игрок не взял ничего.
+    /// если игрок не взял ничего. <paramref name="где"/> — где нашлось:
+    /// «в коробке», «в ящике», «на полке».
     /// </summary>
     public void Показать(Добыча д, Ноша ноша, Карман? карман, РучкиПетли ручки,
-                         System.Action<Тара?> взять, System.Action оставить)
+                         System.Action<Тара?> взять, System.Action оставить,
+                         string где = "в коробке")
     {
         _взять = взять;
         _оставить = оставить;
+        _заголовок.Text = где.ToUpperInvariant();
         double всего = д.вещи.Ключи.Sum(р => д.вещи[р]);
         _что.Text = string.Join(" · ", д.вещи.Ключи
                         .OrderBy(р => р, System.StringComparer.Ordinal)
@@ -141,7 +145,7 @@ public partial class НаходкаUI : PanelContainer
                 почему.Add($"{т.Текст()} полон{(т == Тара.СУМКА ? "а" : "")}");
         }
         if (всего > 0)
-            Кнопка("оставить в коробке   [Esc]", Оставить);
+            Кнопка($"оставить {где}   [Esc]", Оставить);
 
         _почему.Text = string.Join("; ", почему.Distinct());
         Visible = true;
