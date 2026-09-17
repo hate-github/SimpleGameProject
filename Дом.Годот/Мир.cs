@@ -1505,7 +1505,7 @@ public partial class Мир : Node3D
 
     /// <summary>Прямоугольник без дыры — до четырёх полос вокруг неё.
     /// Вторая ось прямоугольника здесь — Z мира.</summary>
-    private static IEnumerable<Rect2> Вычесть(Rect2 к, Rect2 дыра)
+    internal static IEnumerable<Rect2> Вычесть(Rect2 к, Rect2 дыра)
     {
         if (!к.Intersects(дыра))
         {
