@@ -81,6 +81,7 @@ public partial class ДомУзел : Node
     private ТелефонUI _телефон = null!;
     private ПереходUI _переход = null!;
     private КарманUI _карман = null!;
+    private ВерстакUI _верстак = null!;
     private КартаUI _карта = null!;
     private ПодачаUI _подача = null!;
     private ЗвукUI _звук = null!;
@@ -89,6 +90,7 @@ public partial class ДомУзел : Node
     private Обстановка3D _воздух = null!;
     private Control _панели = null!;
     private Label _подсказка = null!;
+    private Label _весть = null!;
     private ColorRect _прицел = null!;
     private Label _телом = null!;
 
@@ -156,6 +158,24 @@ public partial class ДомУзел : Node
             узел.QueueFree();
         int своя = _партия.сеанс.я.apt;
         _мир.Построить(прогон.h, своя);
+        _верстак.Убрать();
+        foreach (var г in _мир.Гаражи)
+        {
+            // Гараж ходит в дом сам, но только через эти ниточки:
+            // что за дом, можно ли его сейчас трогать, куда говорить
+            г.Дом = () => _партия is null ? null : (_партия.сеанс.дом, _партия.сеанс.я);
+            г.МожноМенять = () => _партия?.Ждёт() is not null;
+            г.Сказать = Сказать;
+            г.ОткрытьВерстак = () =>
+            {
+                _вопрос.Свернуть();
+                _верстак.Показать();
+                Мышь();
+            };
+            г.Перенести = куда => _герой.GlobalPosition = куда;
+            г.ГдеГерой = () => _герой.GlobalPosition;
+            г.Обновить(1.0);        // дом ещё не пошёл — читать можно
+        }
         _герой.Position = _мир.Начало(своя);
         _герой.Rotation = new Vector3(0, Мир.Поворот(своя), 0);
         _герой.Прямо();
@@ -291,6 +311,7 @@ public partial class ДомУзел : Node
     // ---------- жизнь ----------
 
     private double _слежка;
+    private double _весть_ещё;         // сколько секунд ещё висит весть
 
     public override void _Process(double delta)
     {
@@ -333,6 +354,13 @@ public partial class ДомУзел : Node
         }
         _подсказка.Text = Под_прицелом();
         _прицел.Visible = _герой.Свободен;
+        if (_весть_ещё > 0)
+        {
+            _весть_ещё -= delta;
+            _весть.Modulate = new Color(1, 1, 1, (float)System.Math.Clamp(_весть_ещё, 0, 1));
+            if (_весть_ещё <= 0)
+                _весть.Text = "";
+        }
 
         // вопрос — если он появился и ещё не показан
         var в = _партия.Ждёт();
@@ -355,6 +383,8 @@ public partial class ДомУзел : Node
                     кв => _мир.УДвери(кв));
                 _воздух.Обновить(видно);
                 _мир.Освещение(видно.свет);
+                foreach (var г in _мир.Гаражи)
+                    г.Обновить(видно.свет);
                 _герой.Дрожь = видно.дрожь;
                 _герой.Тяжесть = видно.дыхание;
 
@@ -429,6 +459,8 @@ public partial class ДомУзел : Node
     {
         if (_партия is null)
             return "";
+        if (_герой.Перед_предметом is Предмет предмет)
+            return предмет.Подсказка();
         if (_герой.Перед_выходом)
             return У_выхода();
         if (_герой.Перед_кладовой is string склад)
@@ -553,6 +585,15 @@ public partial class ДомУзел : Node
     /// взвесил выше прочих, а не тем, который удобнее интерфейсу.</summary>
     private void Постучать()
     {
+        // Предмет — поступок самого героя, а не ответ дому: вопроса
+        // для него ждать не надо. Что из этого трогает дом, предмет
+        // проверяет сам
+        if (_герой.Перед_предметом is Предмет предмет)
+        {
+            if (_герой.Свободен)
+                предмет.Действие();
+            return;
+        }
         if (_на_экране is null)
             return;
         if (_герой.Перед_выходом)
@@ -595,14 +636,22 @@ public partial class ДомУзел : Node
 
     private void Ответить(int номер)
     {
-        if (_карман.открыт || _карта.открыта)
-            return;             // пока открыт карман или карта, отвечать нечем
+        if (_карман.открыт || _карта.открыта || _верстак.открыт)
+            return;             // пока открыт карман, карта или верстак, отвечать нечем
         _вопрос.Убрать();
         _двери_вопроса = System.Array.Empty<int?>();
         _план_вопроса = System.Array.Empty<ЖилецНаПлане>();
         _подсказка.Text = "";
         _партия?.Ответить(номер);
         Мышь();
+    }
+
+    /// <summary>Сказать герою, что вышло из его поступка.</summary>
+    private void Сказать(string что)
+    {
+        _весть.Text = что;
+        _весть.Modulate = Colors.White;
+        _весть_ещё = 4.0;
     }
 
     public override void _ExitTree() => _партия?.Dispose();
@@ -685,6 +734,9 @@ public partial class ДомУзел : Node
         _карта = new КартаUI();
         _панели.AddChild(_карта);
 
+        _верстак = new ВерстакUI { Закрыт = Мышь };
+        _панели.AddChild(_верстак);
+
         // прицел: точка в середине экрана. Без неё непонятно, на какую
         // дверь смотришь, — а «смотришь на дверь» здесь значит «можешь
         // в неё постучать»
@@ -703,6 +755,18 @@ public partial class ДомУзел : Node
         };
         _подсказка.AddThemeColorOverride("font_color", new Color("#e8e2d0"));
         _панели.AddChild(_подсказка);
+
+        // весть — что вышло из поступка: «взял: топливо 2». Висит
+        // несколько секунд и гаснет; в журнал дома она не пишется,
+        // туда пишет сам дом
+        _весть = new Label
+        {
+            HorizontalAlignment = HorizontalAlignment.Center,
+            AutowrapMode = TextServer.AutowrapMode.WordSmart,
+            MouseFilter = Control.MouseFilterEnum.Ignore,
+        };
+        _весть.AddThemeColorOverride("font_color", new Color("#d8c89a"));
+        _панели.AddChild(_весть);
 
         // что с телом — одной строкой понизу, всегда (ГДД 23)
         _телом = new Label
@@ -737,6 +801,11 @@ public partial class ДомУзел : Node
         {
             _подсказка.Position = new Vector2(0, р.Y * 0.54f);
             _подсказка.Size = new Vector2(р.X, 52);
+        }
+        if (_весть is not null)
+        {
+            _весть.Position = new Vector2(р.X * 0.2f, р.Y * 0.54f + 58);
+            _весть.Size = new Vector2(р.X * 0.6f, 48);
         }
         if (_телом is not null)
         {
@@ -789,6 +858,7 @@ public partial class ДомУзел : Node
     private void Мышь()
     {
         bool занят = _вопрос.Развёрнут || _карман.открыт || _карта.открыта
+                     || _верстак.открыт
                      || _переход.Visible || _телефон.Visible || _журнал.Visible
                      || _подъезд.Visible || _состояние.Visible;
         _герой.Свободен = !занят;

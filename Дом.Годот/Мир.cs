@@ -101,6 +101,11 @@ public partial class Мир : Node3D
 
     public IReadOnlyList<ДверьКвартиры> двери => _двери;
 
+    private readonly List<Гараж> _гаражи = new();
+
+    /// <summary>Гаражи во дворе — по гнёздам `гараж<i>` сцены.</summary>
+    public IReadOnlyList<Гараж> Гаражи => _гаражи;
+
     /// <summary>
     /// Где стоит человек в начале: он только что вышел из своей квартиры,
     /// стоит у своей двери спиной к ней.
@@ -141,9 +146,15 @@ public partial class Мир : Node3D
     /// Снег должен лететь снаружи, а не сквозь стены, — иначе он читается
     /// не как буран, а как грязь на камере.</summary>
     public Vector3 Снаружи(Vector3 где)
-        => ВоДворе(где)
-           ? где with { Y = где.Y + 11.0f }     // во дворе метель вокруг тебя
-           : new Vector3(0.0f, где.Y + 6.0f, ПЕРЁД + 7.0f);
+    {
+        if (ВоДворе(где))
+            return где with { Y = где.Y + 11.0f };     // во дворе метель вокруг тебя
+        // из гаража метель видна в ворота — туда её и ставим
+        foreach (var г in _гаражи)
+            if (г.Внутри(где))
+                return г.ПередВоротами(где.Y + 6.0f);
+        return new Vector3(0.0f, где.Y + 6.0f, ПЕРЁД + 7.0f);
+    }
 
     public static int Этаж(int квартира) => (квартира - 1) / 4 + 1;
 
@@ -153,6 +164,7 @@ public partial class Мир : Node3D
     {
         _двери.Clear();
         _лампы.Clear();
+        _гаражи.Clear();
         _своя = своя;
         _полки.Clear();
 
@@ -166,6 +178,10 @@ public partial class Мир : Node3D
         // `npcs.json` говорит только, жив ли жилец и кто он.
         _дом = Прочитать(ДОМ_СЦЕНА);
         int этажей = h.flats.Значения.Select(f => f.floor).DefaultIfEmpty(5).Max();
+
+        // гаражи — раньше коробок: под ними яма, и землю двора
+        // надо ставить уже с дырой на их месте
+        Поставить_гаражи(h);
 
         // своя квартира строится заготовкой интерьера — её наружную
         // коробку пропускаем целиком
@@ -212,6 +228,42 @@ public partial class Мир : Node3D
             AddChild(л);
             if (!подвал)
                 _лампы.Add(л);
+        }
+    }
+
+    /// <summary>
+    /// Гаражи во дворе — по гнёздам `гараж<i>`. Гнездо задаёт место,
+    /// поворот и множитель модели: масштаб точки и есть множитель.
+    ///
+    /// Гараж — это кладовая дома вида ГАРАЖ, по порядку квартир: первое
+    /// гнездо — гараж с меньшим номером. Гнёзд меньше, чем гаражей, —
+    /// остальные стоят только в данных, как стояли и раньше: в кооперативе
+    /// за валом, куда ходят вылазкой.
+    /// </summary>
+    private void Поставить_гаражи(House h)
+    {
+        var гаражи = h.кладовые.Значения
+            .Where(к => к.вид == ВидКладовой.ГАРАЖ)
+            .OrderBy(к => к.apt).ToList();
+        int i = 0;
+        foreach (var (имя, где) in Гнёзда("гараж").OrderBy(г => г.имя, StringComparer.Ordinal))
+        {
+            float масштаб = где.Basis.Scale.X;
+            var г = new Гараж
+            {
+                Name = имя,
+                Position = где.Origin,
+                Rotation = new Vector3(0, где.Basis.Orthonormalized().GetEuler().Y, 0),
+            };
+            AddChild(г);
+            if (!г.Собрать(масштаб > 0.05f ? масштаб : 0.55f))
+            {
+                г.QueueFree();
+                continue;
+            }
+            г.кладовая = i < гаражи.Count ? гаражи[i] : null;
+            i++;
+            _гаражи.Add(г);
         }
     }
 
@@ -314,40 +366,6 @@ public partial class Мир : Node3D
             Shaded = false,
         });
     }
-
-    /// <summary>
-    /// Гаражный кооператив за домом — видом, а не местом.
-    ///
-    /// В симуляции гараж это улица: ходят туда вылазкой («гаражи за домом»
-    /// в `Улица.МЕСТА`), и потому подойти к нему ногами со двора нельзя —
-    /// двор кончается сугробами. Но ряд ворот за ними виден, и этого
-    /// довольно: место, куда ходят, должно быть видно.
-    /// </summary>
-    private void Гаражи()
-    {
-        var кирпич = Материал(new Color("#6a5348"), 0.95f);
-        var снег = Материал(new Color("#b4bcc2"), 1.0f);
-        var ворота = new[]
-        {
-            new Color("#7a3b2e"), new Color("#8a5a34"), new Color("#5a6470"),
-            new Color("#6a4038"), new Color("#96622f"), new Color("#4a5560"),
-        };
-
-        const float Z = -17.5f;
-        const float ШИР = 3.2f, ГЛУБ = 6.0f, ВЫС = 2.6f;
-        for (int i = 0; i < 9; i++)
-        {
-            float x = -12.8f + i * ШИР;
-            Меш(кирпич, new Vector3(ШИР - 0.06f, ВЫС, ГЛУБ),
-                new Vector3(x, ВЫС / 2, Z));
-            Меш(снег, new Vector3(ШИР + 0.1f, 0.2f, ГЛУБ + 0.2f),
-                new Vector3(x, ВЫС + 0.1f, Z));
-            Меш(Материал(ворота[i % ворота.Length], 0.8f),
-                new Vector3(ШИР - 0.85f, ВЫС - 0.5f, 0.1f),
-                new Vector3(x, (ВЫС - 0.5f) / 2, Z + ГЛУБ / 2 + 0.06f));
-        }
-    }
-
 
     /// <summary>Поставить заготовку в местных осях квартиры: сторона
     /// входит множителем, и потому одна годится левой и правой.</summary>
@@ -790,7 +808,8 @@ public partial class Мир : Node3D
         // внутри них оказаться нельзя, и потому их можно не вычитать.
         bool внутри = Math.Abs(где.X) < ДЛИНА
                       && где.Z > -ГЛУБИНА && где.Z < ГЛУБИНА;
-        return !внутри;
+        // в гараже крыша: метель остаётся за воротами
+        return !внутри && !_гаражи.Any(г => г.Внутри(где));
     }
 
     /// <summary>
@@ -1453,11 +1472,58 @@ public partial class Мир : Node3D
             }
             var точка = где.Origin with { Y = где.Origin.Y + y };
             float угол = Mathf.RadToDeg(где.Basis.GetEuler().Y);
+            if (_гаражи.Count > 0 && Mathf.IsZeroApprox(угол)
+                && имя.StartsWith("снег_земля", StringComparison.Ordinal))
+            {
+                // под гаражом яма: земля двора обходит его полосами
+                int n = 0;
+                foreach (var (ц, р) in Без_гаражей(точка, размер))
+                    Куча(Краска(имя), р, ц, 0).Name = $"{имя}_{n++}";
+                continue;
+            }
             if (имя.StartsWith("вид", StringComparison.Ordinal))
                 Меш(Краска(имя), размер, точка);
             else
                 Куча(Краска(имя), размер, точка, угол).Name = имя;
         }
+    }
+
+    /// <summary>Плита земли без гаражей: то, что от неё остаётся,
+    /// когда из неё вырезан след каждого.</summary>
+    private IEnumerable<(Vector3 центр, Vector3 размер)> Без_гаражей(Vector3 ц, Vector3 р)
+    {
+        var куски = new List<Rect2> { new(ц.X - р.X / 2, ц.Z - р.Z / 2, р.X, р.Z) };
+        foreach (var г in _гаражи)
+        {
+            var дыра = г.След();
+            куски = куски.SelectMany(к => Вычесть(к, дыра)).ToList();
+        }
+        foreach (var к in куски)
+            yield return (new Vector3(к.GetCenter().X, ц.Y, к.GetCenter().Y),
+                          new Vector3(к.Size.X, р.Y, к.Size.Y));
+    }
+
+    /// <summary>Прямоугольник без дыры — до четырёх полос вокруг неё.
+    /// Вторая ось прямоугольника здесь — Z мира.</summary>
+    private static IEnumerable<Rect2> Вычесть(Rect2 к, Rect2 дыра)
+    {
+        if (!к.Intersects(дыра))
+        {
+            yield return к;
+            yield break;
+        }
+        var д = к.Intersection(дыра);
+        float x0 = к.Position.X, x1 = к.End.X, z0 = к.Position.Y, z1 = к.End.Y;
+        // слева и справа — во всю глубину плиты
+        if (д.Position.X > x0)
+            yield return new Rect2(x0, z0, д.Position.X - x0, z1 - z0);
+        if (д.End.X < x1)
+            yield return new Rect2(д.End.X, z0, x1 - д.End.X, z1 - z0);
+        // спереди и сзади — только против дыры
+        if (д.Position.Y > z0)
+            yield return new Rect2(д.Position.X, z0, д.Size.X, д.Position.Y - z0);
+        if (д.End.Y < z1)
+            yield return new Rect2(д.Position.X, д.End.Y, д.Size.X, z1 - д.End.Y);
     }
 
     /// <summary>Из чего сделана коробка — по началу её имени.</summary>

@@ -43,6 +43,9 @@ public partial class Герой : CharacterBody3D
 	/// <summary>Смотрит ли на входную дверь подъезда.</summary>
 	public bool Перед_выходом { get; private set; }
 
+	/// <summary>На какой предмет смотрит: замок, коробку, верстак.</summary>
+	public Предмет? Перед_предметом { get; private set; }
+
 	/// <summary>На какую кладовую смотрит — во дворе их пять.</summary>
 	public string? Перед_кладовой { get; private set; }
 
@@ -57,6 +60,10 @@ public partial class Герой : CharacterBody3D
 
 	public override void _Ready()
 	{
+		// Мебель гаража лежит на своём слое: в неё упираются, но луч
+		// сквозь неё видит, иначе коробку на верстаке не выбрать.
+		CollisionMask = 1 | Гараж.СЛОЙ_МЕБЕЛИ;
+
 		var форма = new CollisionShape3D
 		{
 			Shape = new CapsuleShape3D { Height = 1.75f, Radius = 0.3f },
@@ -190,8 +197,11 @@ public partial class Герой : CharacterBody3D
 
 		Перед_дверью = null;
 		Перед_выходом = false;
+		Перед_предметом = null;
 		Перед_кладовой = null;
-		if (_луч.IsColliding() && _луч.GetCollider() is Node узел)
+		if (_луч.IsColliding() && _луч.GetCollider() is Предмет предмет)
+			Перед_предметом = предмет;
+		else if (_луч.IsColliding() && _луч.GetCollider() is Node узел)
 		{
 			string имя = узел.Name.ToString();
 			if (имя.StartsWith("дверь", StringComparison.Ordinal)
