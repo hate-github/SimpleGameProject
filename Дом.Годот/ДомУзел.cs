@@ -750,8 +750,6 @@ public partial class ДомУзел : Node
             GD.Print($"[пиксели] окно {окно.X}×{окно.Y}: {Строк} строк, "
                      + $"зерно {_пиксели.Зерно(окно.Y)} точек, {Оттенков} оттенков");
         }
-        По_окну();
-        GetViewport().SizeChanged += По_окну;
 
         _журнал = new ЖурналUI
         {
@@ -836,7 +834,10 @@ public partial class ДомУзел : Node
             AutowrapMode = TextServer.AutowrapMode.WordSmart,
             MouseFilter = Control.MouseFilterEnum.Ignore,
         };
-        _весть.AddThemeColorOverride("font_color", new Color("#d8c89a"));
+        _весть.AddThemeColorOverride("font_color", new Color("#e8d8a8"));
+        _весть.AddThemeColorOverride("font_outline_color", new Color(0, 0, 0, 0.85f));
+        _весть.AddThemeConstantOverride("outline_size", 4);
+        _весть.AddThemeFontSizeOverride("font_size", 18);
         _панели.AddChild(_весть);
 
         // шкала долгого дела — взлом, обыск
@@ -870,6 +871,13 @@ public partial class ДомУзел : Node
 
         _звук = new ЗвукUI();
         AddChild(_звук);
+
+        // Раскладка — последней, когда всё уже стоит. Первая версия звала её
+        // сразу после фильтра, раньше прицела, подсказки, вести и шкалы дела:
+        // до первой смены размера окна они висели в левом верхнем углу,
+        // а у прицела и шкалы не было размера вовсе
+        По_окну();
+        GetViewport().SizeChanged += По_окну;
     }
 
     /// <summary>Что из настроек держат сами узлы: мышь героя и подсказки
