@@ -371,7 +371,8 @@ public sealed class Летопись
                 л._знатоки.Add(new Знаток(x.GetProperty("кто").GetString()!,
                     x.GetProperty("ступени").EnumerateArray().Select(с => new Ступень(
                         с.GetProperty("доверие").GetDouble(),
-                        с.TryGetProperty("с_дня", out var д) ? д.GetInt32() : 1,
+                        // не сказано — с любого дня, и до метели тоже (пролог — нулевой день)
+                        с.TryGetProperty("с_дня", out var д) ? д.GetInt32() : int.MinValue,
                         с.TryGetProperty("узнаёшь", out var у2) ? у2.GetString() : null,
                         с.GetProperty("говорит").GetString()!,
                         с.TryGetProperty("снегоступы", out var с2) && с2.GetBoolean())).ToList()));

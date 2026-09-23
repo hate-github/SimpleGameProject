@@ -72,6 +72,21 @@ public sealed class Пролог
             _подозрение[p.id] = _подозрение.GetValueOrDefault(p.id) + Math.Max(0.0, доля_тары);
     }
 
+    private readonly HashSet<string> _предупредил = new(StringComparer.Ordinal);
+
+    /// <summary>Предупредил ли уже этого соседа о метели.</summary>
+    public bool Предупреждён(string кто) => _предупредил.Contains(кто);
+
+    /// <summary>
+    /// Герой предупредил соседа о метели — а откуда он знает? Сосед
+    /// запоминает (подозрение), поверил или нет; поверивший ещё и запасся.
+    /// </summary>
+    public void Предупредил(string кто, double насторожился)
+    {
+        _предупредил.Add(кто);
+        _подозрение[кто] = _подозрение.GetValueOrDefault(кто) + Math.Max(0.0, насторожился);
+    }
+
     /// <summary>Сколько сосед насмотрелся, как герой таскает сумки.</summary>
     public double Подозрение(string кто) => _подозрение.GetValueOrDefault(кто);
 
