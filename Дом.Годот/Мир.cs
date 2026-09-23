@@ -1262,7 +1262,8 @@ public partial class Мир : Node3D
     /// не пройти, иначе вся затея не стоит ничего, — а поставленная
     /// в занятое место твёрдая фигура выталкивает героя в стену.
     /// </summary>
-    public void Соседи(IReadOnlyList<Дом.Экран.ВПодъезде> кто, Vector3 герой)
+    public void Соседи(IReadOnlyList<Дом.Экран.ВПодъезде> кто, Vector3 герой,
+                       IReadOnlyDictionary<string, (Дом.Экран.Руки руки, Дом.Экран.Движение движение)>? руки = null)
     {
         _соседи ??= Узел("соседи");
         foreach (var у in _соседи.GetChildren())
@@ -1306,7 +1307,9 @@ public partial class Мир : Node3D
             // и «соседа у своей двери не увидеть вовсе» — а не увидеть
             // хуже: гость у твоей двери и есть самый нужный случай.
             bool вплотную = где.DistanceTo(герой with { Y = где.Y }) < 0.6f;
-            Фигура(где, лицом, с.id, с.имя, $"дверь{с.квартира}", !вплотную);
+            var (что_в_руках, движение) = руки is not null && руки.TryGetValue(с.id, out var р)
+                ? р : (Дом.Экран.Руки.ПУСТЫ, new Дом.Экран.Движение(Дом.Экран.Анимация.Idle));
+            Фигура(где, лицом, с.id, с.имя, $"дверь{с.квартира}", !вплотную, что_в_руках, движение);
         }
     }
 
@@ -1328,7 +1331,8 @@ public partial class Мир : Node3D
     /// соседи различались с первого взгляда и не менялись между ходами.
     /// </summary>
     private void Фигура(Vector3 где, float лицом, string id, string имя,
-                        string зовут, bool твёрдый)
+                        string зовут, bool твёрдый,
+                        Дом.Экран.Руки что_в_руках, Дом.Экран.Движение движение)
     {
         var тело = new StaticBody3D
         {
@@ -1336,19 +1340,35 @@ public partial class Мир : Node3D
             RotationDegrees = new Vector3(0, лицом, 0),
             Name = зовут,
         };
+        // корпус — то, что качается на ходу и клонится от ран: пальто,
+        // голова и рука с тем, что в ней (задание автора, пп. 21, 23)
+        var корпус = new Node3D { Name = "корпус" };
+        тело.AddChild(корпус);
         var пальто = Материал(Пальто(id), 0.95f);
-        тело.AddChild(new MeshInstance3D
+        корпус.AddChild(new MeshInstance3D
         {
             Mesh = new CapsuleMesh { Height = 1.55f, Radius = 0.26f },
             MaterialOverride = пальто,
             Position = new Vector3(0, 0.78f, 0),
         });
-        тело.AddChild(new MeshInstance3D
+        корпус.AddChild(new MeshInstance3D
         {
             Mesh = new SphereMesh { Height = 0.24f, Radius = 0.12f },
             MaterialOverride = Материал(new Color("#8a6f56"), 0.9f),
             Position = new Vector3(0, 1.66f, 0),
         });
+        // правая рука: тот же узел, что у героя у камеры
+        var руки = new Руки3D
+        {
+            Name = "руки",
+            Position = new Vector3(0.32f, 0.92f, -0.12f),
+            RotationDegrees = new Vector3(-130, 0, 0),
+        };
+        корпус.AddChild(руки);
+        руки.Держать(что_в_руках);
+        var аниматор = new Аниматор { Name = "аниматор", Рука = руки, Тело = корпус };
+        тело.AddChild(аниматор);
+        аниматор.Играть(движение);
         if (твёрдый)
             тело.AddChild(new CollisionShape3D
             {

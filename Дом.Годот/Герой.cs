@@ -80,6 +80,16 @@ public partial class Герой : CharacterBody3D
 
 	public Camera3D глаза => _глаза;
 
+	/// <summary>Что в руках — у камеры справа внизу (задание автора, п. 22).
+	/// Тот же узел, что у фигур соседей (`Руки3D`).</summary>
+	public Руки3D руки { get; private set; } = null!;
+
+	/// <summary>Движения руки: достать, убрать, бить по замку, шаг (п. 21).</summary>
+	public Аниматор аниматор { get; private set; } = null!;
+
+	/// <summary>Идёт ли: для шага в аниматоре.</summary>
+	public bool Идёт => IsOnFloor() && new Vector2(Velocity.X, Velocity.Z).Length() > 0.3f;
+
 	/// <summary>Как звучат шаги: разброс высоты и шанс скрипа досок.
 	/// Ставятся до того, как герой встал в мир.</summary>
 	public float Разброс_шагов { get; set; } = 0.03f;
@@ -122,6 +132,17 @@ public partial class Герой : CharacterBody3D
 			CollideWithAreas = true,
 		};
 		_глаза.AddChild(_луч);
+
+		// руки — справа внизу у камеры: что держит, то и видно
+		руки = new Руки3D
+		{
+			Name = "руки",
+			Position = new Vector3(0.28f, -0.30f, -0.50f),
+			RotationDegrees = new Vector3(-25, 15, -8),
+		};
+		_глаза.AddChild(руки);
+		аниматор = new Аниматор { Name = "аниматор", Рука = руки };
+		AddChild(аниматор);
 
 		_шаги = new Шаги
 		{

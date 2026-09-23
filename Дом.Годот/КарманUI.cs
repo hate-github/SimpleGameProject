@@ -166,9 +166,10 @@ public partial class КарманUI : PanelContainer
             Сказать("дом ещё считает ход — подожди");
             return;
         }
-        if (Сеанс.я.карман is null && !у_полки)
-            return;                     // кармана нет — нечего и открывать
+        if (Сеанс.я.карман is null && Сеанс.я.снаряжение is null && !у_полки)
+            return;                     // ни кармана, ни снаряжения — нечего и открывать
         this.у_полки = у_полки;
+        _руки_весть = "";
         _дела = дела ?? System.Array.Empty<(string, System.Action)>();
         Visible = true;
         GetTree().Paused = true;
@@ -278,66 +279,96 @@ public partial class КарманUI : PanelContainer
 
     /// <summary>Инструменты: у полки — взять с собой и положить дома,
     /// по клавише кармана — только что при себе.</summary>
+    // что ответили руки на последнее нажатие — строкой под списком
+    private string _руки_весть = "";
+
+    /// <summary>
+    /// Что в руках и что при себе (задание автора, п. 22). По клавише
+    /// кармана — взять в руки или убрать из рук; у полки — ещё взять
+    /// с собой и положить дома. Тяжёлое, взятое с полки, сразу в руках,
+    /// и второго тяжёлого не взять; спрятать тяжёлое нельзя, только
+    /// положить дома.
+    /// </summary>
     private void Инструменты_героя()
     {
         var я = Сеанс!.я;
         if (я.снаряжение is not { } с)
             return;
         var каталог = Каталог();
-        string Имя(string id) => каталог.все.TryGetValue(id, out var и) ? и.имя : id;
-        var шапка = new Label { Text = "инструменты" };
+        string Имя(string id) => каталог.в_руках.TryGetValue(id, out var в) ? в.имя : id;
+        var шапка = new Label { Text = "в руках и при себе" };
         шапка.AddThemeColorOverride("font_color", new Color("#6f6a5e"));
         _инструменты.AddChild(шапка);
-        var при_себе = с.При_себе(я, каталог).ToList();
+        Надпись(_инструменты, с.в_руках is string держит
+            ? $"в руках: {Имя(держит)}"
+              + (с.Тяжёлое(держит, каталог) ? " — тяжёлое, не спрятать: положить можно дома у полки" : "")
+            : "руки пусты");
+
+        void Ряд_(string текст, string кнопка, System.Action сделать)
+        {
+            var ряд = new HBoxContainer();
+            var надпись = new Label { Text = текст, SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+            надпись.AddThemeColorOverride("font_color", new Color("#c8c2b0"));
+            ряд.AddChild(надпись);
+            var к = new Button { Text = кнопка };
+            к.Pressed += () =>
+            {
+                сделать();
+                Обновить();
+            };
+            ряд.AddChild(к);
+            _инструменты.AddChild(ряд);
+        }
+
         if (!у_полки)
         {
-            Надпись(_инструменты, при_себе.Count == 0
-                ? "с собой ничего — голыми руками замок не сорвать; взять можно дома, у полки"
-                : "с собой: " + string.Join(", ", при_себе.Select(Имя)));
-            return;
+            var можно = с.Можно_держать(я, каталог);
+            if (можно.Count == 0)
+                Надпись(_инструменты, "при себе ничего — голыми руками замок не сорвать; "
+                                      + "взять инструменты можно дома, у полки");
+            foreach (string id in можно)
+            {
+                string что = id;
+                bool в_руках = с.в_руках == что;
+                Ряд_(что == каталог.Оружие_в_руки(я.weapon) ? $"оружие: {Имя(что)}" : $"с собой: {Имя(что)}",
+                     в_руках ? "убрать из рук" : "в руки",
+                     () => _руки_весть = в_руках
+                         ? с.Убрать(каталог) ?? $"убрал: {Имя(что)}"
+                         : с.Достать(что, я, каталог) ?? $"в руках: {Имя(что)}");
+            }
         }
-        foreach (string id in с.дома.ToList())
+        else
         {
-            string инструмент = id;
-            var ряд = new HBoxContainer();
-            var надпись = new Label
+            foreach (string id in с.дома.ToList())
             {
-                Text = $"дома: {Имя(инструмент)}",
-                SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
-            };
-            надпись.AddThemeColorOverride("font_color", new Color("#c8c2b0"));
-            ряд.AddChild(надпись);
-            var к = new Button { Text = "взять с собой" };
-            к.Pressed += () =>
+                string инструмент = id;
+                Ряд_($"дома: {Имя(инструмент)}", "взять с собой", () =>
+                {
+                    if (с.Нельзя_взять(инструмент, каталог) is string нельзя)
+                        _руки_весть = нельзя;
+                    else if (с.Взять(инструмент, каталог))
+                        _руки_весть = с.в_руках == инструмент
+                            ? $"{Имя(инструмент)} — тяжёлое, в руках" : $"взял: {Имя(инструмент)}";
+                });
+            }
+            foreach (string id in с.с_собой.ToList())
             {
-                с.Взять(инструмент);
-                Обновить();
-            };
-            ряд.AddChild(к);
-            _инструменты.AddChild(ряд);
+                string инструмент = id;
+                Ряд_($"с собой: {Имя(инструмент)}", "положить дома", () =>
+                {
+                    с.Положить(инструмент);
+                    _руки_весть = $"положил: {Имя(инструмент)}";
+                });
+            }
+            if (с.дома.Count == 0 && с.с_собой.Count == 0)
+                Надпись(_инструменты, "инструментов нет");
         }
-        foreach (string id in с.с_собой.ToList())
+        if (_руки_весть.Length > 0)
         {
-            string инструмент = id;
-            var ряд = new HBoxContainer();
-            var надпись = new Label
-            {
-                Text = $"с собой: {Имя(инструмент)}",
-                SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
-            };
-            надпись.AddThemeColorOverride("font_color", new Color("#c8c2b0"));
-            ряд.AddChild(надпись);
-            var к = new Button { Text = "положить дома" };
-            к.Pressed += () =>
-            {
-                с.Положить(инструмент);
-                Обновить();
-            };
-            ряд.AddChild(к);
-            _инструменты.AddChild(ряд);
+            var весть = new Label { Text = _руки_весть };
+            весть.AddThemeColorOverride("font_color", new Color("#d8b070"));
+            _инструменты.AddChild(весть);
         }
-        if (с.дома.Count == 0 && с.с_собой.Count == 0)
-            Надпись(_инструменты, "инструментов нет");
     }
 
     private static void Надпись(VBoxContainer куда, string текст)

@@ -36,7 +36,9 @@ public static partial class Проверки
     public static List<string> Настройки_(Action<string> w)
     {
         var плохо = new List<string>();
-        const string БЫЛО = "W S A D E Space Q J T P M I";
+        // прежние клавиши и две новые: F — достать или убрать из рук,
+        // R — взять в руки другое (задание автора, п. 22)
+        const string БЫЛО = "W S A D E Space Q J T P M I F R";
 
         static string Клавишами(Настройки н)
             => string.Join(" ", Клавиши.ВСЕ.Select(п => н.Клавиша(п.ключ)));
