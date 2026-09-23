@@ -26,6 +26,7 @@ public sealed class Карман
 {
     private readonly Умения _умения;
     private readonly Словарь<string, double> _вещи = Словари.Числа();
+    private readonly SortedDictionary<string, double> _инструменты = new(StringComparer.Ordinal);
 
     public Карман(Умения умения) => _умения = умения;
 
@@ -33,7 +34,47 @@ public sealed class Карман
     public double предел => _умения.карман;
 
     /// <summary>Сколько занято.</summary>
-    public double занято => Util.Sum(_вещи.Ключи.Select(к => _вещи[к]));
+    public double занято => Util.Sum(_вещи.Ключи.Select(к => _вещи[к])) + _инструменты.Values.Sum();
+
+    /// <summary>Инструменты и оружие, спрятанные в карман: их нет в мире,
+    /// и отобрать их нельзя (задание автора, п. 17: побег из камеры).</summary>
+    public IReadOnlyCollection<string> инструменты => _инструменты.Keys;
+
+    /// <summary>Сколько места займёт вещь: тяжёлое — больше.</summary>
+    public static double Вес(string id, Инструменты каталог, РучкиПетли ручки)
+        => каталог.в_руках.TryGetValue(id, out var в) && в.тяжёлый
+            ? ручки["карман_тяжёлое"] : ручки["карман_вещь"];
+
+    /// <summary>Спрятать вещь из снаряжения в карман — убрать из мира.
+    /// null — спрятал; иначе почему нет.</summary>
+    public string? Спрятать(NPC я, string id, Инструменты каталог, РучкиПетли ручки)
+    {
+        if (я.снаряжение is not { } с || !с.Есть(id))
+            return "этого при себе нет";
+        if (каталог.в_руках.TryGetValue(id, out var в) && в.носят)
+            return "надетое в карман не спрячешь";
+        double вес = Вес(id, каталог, ручки);
+        if (вес > свободно + 1e-9)
+            return "в кармане нет места";
+        с.Положить_насовсем(id);
+        _инструменты[id] = вес;
+        return null;
+    }
+
+    /// <summary>Вынуть вещь из кармана — при себе, тяжёлое сразу в руках.
+    /// null — вынул; иначе почему нет.</summary>
+    public string? Вынуть(NPC я, string id, Инструменты каталог)
+    {
+        if (!_инструменты.ContainsKey(id))
+            return "в кармане этого нет";
+        if (я.снаряжение is not { } с)
+            return "некуда взять";
+        if (с.Нельзя_взять(id, каталог) is string нельзя)
+            return нельзя;
+        _инструменты.Remove(id);
+        с.Подобрать(id, каталог);
+        return null;
+    }
 
     public double свободно => System.Math.Max(0.0, предел - занято);
 
@@ -82,6 +123,19 @@ public sealed class Карман
         return сколько;
     }
 
+    /// <summary>Съесть или выпить прямо из кармана — мимо шкафа (в камере
+    /// шкафа нет). Сколько взято.</summary>
+    public double Потратить(string ресурс, double сколько)
+    {
+        сколько = System.Math.Min(сколько, Сколько(ресурс));
+        if (сколько <= 0.0)
+            return 0.0;
+        _вещи[ресурс] = Сколько(ресурс) - сколько;
+        if (_вещи[ресурс] <= 1e-12)
+            _вещи.Убрать(ресурс);
+        return сколько;
+    }
+
     /// <summary>Достать обратно в мир.</summary>
     public double Достать(NPC я, string ресурс, double сколько)
     {
@@ -96,7 +150,11 @@ public sealed class Карман
     }
 
     /// <summary>Смерть: содержимое не переносится никогда (ГДД 8).</summary>
-    public void Обнулить() => _вещи.Очистить();
+    public void Обнулить()
+    {
+        _вещи.Очистить();
+        _инструменты.Clear();
+    }
 
     public override string ToString()
         => _вещи.Ключи.Count == 0

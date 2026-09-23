@@ -75,6 +75,12 @@ public sealed class Округа : IУлицы
     /// <summary>Болезнь с «Вектора-3» в этом доме (`Заражение`).</summary>
     public Заражение заражение { get; }
 
+    /// <summary>Полицейский участок этой жизни — или null, если его нет в мире.</summary>
+    public Участок? участок { get; }
+
+    /// <summary>Попался в магазине в метель — больше не продают.</summary>
+    public bool выгнан_из_магазина { get; set; }
+
     private readonly ДанныеСнегоступов _снегоступы;
     private readonly HashSet<string> _у_соседей = new(StringComparer.Ordinal);
     private readonly HashSet<string> _лишились = new(StringComparer.Ordinal);
@@ -92,6 +98,7 @@ public sealed class Округа : IУлицы
         this.зерно = зерно;
         _снегоступы = летопись.снегоступы;
         заражение = new Заражение(летопись.заражение, зерно);
+        участок = летопись.участок is { } д ? new Участок(д) : null;
     }
 
     /// <summary>
@@ -178,6 +185,8 @@ public sealed class Округа : IУлицы
     {
         if (п.знать is string что && !Знает(что))
             return "не знаешь, где это";
+        if (п.вид == "участок" && h.day < 1)
+            return "до метели там дежурят — задержанным туда и так дорога";
         if (!летопись.Пройти(п.улица, h.day, зерно, Есть_у(h, я)))
             return "замело — без снегоступов не пройти";
         double часов = 2.0 * Часы_дороги(h, я, п) + там_часов;

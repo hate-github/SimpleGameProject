@@ -441,6 +441,9 @@ public sealed class House
     /// <summary>Температура в квартире (GDD 15: утепление, буржуйка, обогреватель).</summary>
     public double room_temp(NPC npc, bool? burning = null)
     {
+        // не дома — греется там, где он есть (только игрок: у соседей приюта нет)
+        if (npc.приют?.Температура(this, npc) is double там)
+            return там;
         // гость греется хозяйской печкой — в этом весь смысл съезжаться
         var хозяин = хозяин_жилья(npc);
         var flat = flats[хозяин.apt];

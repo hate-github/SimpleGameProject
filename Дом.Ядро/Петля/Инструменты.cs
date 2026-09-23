@@ -104,6 +104,15 @@ public sealed class Инструменты
     public string? Из_оружия(Оружие о)
         => _оружие.TryGetValue(о, out var id) && _все.ContainsKey(id) ? id : null;
 
+    /// <summary>Какое это оружие жильца — по id предмета; не оружие — null.</summary>
+    public Оружие? Оружие_из(string id)
+    {
+        foreach (var (о, и) in _оружие)
+            if (string.Equals(и, id, StringComparison.Ordinal))
+                return о;
+        return null;
+    }
+
     /// <summary>Что в руках у того, кто достал это оружие, — или ничего (НЕТ).</summary>
     public string? Оружие_в_руки(Оружие о) => _оружие.TryGetValue(о, out var id) ? id : null;
 

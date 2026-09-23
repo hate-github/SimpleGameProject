@@ -132,6 +132,9 @@ public sealed class Летопись
 
     private readonly Dictionary<int, string> _новости = new();
 
+    /// <summary>Полицейский участок — или null, если в мире его нет.</summary>
+    public ДанныеУчастка? участок { get; private set; }
+
     /// <summary>Что в новостях в этот день подготовки (−2, −1 …): тревога
     /// нарастает (ГДД 4). Нет — пусто.</summary>
     public string? Новости(int день) => _новости.TryGetValue(день, out var н) ? н : null;
@@ -354,10 +357,12 @@ public sealed class Летопись
                                   x.GetProperty("улица").GetString()!, x.GetProperty("часы").GetDouble(),
                                   x.GetProperty("вид").GetString()!,
                                   x.TryGetProperty("знать", out var з) ? з.GetString() : null);
-                if (п.часы <= 0 || п.вид is not ("магазин" or "промзона" or "бункер"))
-                    throw new InvalidDataException($"мир.json: поход «{п.id}» — часы больше нуля, вид — магазин, промзона или бункер");
+                if (п.часы <= 0 || п.вид is not ("магазин" or "промзона" or "бункер" or "участок"))
+                    throw new InvalidDataException($"мир.json: поход «{п.id}» — часы больше нуля, вид — магазин, промзона, бункер или участок");
                 л._походы.Add(п);
             }
+        if (корень.TryGetProperty("участок", out var уч))
+            л.участок = ДанныеУчастка.Прочитать(уч);
         if (корень.TryGetProperty("новости", out var нв))
             foreach (var x in нв.EnumerateObject())
                 л._новости[int.Parse(x.Name, System.Globalization.CultureInfo.InvariantCulture)] = x.Value.GetString()!;
