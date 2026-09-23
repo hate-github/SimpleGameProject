@@ -65,6 +65,10 @@ public abstract partial class Хранилище : Node3D
     /// На просьбу соседа или ночь «я пока взломаю замок» не ответ.</summary>
     public System.Func<bool> МожноПоступать { get; set; } = () => false;
 
+    /// <summary>Почему поступать нельзя, если причина не «дом ждёт ответа»
+    /// (до метели — кругом люди). Нет — обычная отповедь.</summary>
+    public System.Func<string?> Нельзя_сейчас { get; set; } = () => null;
+
     /// <summary>Поступок стоил часов — дому пора идти дальше.</summary>
     public System.Action Прошло { get; set; } = () => { };
 
@@ -339,7 +343,7 @@ public abstract partial class Хранилище : Node3D
         if (!МожноМенять())
             return "дом ещё считает ход — подожди";
         if (!МожноПоступать())
-            return "сейчас не до этого — сначала ответь дому";
+            return Нельзя_сейчас() ?? "сейчас не до этого — сначала ответь дому";
         return null;
     }
 

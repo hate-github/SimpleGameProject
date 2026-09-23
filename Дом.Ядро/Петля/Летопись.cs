@@ -130,6 +130,12 @@ public sealed class Летопись
     /// <summary>Куда герой ходит сам, за ворота двора, — в порядке файла.</summary>
     public IReadOnlyList<Поход> походы => _походы;
 
+    private readonly Dictionary<int, string> _новости = new();
+
+    /// <summary>Что в новостях в этот день подготовки (−2, −1 …): тревога
+    /// нарастает (ГДД 4). Нет — пусто.</summary>
+    public string? Новости(int день) => _новости.TryGetValue(день, out var н) ? н : null;
+
     private readonly List<Знаток> _знатоки = new();
 
     /// <summary>Кто из жильцов что знает о мире и рассказывает по ступеням.</summary>
@@ -352,6 +358,9 @@ public sealed class Летопись
                     throw new InvalidDataException($"мир.json: поход «{п.id}» — часы больше нуля, вид — магазин, промзона или бункер");
                 л._походы.Add(п);
             }
+        if (корень.TryGetProperty("новости", out var нв))
+            foreach (var x in нв.EnumerateObject())
+                л._новости[int.Parse(x.Name, System.Globalization.CultureInfo.InvariantCulture)] = x.Value.GetString()!;
         if (корень.TryGetProperty("знатоки", out var зн))
             foreach (var x in зн.EnumerateArray())
                 л._знатоки.Add(new Знаток(x.GetProperty("кто").GetString()!,
