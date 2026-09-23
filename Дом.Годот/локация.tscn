@@ -5223,6 +5223,18 @@ mesh = SubResource("B972")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 32, 0.29, -18)
 mesh = SubResource("B973")
 
+[node name="здание_котельная" type="Marker3D" parent="двор"]
+transform = Transform3D(16, 0, 0, 0, 8, 0, 0, 0, 10, -14, 0, -40)
+
+[node name="здание_дом_напротив" type="Marker3D" parent="двор"]
+transform = Transform3D(40, 0, 0, 0, 14, 0, 0, 0, 12, 0, 0, 34)
+
+[node name="здание_школа" type="Marker3D" parent="двор"]
+transform = Transform3D(24, 0, 0, 0, 10, 0, 0, 0, 14, 32, 0, -38)
+
+[node name="выход_в_город" type="Marker3D" parent="двор"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1, 0, -21.5)
+
 [node name="секция0" type="Node3D" parent="."]
 
 [node name="пол516" type="MeshInstance3D" parent="секция0"]
@@ -7034,15 +7046,3 @@ mesh = SubResource("B966")
 [node name="доска_дверь967" type="MeshInstance3D" parent="секция1"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16.8, 1.05, -5.82)
 mesh = SubResource("B967")
-
-[node name="здание_котельная" type="Marker3D" parent="двор"]
-transform = Transform3D(16, 0, 0, 0, 8, 0, 0, 0, 10, -14, 0, -40)
-
-[node name="здание_дом_напротив" type="Marker3D" parent="двор"]
-transform = Transform3D(40, 0, 0, 0, 14, 0, 0, 0, 12, 0, 0, 34)
-
-[node name="здание_школа" type="Marker3D" parent="двор"]
-transform = Transform3D(24, 0, 0, 0, 10, 0, 0, 0, 14, 32, 0, -38)
-
-[node name="выход_в_город" type="Marker3D" parent="двор"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1, 0, -21.5)
