@@ -181,6 +181,7 @@ public partial class Мир : Node3D
         _своя = своя;
         _полки.Clear();
         _вещи.Clear();
+        Забыть_места();
 
         // Вся локация — одна сцена. Не «этаж, повторённый пять раз»,
         // а ровно то, что стоит в игре: пять этажей, подвал, двадцать
@@ -211,6 +212,7 @@ public partial class Мир : Node3D
         Квартира(ЭТАЖ * (Этаж(_своя) - 1));
         Деревья();
         Сугробы();
+        Здания();
     }
 
     private Заготовка? _дом;
@@ -1458,13 +1460,17 @@ public partial class Мир : Node3D
     }
 
     /// <summary>Только видимое, без твёрдости: ступени и мелочь.</summary>
-    private void Меш(StandardMaterial3D материал, Vector3 размер, Vector3 где)
-        => AddChild(new MeshInstance3D
+    private MeshInstance3D Меш(StandardMaterial3D материал, Vector3 размер, Vector3 где)
+    {
+        var м = new MeshInstance3D
         {
             Mesh = new BoxMesh { Size = размер },
             MaterialOverride = материал,
             Position = где,
-        });
+        };
+        AddChild(м);
+        return м;
+    }
 
     // -------------------------------------------------------- заготовка
 
@@ -1562,10 +1568,18 @@ public partial class Мир : Node3D
                     Куча(Краска(имя), р, ц, 0).Name = $"{имя}_{n++}";
                 continue;
             }
+            MeshInstance3D? меш;
             if (имя.StartsWith("вид", StringComparison.Ordinal))
-                Меш(Краска(имя), размер, точка);
+                меш = Меш(Краска(имя), размер, точка);
             else
-                Куча(Краска(имя), размер, точка, угол).Name = имя;
+            {
+                var тело = Куча(Краска(имя), размер, точка, угол);
+                тело.Name = имя;
+                меш = тело.GetChildOrNull<MeshInstance3D>(0);
+            }
+            // соседние подъезды — места мира: их может выжечь летопись
+            if (группа.StartsWith("секция", StringComparison.Ordinal))
+                К_месту(группа, меш, окно: имя.StartsWith("стекло", StringComparison.Ordinal));
         }
     }
 
