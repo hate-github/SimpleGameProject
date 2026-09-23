@@ -43,6 +43,16 @@ public enum ВидСобытияМира { ПОЖАР, РАЗРУШЕНИЕ, С�
 /// <summary>Каково здание: цело, горит, сгорело, разрушено.</summary>
 public enum Здание { ЦЕЛО, ГОРИТ, СГОРЕЛО, РАЗРУШЕНО }
 
+/// <summary>Видно ли на месте следы и ходы — вход, шахты: видны или замело.</summary>
+public enum Следы { ВИДНЫ, ЗАМЕЛО }
+
+/// <summary>Ступень рассказа знатока: с какого доверия к герою и дня, что
+/// герой узнаёт, что тот говорит, и про снегоступы ли это.</summary>
+public sealed record Ступень(double доверие, int с_дня, string? узнаёшь, string говорит, bool снегоступы);
+
+/// <summary>Знаток: кто и что по ступеням рассказывает.</summary>
+public sealed record Знаток(string кто, IReadOnlyList<Ступень> ступени);
+
 /// <summary>Сколько снега на дороге: чисто, снег, глубокий снег, завалено
 /// (задание: Clear, LightSnow, DeepSnow, Blocked).</summary>
 public enum СостояниеУлицы { ЧИСТО, СНЕГ, ГЛУБОКИЙ_СНЕГ, ЗАВАЛЕНО }
@@ -58,7 +68,7 @@ public sealed record ПроходУлицы(bool без_снегоступов, 
 /// </summary>
 public sealed record СобытиеМира(string id, int день, string место, ВидСобытияМира вид,
                                  Здание? здание, double шанс = 1.0, string? после = null,
-                                 СостояниеУлицы? улица = null);
+                                 СостояниеУлицы? улица = null, Следы? следы = null);
 
 /// <summary>Поход героя за ворота: куда, чья дорога, часов в один конец
 /// по чистой улице, что там и что надо знать, чтобы туда пойти.</summary>
@@ -70,6 +80,13 @@ public sealed record СостояниеМира(int день, IReadOnlyDictionar
 {
     /// <summary>Каково здание в этом месте. Не тронутое событиями — цело.</summary>
     public Здание Здание(string место) => здания.TryGetValue(место, out var з) ? з : Ядро.Здание.ЦЕЛО;
+
+    /// <summary>Видны ли на месте следы: последнее случившееся событие
+    /// со следами решает; не было таких — видны.</summary>
+    public Следы Следы(string место)
+        => случились.LastOrDefault(э => э.следы is not null
+                                        && string.Equals(э.место, место, StringComparison.Ordinal))?.следы
+           ?? Ядро.Следы.ВИДНЫ;
 
     /// <summary>Что случилось ровно в этот день: для вести и звука.</summary>
     public IEnumerable<СобытиеМира> Сегодня => случились.Where(с => с.день == день);
@@ -98,6 +115,17 @@ public sealed class Летопись
 
     /// <summary>Куда герой ходит сам, за ворота двора, — в порядке файла.</summary>
     public IReadOnlyList<Поход> походы => _походы;
+
+    private readonly List<Знаток> _знатоки = new();
+
+    /// <summary>Кто из жильцов что знает о мире и рассказывает по ступеням.</summary>
+    public IReadOnlyList<Знаток> знатоки => _знатоки;
+
+    /// <summary>Бункер: сколько часов искать и шанс найти, пока видно.</summary>
+    public (double часов, double найти) бункер { get; private set; }
+
+    /// <summary>Заражение с «Вектора-3»: стадии, урон, передача, промзона.</summary>
+    public ДанныеЗаражения заражение { get; private set; } = ДанныеЗаражения.НИКАКОГО;
 
     /// <summary>Снегоступы в мире: кто их делает и как к ним тянутся.</summary>
     public ДанныеСнегоступов снегоступы { get; private set; } = ДанныеСнегоступов.НИКАКИХ;
@@ -241,11 +269,22 @@ public sealed class Летопись
             };
             Здание? здание = null;
             СостояниеУлицы? улица = null;
+            Следы? следы = null;
             foreach (var п in э.GetProperty("последствия").EnumerateObject())
             {
                 if (п.Name == "улица")
                 {
                     улица = Уровень(п.Value.GetString()!, $"«{id}»");
+                    continue;
+                }
+                if (п.Name == "следы")
+                {
+                    следы = п.Value.GetString() switch
+                    {
+                        "видны" => Ядро.Следы.ВИДНЫ,
+                        "замело" => Ядро.Следы.ЗАМЕЛО,
+                        var х => throw new InvalidDataException($"мир.json: «{id}» — следов «{х}» не бывает"),
+                    };
                     continue;
                 }
                 if (п.Name != "здание")
@@ -265,7 +304,7 @@ public sealed class Летопись
             if (шанс < 0.0 || шанс > 1.0)
                 throw new InvalidDataException($"мир.json: «{id}» — шанс {шанс} не от нуля до единицы");
             string? после = э.TryGetProperty("после", out var по) ? по.GetString() : null;
-            л._события.Add(new СобытиеМира(id, день, место, вид, здание, шанс, после, улица));
+            л._события.Add(new СобытиеМира(id, день, место, вид, здание, шанс, после, улица, следы));
         }
         if (корень.TryGetProperty("улицы", out var у))
         {
@@ -297,6 +336,19 @@ public sealed class Летопись
                     throw new InvalidDataException($"мир.json: поход «{п.id}» — часы больше нуля, вид — магазин, промзона или бункер");
                 л._походы.Add(п);
             }
+        if (корень.TryGetProperty("знатоки", out var зн))
+            foreach (var x in зн.EnumerateArray())
+                л._знатоки.Add(new Знаток(x.GetProperty("кто").GetString()!,
+                    x.GetProperty("ступени").EnumerateArray().Select(с => new Ступень(
+                        с.GetProperty("доверие").GetDouble(),
+                        с.TryGetProperty("с_дня", out var д) ? д.GetInt32() : 1,
+                        с.TryGetProperty("узнаёшь", out var у2) ? у2.GetString() : null,
+                        с.GetProperty("говорит").GetString()!,
+                        с.TryGetProperty("снегоступы", out var с2) && с2.GetBoolean())).ToList()));
+        if (корень.TryGetProperty("бункер", out var бн))
+            л.бункер = (бн.GetProperty("часов").GetDouble(), бн.GetProperty("найти").GetDouble());
+        if (корень.TryGetProperty("заражение", out var зр))
+            л.заражение = ДанныеЗаражения.Прочитать(зр);
         if (корень.TryGetProperty("снегоступы", out var сн))
             л.снегоступы = new ДанныеСнегоступов(
                 сн.GetProperty("мастера").EnumerateArray()

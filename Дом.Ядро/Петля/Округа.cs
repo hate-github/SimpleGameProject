@@ -53,6 +53,13 @@ public sealed class Округа : IУлицы
     /// <summary>Id снегоступов в каталоге предметов.</summary>
     public const string СНЕГОСТУПЫ = "снегоступы";
 
+    /// <summary>С чем приходят к знатоку, чтобы он заговорил: разговор, просьба,
+    /// мена, помощь — не разбой и не кража.</summary>
+    public static readonly IReadOnlySet<string> ДРУЖЕСКИЕ = new HashSet<string>(StringComparer.Ordinal)
+    {
+        "разговор", "попросить", "поделиться", "обмен", "лечить", "вернуть", "проведать", "шепнуть",
+    };
+
     /// <summary>По какой дороге мерить завал «сегодня вообще».</summary>
     public const string ДОРОГА = "магазин на Заречной";
 
@@ -65,12 +72,18 @@ public sealed class Округа : IУлицы
     public Летопись летопись { get; }
     public long зерно { get; }
 
+    /// <summary>Болезнь с «Вектора-3» в этом доме (`Заражение`).</summary>
+    public Заражение заражение { get; }
+
     private readonly ДанныеСнегоступов _снегоступы;
     private readonly HashSet<string> _у_соседей = new(StringComparer.Ordinal);
     private readonly HashSet<string> _лишились = new(StringComparer.Ordinal);
     private readonly HashSet<int> _дни_на_снегоступах = new();
     private readonly HashSet<string> _герой_знает = new(StringComparer.Ordinal);
     private readonly HashSet<string> _знания = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, int> _рассказано = new(StringComparer.Ordinal);
+    private readonly Queue<(string кто, string говорит)> _рассказы = new();
+    private readonly object _замок_рассказов = new();
 
     private Округа(string герой, Летопись летопись, long зерно)
     {
@@ -78,6 +91,7 @@ public sealed class Округа : IУлицы
         this.летопись = летопись;
         this.зерно = зерно;
         _снегоступы = летопись.снегоступы;
+        заражение = new Заражение(летопись.заражение, зерно);
     }
 
     /// <summary>
@@ -90,6 +104,15 @@ public sealed class Округа : IУлицы
         var о = new Округа(герой, летопись, зерно);
         _у.AddOrUpdate(h, о);
         h.people[герой].улицы = о;
+        о.заражение.Слушать(h);
+        // знатоки: герой пришёл к ним сам — рассказ по ступеням. Наблюдатель
+        // исполнения: дом не трогает, пишет только в округу
+        h.hooks.after_execute.Add((дом, npc, ключ, цель, _, _) =>
+        {
+            if (string.Equals(npc.id, герой, StringComparison.Ordinal) && цель is NPC знаток
+                && ДРУЖЕСКИЕ.Contains(ключ))
+                о.Пришёл_к(дом, npc, знаток);
+        });
         h.hooks.on_outing.Add((дом, npc, _, м, _) =>
         {
             if (string.Equals(npc.id, герой, StringComparison.Ordinal)
@@ -149,6 +172,80 @@ public sealed class Округа : IУлицы
         if (!летопись.Пройти(п.улица, h.day, зерно, снегоступы: false))
             Ходил_на_снегоступах(h.day);
         Социальное.emit(h, я, 2, "возвращение", night: false);
+    }
+
+    // ------------------------------------------------------------ знатоки
+
+    /// <summary>
+    /// Герой пришёл к соседу лицом к лицу. Если сосед — знаток, он говорит
+    /// следующую ступень, когда доверяет герою не меньше нужного и день
+    /// пришёл. Одну ступень за раз. Сказанное ждёт экрана (`Рассказ`).
+    /// </summary>
+    public void Пришёл_к(House h, NPC я, NPC сосед)
+    {
+        var знаток = летопись.знатоки.FirstOrDefault(з => string.Equals(з.кто, сосед.id, StringComparison.Ordinal));
+        if (знаток is null || !сосед.alive)
+            return;
+        int сказано = _рассказано.GetValueOrDefault(сосед.id);
+        if (сказано >= знаток.ступени.Count)
+            return;
+        var ступень = знаток.ступени[сказано];
+        if (h.day < ступень.с_дня || сосед.trust.Взять(я.id, 3.0) < ступень.доверие - 1e-9)
+            return;
+        _рассказано[сосед.id] = сказано + 1;
+        if (ступень.узнаёшь is string что)
+            Узнал(что);
+        if (ступень.снегоступы)
+            Герой_узнал(сосед.id);
+        lock (_замок_рассказов)
+            _рассказы.Enqueue((сосед.id, ступень.говорит));
+    }
+
+    /// <summary>Сколько ступеней уже сказал этот знаток.</summary>
+    public int Рассказано(string кто) => _рассказано.GetValueOrDefault(кто);
+
+    /// <summary>Что сказано и ещё не показано — по одному; нет — null.</summary>
+    public (string кто, string говорит)? Рассказ()
+    {
+        lock (_замок_рассказов)
+            return _рассказы.Count > 0 ? _рассказы.Dequeue() : null;
+    }
+
+    // ------------------------------------------------------------ бункер
+
+    /// <summary>
+    /// Искать бункер в районе, что показал Сергей: пока следы видны
+    /// (летопись: до «замело»), найти можно с шансом за поход; замело —
+    /// не найти. Нашёл — герой знает, где вход. Часы — здесь или уже
+    /// ушли делом (`тратить: false`).
+    /// </summary>
+    public (bool нашёл, bool замело) Искать_бункер(House h, NPC я, bool тратить = true)
+    {
+        var (часов, найти) = летопись.бункер;
+        if (тратить)
+            я.time_left -= Math.Min(часов, я.time_left);
+        if (Знает("бункер_вход"))
+            return (true, false);
+        bool замело = летопись.На(h.day, зерно).Следы("район_бункера") == Следы.ЗАМЕЛО;
+        if (замело)
+            return (false, true);
+        bool нашёл = Бросок(зерно, "бункер", я.id, h.day) < найти;
+        if (нашёл)
+            Узнал("бункер_вход");
+        return (нашёл, false);
+    }
+
+    /// <summary>Бросок от зерна мира, повода, человека и дня — мимо `h.rng`.</summary>
+    public static double Бросок(long зерно, string повод, string кто, int день)
+    {
+        ulong x = 14695981039346656037UL;
+        foreach (byte b in BitConverter.GetBytes(зерно).Concat(BitConverter.GetBytes(день))
+                                  .Concat(System.Text.Encoding.UTF8.GetBytes(повод + "|" + кто)))
+        {
+            x ^= b;
+            x *= 1099511628211UL;
+        }
+        return new Rng((long)(x & 0x7fffffffffffffffUL)).Random();
     }
 
     // ------------------------------------------------------------ снегоступы

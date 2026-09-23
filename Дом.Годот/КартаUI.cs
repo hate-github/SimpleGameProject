@@ -31,6 +31,10 @@ public partial class КартаUI : PanelContainer
     /// <summary>Откуда брать. Ставится корневым узлом.</summary>
     public Сеанс? Сеанс { get; set; }
 
+    /// <summary>Отметки со слов знатоков — промзона, район бункера: примерно,
+    /// где это, и что там. Не места вылазки: туда ходят сами, за ворота.</summary>
+    public System.Func<IReadOnlyList<string>> Отметки { get; set; } = () => System.Array.Empty<string>();
+
     public bool открыта => Visible;
 
     public override void _Ready()
@@ -109,6 +113,20 @@ public partial class КартаUI : PanelContainer
             Подпись(строка,
                     $"дорога {Текст.Ф(м.дорога, 1)} · люди {Текст.Ф(м.угроза, 1)}",
                     200, "#6f6a5e");
+        }
+
+        var отметки = Отметки();
+        if (отметки.Count > 0)
+        {
+            var шапка = new Label { Text = "что рассказали — примерно, со слов:" };
+            шапка.AddThemeColorOverride("font_color", new Color("#8a8474"));
+            _столбец.AddChild(шапка);
+            foreach (var о in отметки)
+            {
+                var l = new Label { Text = "· " + о, AutowrapMode = TextServer.AutowrapMode.WordSmart };
+                l.AddThemeColorOverride("font_color", new Color("#c8b48a"));
+                _столбец.AddChild(l);
+            }
         }
 
         var примечание = new Label
