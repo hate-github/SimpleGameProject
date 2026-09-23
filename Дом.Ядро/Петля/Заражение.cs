@@ -16,6 +16,14 @@
 //   · **больной заразен**: кто за день встречался с ним лицом к лицу —
 //     пришёл к его двери, он пришёл к нему, живут под одной крышей, —
 //     задет с шансом. Так болезнь и ходит между героем и соседями.
+//     Встреча — дело, в котором ядро само сводит двоих лицом к лицу
+//     (`Социальное.встретились`: разговор, мена, просьба, помощь, отъём),
+//     а не любое дело «про соседа»: присматриваться к квартире или
+//     обокрасть пустую — не встреча;
+//   · **больной слёг** (`на_ногах`): после каждого своего дела он на ногах
+//     не дольше своей доли дня — больной полдня, тяжёлый встал, поел
+//     и лёг. Без этого кашляющий кровью весь день ходил по квартирам,
+//     и одна вылазка героя в промзону выкашивала дом за две недели.
 //
 // Броски — своим генератором от зерна мира, человека и дня, мимо `h.rng`.
 // Встречи записывает наблюдатель исполнения (ничего не меняет); сама
@@ -41,11 +49,12 @@ public sealed record ДанныеЗаражения(
     IReadOnlyDictionary<Стадия, double> урон,
     double передача,
     double промзона_часов, double задеть, double задеть_зная,
-    IReadOnlyDictionary<string, (int от, int до)> находка)
+    IReadOnlyDictionary<string, (int от, int до)> находка,
+    IReadOnlyDictionary<Стадия, double> на_ногах)
 {
     public static readonly ДанныеЗаражения НИКАКОГО = new(0.0,
         new Dictionary<Стадия, (int, int)>(), new Dictionary<Стадия, double>(), 0.0, 0.0, 0.0, 0.0,
-        new Dictionary<string, (int, int)>(StringComparer.Ordinal));
+        new Dictionary<string, (int, int)>(StringComparer.Ordinal), new Dictionary<Стадия, double>());
 
     public static ДанныеЗаражения Прочитать(JsonElement з)
     {
@@ -65,13 +74,22 @@ public sealed record ДанныеЗаражения(
             var пара = п.Value.EnumerateArray().Select(x => x.GetInt32()).ToList();
             находка[п.Name] = (пара[0], пара[1]);
         }
+        var на_ногах = new Dictionary<Стадия, double>();
+        if (з.TryGetProperty("на_ногах", out var нн))
+            foreach (var п in нн.EnumerateObject())
+            {
+                double доля = п.Value.GetDouble();
+                if (доля < 0.0 || доля > 1.0)
+                    throw new InvalidDataException($"мир.json: «на_ногах» у «{п.Name}» — доля дня, от 0 до 1, а не {доля}");
+                на_ногах[Стадия_(п.Name)] = доля;
+            }
         foreach (var с in new[] { Стадия.ЗАРАЖЁН, Стадия.БОЛЕН, Стадия.ТЯЖЕЛО })
             if (!дней.TryGetValue(с, out var д) || д.Item1 < 1 || д.Item2 < д.Item1)
                 throw new InvalidDataException($"мир.json: у стадии «{с}» нужно дней от и до, не меньше одного");
         return new ДанныеЗаражения(з.GetProperty("задетый_заболеет").GetDouble(), дней, урон,
             з.GetProperty("передача").GetDouble(),
             пз.GetProperty("часов").GetDouble(), пз.GetProperty("задеть").GetDouble(),
-            пз.GetProperty("задеть_зная").GetDouble(), находка);
+            пз.GetProperty("задеть_зная").GetDouble(), находка, на_ногах);
     }
 
     private static Стадия Стадия_(string имя) => имя switch
@@ -91,6 +109,16 @@ public sealed record Промзона(double часы, Словарь<string, do
 /// <summary>Болезнь в доме — часть округи героя.</summary>
 public sealed class Заражение
 {
+    /// <summary>
+    /// Дела лицом к лицу — ровно те, чьи исполнители зовут
+    /// `Социальное.встретились`. Список сверяет проверка «заражение
+    /// и знатоки» с исходниками исполнителей в обе стороны.
+    /// </summary>
+    public static readonly IReadOnlySet<string> ЛИЦОМ_К_ЛИЦУ = new HashSet<string>(StringComparer.Ordinal)
+    {
+        "разговор", "обмен", "поделиться", "попросить", "вернуть", "лечить", "шепнуть", "отнять",
+    };
+
     private readonly ДанныеЗаражения _д;
     private readonly long _зерно;
     private readonly Dictionary<string, Болезнь> _болезни = new(StringComparer.Ordinal);
@@ -131,14 +159,29 @@ public sealed class Заражение
         _встречи.Add(string.CompareOrdinal(а, б) < 0 ? (а, б) : (б, а));
     }
 
+    /// <summary>
+    /// Больной слёг: после своего дела он на ногах не дольше своей доли
+    /// дня (`на_ногах`), остальное — лёжа. День кончается раньше: дом
+    /// больше не даёт ему хода до утра.
+    /// </summary>
+    public void Слечь(House h, NPC p)
+    {
+        if (!_д.на_ногах.TryGetValue(Стадия(p.id), out var доля))
+            return;
+        double день = h.B["часов_бодрствования"];
+        double прожито = день - p.time_left;
+        p.time_left = Math.Max(0.0, Math.Min(p.time_left, день * доля - прожито));
+    }
+
     /// <summary>Подписаться на дом: встречи — наблюдателем исполнения;
     /// болезнь — в конце каждого дня.</summary>
     public void Слушать(House h)
     {
-        h.hooks.after_execute.Add((_, npc, _, цель, _, _) =>
+        h.hooks.after_execute.Add((дом, npc, ключ, цель, _, _) =>
         {
-            if (цель is NPC t)
+            if (цель is NPC t && ЛИЦОМ_К_ЛИЦУ.Contains(ключ))
                 Встретились(npc.id, t.id);
+            Слечь(дом, npc);
         });
         h.hooks.on_day.Add(дом => Конец_дня(дом));
     }
