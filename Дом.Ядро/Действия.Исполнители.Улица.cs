@@ -619,6 +619,9 @@ public static partial class Действия
                 h.journal.line($"{npc.@short} {Util.Vb(npc.sex, "зажал")} "
                     + $"{victim.form("acc")} на лестнице и {Util.Vb(npc.sex, "забрал")} "
                     + $"{Конфликт._fmt(moved)}.", 2);
+                // и снегоступы, если за ними и шёл (бывает только вокруг героя)
+                if (Округа.У(h)?.Отнять(h, npc, victim) is string снегоступы)
+                    h.journal.line(снегоступы, 2);
                 victim.mood = Util.Clamp(victim.mood - 14);
                 victim.panic = Util.Clamp(victim.panic + 16);
             }
@@ -629,7 +632,11 @@ public static partial class Действия
                     + $"{Util.Vb(victim.sex, "отдал")}.", 2);
                 bool won = Конфликт.scuffle(h, npc, victim, place: "на лестнице");
                 if (won)
+                {
                     Конфликт.take_carried(h, victim, npc, limit: b["отъём_максимум"] * 0.5);
+                    if (Округа.У(h)?.Отнять(h, npc, victim) is string снегоступы)
+                        h.journal.line(снегоступы, 2);
+                }
             }
             // заодно вытряхивают карманы: ключи стоят дороже банки тушёнки
             if (victim.guests.Count == 0 && string.IsNullOrEmpty(victim.living_with)

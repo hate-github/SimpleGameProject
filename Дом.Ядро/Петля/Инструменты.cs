@@ -47,9 +47,10 @@ public sealed record Инструмент(string id, string имя, string че�
     public Приём? Берёт(string замок) => замки.TryGetValue(замок, out var п) ? п : null;
 }
 
-/// <summary>Что бывает в руках: инструмент или оружие. Имя, ассет
-/// (латиницей — для модели и клипа) и тяжёлое ли — не спрятать.</summary>
-public sealed record ВРуках(string id, string имя, string ассет, bool тяжёлый);
+/// <summary>Что бывает при герое: инструмент, оружие, снегоступы. Имя, ассет
+/// (латиницей — для модели и клипа), тяжёлое ли — не спрятать, и носят ли
+/// на себе (снегоступы — на ногах: в руки их не берут).</summary>
+public sealed record ВРуках(string id, string имя, string ассет, bool тяжёлый, bool носят = false);
 
 /// <summary>Что видно в руках у соседа: оружие наголо — за какими делами,
 /// с какой нормальности его носят открыто всегда и что берут в руки
@@ -151,7 +152,8 @@ public sealed class Инструменты
             if (к._в_руках.ContainsKey(п.Name))
                 throw new InvalidDataException($"инструменты.json: «{п.Name}» — и инструмент, и предмет");
             к._в_руках[п.Name] = new ВРуках(п.Name, п.Value.GetProperty("имя").GetString()!,
-                                            Ассет(п.Value, п.Name), false);
+                                            Ассет(п.Value, п.Name), false,
+                                            п.Value.TryGetProperty("носят", out var н) && н.GetBoolean());
         }
         var ассеты = new HashSet<string>(StringComparer.Ordinal);
         foreach (var в in к._в_руках.Values)
@@ -264,6 +266,19 @@ public sealed class Снаряжение
         return true;
     }
 
+    /// <summary>При себе ли это (в руках, спрятано или надето).</summary>
+    public bool Есть(string id) => _с_собой.Contains(id);
+
+    /// <summary>Лишиться насовсем — отняли: ни с собой, ни дома.</summary>
+    public bool Положить_насовсем(string id)
+    {
+        if (!_с_собой.Remove(id))
+            return false;
+        if (в_руках == id)
+            в_руках = null;
+        return true;
+    }
+
     /// <summary>Положить дома. false — с собой такого нет. Было в руках —
     /// руки пусты.</summary>
     public bool Положить(string id)
@@ -297,7 +312,8 @@ public sealed class Снаряжение
     /// в порядке: инструменты по имени, потом оружие.</summary>
     public IReadOnlyList<string> Можно_держать(NPC я, Инструменты каталог)
     {
-        var @out = new List<string>(_с_собой);
+        // надетое (снегоступы) в руки не берут
+        var @out = _с_собой.Where(id => !(каталог.в_руках.TryGetValue(id, out var в) && в.носят)).ToList();
         if (каталог.Оружие_в_руки(я.weapon) is string оружие && !@out.Contains(оружие))
             @out.Add(оружие);
         return @out;
