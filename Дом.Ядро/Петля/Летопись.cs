@@ -108,6 +108,20 @@ public sealed class Летопись
     /// соседние подъезды.</summary>
     public const int НЕ_ЗАМЕТАЕТ = -3;
 
+    /// <summary>Место улиц, где стоит дверь подъезда: заметёт его —
+    /// дверь во двор не открыть (`Дверь_завалена`).</summary>
+    public const string ДВЕРЬ = "дверь подъезда";
+
+    private СостояниеУлицы? _дверь_завалена;
+
+    /// <summary>
+    /// Завалена ли снаружи дверь подъезда: снег у неё дошёл до уровня
+    /// «дверь_завалена» (`мир.json`, «улицы»). Тогда во двор — через окно
+    /// лестничной площадки второго этажа. Не сказано — не заваливает никогда.
+    /// </summary>
+    public bool Дверь_завалена(int день, long зерно)
+        => _дверь_завалена is { } уровень && Улица(ДВЕРЬ, день, зерно) >= уровень;
+
     /// <summary>Места: id → как зовётся.</summary>
     public IReadOnlyDictionary<string, string> места => _места;
 
@@ -314,6 +328,8 @@ public sealed class Летопись
             л._по_дням.Sort((а, б) => а.с_дня.CompareTo(б.с_дня));
             foreach (var x in у.GetProperty("сдвиг").EnumerateObject())
                 л._сдвиг[x.Name] = x.Value.GetInt32();
+            if (у.TryGetProperty("дверь_завалена", out var дз))
+                л._дверь_завалена = Уровень(дз.GetString()!, "«дверь_завалена»");
             foreach (var x in у.GetProperty("состояния").EnumerateObject())
             {
                 double часы = x.Value.GetProperty("часы").GetDouble();
