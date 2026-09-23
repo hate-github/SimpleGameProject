@@ -131,7 +131,8 @@ public sealed record СоседГде(
     int этаж,
     string ключ,
     int дом,
-    int этаж_дома)
+    int этаж_дома,
+    string? место = null)
 {
     /// <summary>Виден ли на лестнице: у двери или на площадке.</summary>
     public bool виден => где is Где.УДвери or Где.НаПлощадке;
@@ -493,7 +494,7 @@ public static class Подача
             };
             var f = h.flats.Взять(кв, null);
             @out.Add(new СоседГде(п.id, п.@short, где, кв, f?.floor ?? 0,
-                                  ход?.ключ ?? "", дом, этаж_дома));
+                                  ход?.ключ ?? "", дом, этаж_дома, ход?.место));
         }
         return @out;
     }

@@ -60,6 +60,10 @@ public sealed record СобытиеМира(string id, int день, string ме
                                  Здание? здание, double шанс = 1.0, string? после = null,
                                  СостояниеУлицы? улица = null);
 
+/// <summary>Поход героя за ворота: куда, чья дорога, часов в один конец
+/// по чистой улице, что там и что надо знать, чтобы туда пойти.</summary>
+public sealed record Поход(string id, string имя, string улица, double часы, string вид, string? знать);
+
 /// <summary>Мир на это утро: каким стало каждое место и что случилось к нему.</summary>
 public sealed record СостояниеМира(int день, IReadOnlyDictionary<string, Здание> здания,
                                    IReadOnlyList<СобытиеМира> случились)
@@ -89,6 +93,11 @@ public sealed class Летопись
 
     /// <summary>Места: id → как зовётся.</summary>
     public IReadOnlyDictionary<string, string> места => _места;
+
+    private readonly List<Поход> _походы = new();
+
+    /// <summary>Куда герой ходит сам, за ворота двора, — в порядке файла.</summary>
+    public IReadOnlyList<Поход> походы => _походы;
 
     /// <summary>Снегоступы в мире: кто их делает и как к ним тянутся.</summary>
     public ДанныеСнегоступов снегоступы { get; private set; } = ДанныеСнегоступов.НИКАКИХ;
@@ -277,6 +286,17 @@ public sealed class Летопись
                 if (!л._проход.ContainsKey(уровень))
                     throw new InvalidDataException($"мир.json: у улицы «{уровень}» не сказано, проходима ли она");
         }
+        if (корень.TryGetProperty("походы", out var пх))
+            foreach (var x in пх.EnumerateArray())
+            {
+                var п = new Поход(x.GetProperty("id").GetString()!, x.GetProperty("имя").GetString()!,
+                                  x.GetProperty("улица").GetString()!, x.GetProperty("часы").GetDouble(),
+                                  x.GetProperty("вид").GetString()!,
+                                  x.TryGetProperty("знать", out var з) ? з.GetString() : null);
+                if (п.часы <= 0 || п.вид is not ("магазин" or "промзона" or "бункер"))
+                    throw new InvalidDataException($"мир.json: поход «{п.id}» — часы больше нуля, вид — магазин, промзона или бункер");
+                л._походы.Add(п);
+            }
         if (корень.TryGetProperty("снегоступы", out var сн))
             л.снегоступы = new ДанныеСнегоступов(
                 сн.GetProperty("мастера").EnumerateArray()
