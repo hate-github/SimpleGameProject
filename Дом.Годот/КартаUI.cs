@@ -130,17 +130,14 @@ public partial class КартаUI : PanelContainer
 
     /// <summary>Клавиша карты открывает и закрывает, Esc закрывает;
     /// повтор клавиши отбрасывается.</summary>
+    /// <summary>Открытую карту закрывают её клавиша и Esc. Открывает её
+    /// корневой узел: он знает, не идёт ли дело и не открыто ли другое окно.</summary>
     public override void _UnhandledInput(InputEvent e)
     {
-        if (Управление.Нажато(e, Клавиши.КАРТА))
-        {
-            if (Visible)
-                Убрать();
-            else
-                Показать();
-            AcceptEvent();
-        }
-        else if (Visible && e is InputEventKey { Pressed: true, Echo: false, Keycode: Key.Escape })
+        if (!Visible)
+            return;
+        if (Управление.Нажато(e, Клавиши.КАРТА)
+            || e is InputEventKey { Pressed: true, Echo: false, Keycode: Key.Escape })
         {
             Убрать();
             AcceptEvent();

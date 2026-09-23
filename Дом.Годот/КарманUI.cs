@@ -21,6 +21,15 @@
 // отсюда кнопками, как у печи клавишей. Выбранная в телефоне мысль
 // помечена.
 //
+// И здесь же — инструменты (`Дом.Ядро.Снаряжение`): что лежит дома и что
+// взято с собой. Голыми руками замок не сорвать, и молоток, чтобы сбить
+// чужой замок, сперва берут с полки. По клавише кармана видно, что при себе.
+//
+// Открывает экран корневой узел, а не своя клавиша: он знает, не идёт ли
+// долгое дело и не открыто ли другое окно (задание автора, п. 1: карман
+// открывался посреди взлома и ложился поверх шкалы). Сам экран ловит
+// только то, чем его закрывают.
+//
 // И главное, чего этот экран не прячет: **вещь исчезает из мира.** Кто
 // стоит с героем в одной квартире, это видит, и экран говорит об этом
 // прямо — до того, как игрок нажмёт, а не после.
@@ -41,12 +50,16 @@ public partial class КарманUI : PanelContainer
     private Label _свидетели = null!;
     private Label _где = null!;
     private VBoxContainer _мысли = null!;
+    private VBoxContainer _инструменты = null!;
     private Button _закрыть = null!;
     private IReadOnlyList<(string что, System.Action сделать)> _дела =
         System.Array.Empty<(string, System.Action)>();
 
     /// <summary>Откуда брать. Ставится корневым узлом.</summary>
     public Сеанс? Сеанс { get; set; }
+
+    /// <summary>Каталог инструментов — чтобы звать их по имени.</summary>
+    public System.Func<Инструменты> Каталог { get; set; } = () => Инструменты.НИКАКИХ;
 
     /// <summary>Можно ли открыться: дом спит на вопросе.</summary>
     public System.Func<bool> МожноОткрыть { get; set; } = () => false;
@@ -109,6 +122,10 @@ public partial class КарманUI : PanelContainer
 
         (_шкаф, _шкаф_шапка) = Колонка(две);
         (_внутри, _внутри_шапка) = Колонка(две);
+
+        _инструменты = new VBoxContainer();
+        _инструменты.AddThemeConstantOverride("separation", 2);
+        столбец.AddChild(_инструменты);
 
         _мысли = new VBoxContainer();
         _мысли.AddThemeConstantOverride("separation", 2);
@@ -184,11 +201,13 @@ public partial class КарманUI : PanelContainer
                 столбец.RemoveChild(узел);
                 узел.QueueFree();
             }
-        foreach (var узел in _мысли.GetChildren())
-        {
-            _мысли.RemoveChild(узел);
-            узел.QueueFree();
-        }
+        foreach (var столбец in new[] { _мысли, _инструменты })
+            foreach (var узел in столбец.GetChildren())
+            {
+                столбец.RemoveChild(узел);
+                узел.QueueFree();
+            }
+        Инструменты_героя();
 
         string место = карман is null
             ? ""
@@ -257,6 +276,70 @@ public partial class КарманUI : PanelContainer
         }
     }
 
+    /// <summary>Инструменты: у полки — взять с собой и положить дома,
+    /// по клавише кармана — только что при себе.</summary>
+    private void Инструменты_героя()
+    {
+        var я = Сеанс!.я;
+        if (я.снаряжение is not { } с)
+            return;
+        var каталог = Каталог();
+        string Имя(string id) => каталог.все.TryGetValue(id, out var и) ? и.имя : id;
+        var шапка = new Label { Text = "инструменты" };
+        шапка.AddThemeColorOverride("font_color", new Color("#6f6a5e"));
+        _инструменты.AddChild(шапка);
+        var при_себе = с.При_себе(я, каталог).ToList();
+        if (!у_полки)
+        {
+            Надпись(_инструменты, при_себе.Count == 0
+                ? "с собой ничего — голыми руками замок не сорвать; взять можно дома, у полки"
+                : "с собой: " + string.Join(", ", при_себе.Select(Имя)));
+            return;
+        }
+        foreach (string id in с.дома.ToList())
+        {
+            string инструмент = id;
+            var ряд = new HBoxContainer();
+            var надпись = new Label
+            {
+                Text = $"дома: {Имя(инструмент)}",
+                SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
+            };
+            надпись.AddThemeColorOverride("font_color", new Color("#c8c2b0"));
+            ряд.AddChild(надпись);
+            var к = new Button { Text = "взять с собой" };
+            к.Pressed += () =>
+            {
+                с.Взять(инструмент);
+                Обновить();
+            };
+            ряд.AddChild(к);
+            _инструменты.AddChild(ряд);
+        }
+        foreach (string id in с.с_собой.ToList())
+        {
+            string инструмент = id;
+            var ряд = new HBoxContainer();
+            var надпись = new Label
+            {
+                Text = $"с собой: {Имя(инструмент)}",
+                SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
+            };
+            надпись.AddThemeColorOverride("font_color", new Color("#c8c2b0"));
+            ряд.AddChild(надпись);
+            var к = new Button { Text = "положить дома" };
+            к.Pressed += () =>
+            {
+                с.Положить(инструмент);
+                Обновить();
+            };
+            ряд.AddChild(к);
+            _инструменты.AddChild(ряд);
+        }
+        if (с.дома.Count == 0 && с.с_собой.Count == 0)
+            Надпись(_инструменты, "инструментов нет");
+    }
+
     private static void Надпись(VBoxContainer куда, string текст)
     {
         var l = new Label { Text = текст };
@@ -305,21 +388,16 @@ public partial class КарманUI : PanelContainer
         Обновить();
     }
 
-    /// <summary>Клавиша кармана открывает и закрывает, Esc закрывает,
-    /// у полки закрывает и клавиша действия. Повтор клавиши отбрасывается —
-    /// зажатая иначе мигала бы экраном.</summary>
+    /// <summary>Открытый экран закрывают клавиша кармана и Esc, у полки —
+    /// и клавиша действия. Открывает его корневой узел. Повтор клавиши
+    /// отбрасывается — зажатая иначе мигала бы экраном.</summary>
     public override void _UnhandledInput(InputEvent e)
     {
-        if (Управление.Нажато(e, Клавиши.КАРМАН))
-        {
-            if (Visible)
-                Убрать();
-            else
-                Показать();
-            AcceptEvent();
-        }
-        else if (Visible && (e is InputEventKey { Pressed: true, Echo: false, Keycode: Key.Escape }
-                             || (у_полки && Управление.Нажато(e, Клавиши.ДЕЙСТВИЕ))))
+        if (!Visible)
+            return;
+        if (Управление.Нажато(e, Клавиши.КАРМАН)
+            || e is InputEventKey { Pressed: true, Echo: false, Keycode: Key.Escape }
+            || (у_полки && Управление.Нажато(e, Клавиши.ДЕЙСТВИЕ)))
         {
             Убрать();
             AcceptEvent();

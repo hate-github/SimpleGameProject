@@ -142,6 +142,17 @@ public sealed partial class NPC
     /// (`Петля/Взлом.cs`). Только у игрока — как ноша, мимо снимка и сейва.</summary>
     public Застали? застали { get; set; }
 
+    /// <summary>Инструменты героя: что при нём и что дома (`Петля/Инструменты.cs`).
+    /// Только у игрока — мимо снимка и сейва.</summary>
+    public Снаряжение? снаряжение { get; set; }
+
+    /// <summary>Стук взлома, который сегодня слышали, — дом настороже
+    /// (`Петля/Положение.cs`). Только у игрока.</summary>
+    public ШумВзлома? шум_взлома { get; set; }
+
+    /// <summary>День, когда героя избили до беспамятства. Только у игрока.</summary>
+    public int? без_сознания { get; set; }
+
     public string? living_with { get; set; }    // к кому переехал
     public HashSet<string> guests { get; } = new(StringComparer.Ordinal);
     public HashSet<string> allies { get; } = new(StringComparer.Ordinal);

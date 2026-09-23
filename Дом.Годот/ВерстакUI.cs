@@ -1,11 +1,14 @@
-// Верстак — пока заглушка.
+// Верстак в гараже соседа: инструмент, который можно унести.
 //
 // Крафта в доме нет: ни рецептов, ни того, из чего их считать. Заводить
 // рецепты здесь, в экране, значило бы придумать механику мимо дома,
 // а у этого проекта механика живёт в ядре и сверяется числом. Поэтому
-// панель открывается и честно говорит, что делать тут пока нечего.
-// Когда крафт появится в ядре, сюда придёт список того, что можно
-// собрать из запасов героя.
+// собирать на верстаке по-прежнему нечего.
+//
+// Зато на нём лежит инструмент (`data/инструменты.json`, «верстак»):
+// монтировка и болторез. Голыми руками замок не сорвать, и болторез
+// с чужого верстака — единственный способ перекусить навесной замок
+// тихо. Взять — значит унести чужое; взятое сразу при герое.
 
 using Godot;
 using Дом.Экран;
@@ -14,6 +17,11 @@ namespace Дом.Годот;
 
 public partial class ВерстакUI : PanelContainer
 {
+    private VBoxContainer _лежат = null!;
+    private Label _пусто = null!;
+    private IReadOnlyList<(string id, string имя)> _что = System.Array.Empty<(string, string)>();
+    private System.Action<string>? _взять;
+
     public bool открыт => Visible;
 
     /// <summary>Закрыли — корневому узлу надо вернуть мышь и ходьбу.</summary>
@@ -47,25 +55,67 @@ public partial class ВерстакUI : PanelContainer
         var текст = new Label
         {
             Text = "Тиски, ящик с инструментом, обрезки железа.\n"
-                   + "Собирать здесь пока нечего — крафт появится позже.",
+                   + "Собирать здесь нечего — а инструмент унести можно. Это чужое.",
             HorizontalAlignment = HorizontalAlignment.Center,
             AutowrapMode = TextServer.AutowrapMode.WordSmart,
         };
         текст.AddThemeColorOverride("font_color", new Color("#b8b0a0"));
         столбец.AddChild(текст);
 
+        _лежат = new VBoxContainer();
+        _лежат.AddThemeConstantOverride("separation", 4);
+        столбец.AddChild(_лежат);
+
+        _пусто = new Label
+        {
+            Text = "инструмента на верстаке больше нет",
+            HorizontalAlignment = HorizontalAlignment.Center,
+        };
+        _пусто.AddThemeColorOverride("font_color", new Color("#8a8474"));
+        столбец.AddChild(_пусто);
+
         var закрыть = new Button { Text = "Отойти  [Esc]" };
         закрыть.Pressed += Убрать;
         столбец.AddChild(закрыть);
     }
 
-    public void Показать() => Visible = true;
+    /// <summary>Показать верстак: что на нём лежит и чем это взять.</summary>
+    public void Показать(IReadOnlyList<(string id, string имя)> лежат, System.Action<string> взять)
+    {
+        _что = лежат;
+        _взять = взять;
+        Visible = true;
+        Разложить();
+    }
+
+    private void Разложить()
+    {
+        foreach (var узел in _лежат.GetChildren())
+        {
+            _лежат.RemoveChild(узел);
+            узел.QueueFree();
+        }
+        foreach (var (id, имя) in _что)
+        {
+            string инструмент = id;
+            var к = new Button { Text = $"взять: {имя}", Alignment = HorizontalAlignment.Left };
+            к.Pressed += () =>
+            {
+                _взять?.Invoke(инструмент);
+                _что = _что.Where(x => x.id != инструмент).ToList();
+                Разложить();
+            };
+            _лежат.AddChild(к);
+        }
+        _пусто.Visible = _что.Count == 0;
+    }
 
     public void Убрать()
     {
         if (!Visible)
             return;
         Visible = false;
+        _взять = null;
         Закрыт();
     }
 
