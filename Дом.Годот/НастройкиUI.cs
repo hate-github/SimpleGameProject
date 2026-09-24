@@ -36,6 +36,10 @@ public partial class НастройкиUI : PanelContainer
     /// и подсказки с именем клавиши.</summary>
     public System.Action Применено { get; set; } = () => { };
 
+    /// <summary>Как выйти в главное меню — или null: меню уже на экране
+    /// (настройки открыты из него), выходить некуда.</summary>
+    public System.Func<System.Action?> В_меню { get; set; } = () => null;
+
     public bool открыт => Visible;
 
     private static readonly Color СВЕТЛО = new("#e8e2d0");
@@ -58,6 +62,8 @@ public partial class НастройкиUI : PanelContainer
     private readonly Dictionary<string, (HSlider полоса, Label число)> _громкость =
         new(StringComparer.Ordinal);
     private bool _не_записано;               // полоски двигали, а файл ещё старый
+    private Button _в_меню = null!;
+    private Label _выход = null!;
 
     public override void _Ready()
     {
@@ -106,12 +112,16 @@ public partial class НастройкиUI : PanelContainer
         столбец.AddChild(низ);
         низ.AddChild(Кнопка("Продолжить  [Esc]", Закрыть));
         низ.AddChild(Кнопка("Сбросить вкладку", Сбросить));
+        _в_меню = Кнопка("В главное меню", () => В_меню()?.Invoke());
+        низ.AddChild(_в_меню);
         низ.AddChild(Кнопка("Выйти из игры", Выйти));
 
-        var выход = Тихо("выход посреди жизни её не сохранит: наследие пишется, "
-                         + "когда жизнь кончилась");
-        выход.HorizontalAlignment = HorizontalAlignment.Center;
-        столбец.AddChild(выход);
+        // жизнь сохраняется при каждом сне (ГДД 24) — выход посреди дня
+        // отнимает только этот день
+        _выход = Тихо("выйти можно когда угодно: жизнь сохраняется при каждом сне "
+                      + "и продолжится с последнего утра");
+        _выход.HorizontalAlignment = HorizontalAlignment.Center;
+        столбец.AddChild(_выход);
     }
 
     // ------------------------------------------------------------ открыть и закрыть
@@ -123,6 +133,8 @@ public partial class НастройкиUI : PanelContainer
         Visible = true;
         _ждёт = null;
         Сказать("", ТИХО);
+        _в_меню.Visible = В_меню() is not null;
+        _выход.Visible = _в_меню.Visible;
         Разложить();
         GetTree().Paused = true;
         Input.MouseMode = Input.MouseModeEnum.Visible;

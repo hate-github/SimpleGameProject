@@ -51,6 +51,25 @@ public static class Пути
         => System.IO.Path.Combine(
                ProjectSettings.GlobalizePath("user://"), "настройки.json");
 
+    /// <summary>Кем и в каком мире идёт петля (`ИграГероя`): пишется
+    /// новой игрой, живёт всю петлю — после смерти герой тот же.</summary>
+    public static string Игра
+        => System.IO.Path.Combine(
+               ProjectSettings.GlobalizePath("user://"), "игра.json");
+
+    public static bool ЕстьИгра => System.IO.File.Exists(Игра);
+
+    /// <summary>
+    /// Сохранение текущей жизни (`СохранениеИгры`, ГДД 24): одно,
+    /// автоматическое, перезаписывается при каждом сне. Жизнь кончилась —
+    /// файла нет: загрузиться раньше смерти нельзя.
+    /// </summary>
+    public static string Жизнь
+        => System.IO.Path.Combine(
+               ProjectSettings.GlobalizePath("user://"), "жизнь.json");
+
+    public static bool ЕстьЖизнь => System.IO.File.Exists(Жизнь);
+
     private static string Найти()
     {
         string корень = OS.HasFeature("editor")
