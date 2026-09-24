@@ -9,6 +9,12 @@
 // ровно один раз за петлю и ровно на одном экране, поэтому живёт здесь же,
 // а не в своём.
 //
+// И ряды с кнопками — очки навыков (ГДД 8.2): тратит их игрок, между
+// жизнями, на этом же экране. Долго их было негде тратить вовсе: монолог
+// писал «очков навыков: N», а ни одна кнопка не звала `Наследие.Поднять`,
+// и навыки в игре не росли. Кнопки берутся только мышью — пробел и Enter
+// здесь значат «дальше».
+//
 // Чего этот экран не делает: не показывает рассудок числом. Ни на смерти,
 // ни на старте — нигде. Он показывает, из чего рассудок сложился («видел
 // расправу», «был один»), и этого достаточно: игрок должен заметить,
@@ -23,6 +29,8 @@ public partial class ПереходUI : PanelContainer
     private VBoxContainer _столбец = null!;
     private Label _заголовок = null!;
     private VBoxContainer _строки = null!;
+    private VBoxContainer _ряды = null!;
+    private System.Func<IReadOnlyList<(string текст, string? кнопка, bool можно, System.Action? сделать)>>? _ряды_дай;
     private LineEdit _поле = null!;
     private Button _дальше = null!;
     private System.Action<string>? _ответ;
@@ -57,6 +65,10 @@ public partial class ПереходUI : PanelContainer
         _строки = new VBoxContainer();
         _столбец.AddChild(_строки);
 
+        _ряды = new VBoxContainer();
+        _ряды.AddThemeConstantOverride("separation", 4);
+        _столбец.AddChild(_ряды);
+
         _поле = new LineEdit
         {
             Visible = false,
@@ -74,8 +86,11 @@ public partial class ПереходUI : PanelContainer
     /// <summary>Показать экран. <paramref name="спросить_слово"/> —
     /// только для точки невозврата.</summary>
     public void Показать(string заголовок, IEnumerable<string> строки,
-                         System.Action<string> ответ, bool спросить_слово = false)
+                         System.Action<string> ответ, bool спросить_слово = false,
+                         System.Func<IReadOnlyList<(string текст, string? кнопка, bool можно, System.Action? сделать)>>? ряды = null)
     {
+        _ряды_дай = ряды;
+        Ряды();
         _заголовок.Text = заголовок;
         foreach (var узел in _строки.GetChildren())
             узел.QueueFree();
@@ -109,6 +124,51 @@ public partial class ПереходUI : PanelContainer
     {
         Visible = false;
         _ответ = null;
+        _ряды_дай = null;
+    }
+
+    /// <summary>Ряды с кнопками — заново после каждого нажатия: очки
+    /// и уровни поменялись.</summary>
+    private void Ряды()
+    {
+        foreach (var узел in _ряды.GetChildren())
+        {
+            _ряды.RemoveChild(узел);
+            узел.QueueFree();
+        }
+        if (_ряды_дай is null)
+            return;
+        foreach (var (текст, кнопка, можно, сделать) in _ряды_дай())
+        {
+            var ряд = new HBoxContainer();
+            ряд.AddThemeConstantOverride("separation", 12);
+            var надпись = new Label
+            {
+                Text = текст,
+                AutowrapMode = TextServer.AutowrapMode.WordSmart,
+                SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
+            };
+            надпись.AddThemeColorOverride("font_color", new Color(кнопка is null ? "#e8e2d0" : "#c8c2b0"));
+            ряд.AddChild(надпись);
+            if (кнопка is not null)
+            {
+                var к = new Button
+                {
+                    Text = кнопка,
+                    Disabled = !можно,
+                    FocusMode = Control.FocusModeEnum.None,
+                    CustomMinimumSize = new Vector2(150, 0),
+                };
+                var что = сделать;
+                к.Pressed += () =>
+                {
+                    что?.Invoke();
+                    Ряды();
+                };
+                ряд.AddChild(к);
+            }
+            _ряды.AddChild(ряд);
+        }
     }
 
     private void Дальше(string слово)

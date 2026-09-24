@@ -8,9 +8,16 @@
 // открывался посреди взлома и ложился поверх шкалы). Бросить — клавиша
 // действия или Esc; ничего не случилось.
 //
-// Дело, которому нужен курсор (будущая мини-игра), говорит об этом само
+// Дело, которому нужен курсор (мини-игра), говорит об этом само
 // (`Долгое.мышь`): тогда корневой узел отпускает мышь на время дела,
 // а камера по-прежнему стоит.
+//
+// **Мини-игра «Взлом» — удержание в зоне** (ГДД 7; `Дом.Ядро.МиниИгры`).
+// Под полосой — дорожка, по ней плавает светлая зона, метка идёт за мышью;
+// качество — доля времени, что метка была в зоне, пока шкала шла. Ширину
+// зоны даёт ядро (Смекалка до третьего уровня — шире), и с третьего игры
+// нет вовсе: дело идёт само, как раньше. Качество отдаётся ядру числом:
+// половина — «как обычно», прежний бросок.
 //
 // Первая версия ставила слово и тонкую черту над подсказкой, но корневой
 // узел раскладывал экран раньше, чем шкала появлялась, — и слово висело
@@ -49,7 +56,9 @@ public sealed record Долгое(string слово, double секунд, System
                             System.Func<int, bool>? кусок = null,
                             double часов = 0.0,
                             Движение? движение = null,
-                            string? в_руках = null);
+                            string? в_руках = null,
+                            Дом.Ядро.МиниИгра? мини = null,
+                            double зона = 0.22);
 
 public partial class ДелоUI : Control
 {
@@ -63,6 +72,14 @@ public partial class ДелоUI : Control
     private double _без_взгляда;
     private int _сделано;          // сколько кусков уже отдано дому
     private bool _ждёт;            // кусок отдан — ждём, пока дом снова уснёт
+
+    // мини-игра: дорожка, зона, метка; сколько секунд метка была в зоне из скольких
+    private ColorRect _дорожка = null!;
+    private ColorRect _зона = null!;
+    private ColorRect _метка = null!;
+    private double _в_зоне, _играно, _фаза;
+    private float _где_метка = 0.5f, _где_зона = 0.5f;
+    private const float ДОРОЖКА = 14;
 
     private const double ТОЧКИ = 0.3;       // как часто прибавляется точка
     private const double ТЕРПЕНИЕ = 0.25;   // сколько можно не смотреть на вещь
@@ -105,6 +122,14 @@ public partial class ДелоUI : Control
     /// <summary>Нужен ли идущему делу курсор (мини-игра), а не захваченная мышь.</summary>
     public bool нужна_мышь => _дело?.мышь ?? false;
 
+    /// <summary>Шла ли в последнем (или идущем) деле мини-игра.</summary>
+    public bool играл { get; private set; }
+
+    /// <summary>Как сыграно в последнем деле: доля времени в зоне;
+    /// половина — если не играли вовсе. Живёт и после конца дела — его
+    /// читает итог.</summary>
+    public double качество => _играно > 0 ? _в_зоне / _играно : 0.5;
+
     public override void _Ready()
     {
         MouseFilter = MouseFilterEnum.Ignore;
@@ -143,6 +168,13 @@ public partial class ДелоUI : Control
         _слово.AddThemeFontSizeOverride("font_size", 17);
         AddChild(_слово);
 
+        _дорожка = new ColorRect { Color = new Color(0.05f, 0.05f, 0.05f, 0.8f), MouseFilter = MouseFilterEnum.Ignore };
+        AddChild(_дорожка);
+        _зона = new ColorRect { Color = new Color(0.78f, 0.82f, 0.62f, 0.75f), MouseFilter = MouseFilterEnum.Ignore };
+        AddChild(_зона);
+        _метка = new ColorRect { Color = new Color("#f4efe2"), MouseFilter = MouseFilterEnum.Ignore };
+        AddChild(_метка);
+
         _как_бросить = new Label
         {
             HorizontalAlignment = HorizontalAlignment.Center,
@@ -159,15 +191,14 @@ public partial class ДелоUI : Control
     public void Разложить(Vector2 окно)
     {
         Position = new Vector2(окно.X / 2 - ШИРИНА / 2, окно.Y / 2 + ОТ_ПРИЦЕЛА);
-        Size = new Vector2(ШИРИНА, ВЫСОТА + 24);
+        Size = new Vector2(ШИРИНА, ВЫСОТА + 24 + ДОРОЖКА + 4);
         if (_рамка is null)
             return;                 // ещё не готов: разложится в _Ready
         _рамка.Position = Vector2.Zero;
         _рамка.Size = new Vector2(ШИРИНА, ВЫСОТА);
         _слово.Position = Vector2.Zero;
         _слово.Size = new Vector2(ШИРИНА, ВЫСОТА);
-        _как_бросить.Position = new Vector2(0, ВЫСОТА + 3);
-        _как_бросить.Size = new Vector2(ШИРИНА, 18);
+        Под_дорожку();
         Показать();
     }
 
@@ -181,8 +212,15 @@ public partial class ДелоUI : Control
         _сделано = 0;
         _ждёт = false;
         this.день = день;
+        играл = дело.мини is not null;
+        _в_зоне = 0;
+        _играно = 0;
+        _фаза = System.Random.Shared.NextDouble() * System.Math.Tau;
+        _где_метка = 0.5f;
         Visible = true;
-        _как_бросить.Text = $"{Управление.В_скобках(Клавиши.ДЕЙСТВИЕ)} или [Esc] — бросить";
+        _как_бросить.Text = (играл ? "держи метку мышью в светлой полосе · " : "")
+                            + $"{Управление.В_скобках(Клавиши.ДЕЙСТВИЕ)} или [Esc] — бросить";
+        Под_дорожку();
         Показать();
     }
 
@@ -232,6 +270,7 @@ public partial class ДелоUI : Control
         }
 
         _прошло += delta;
+        Играть(delta);
         _дело.идёт?.Invoke(_прошло);
         if (_дело is null)
             return;                 // пока шло, его могли прервать
@@ -273,10 +312,52 @@ public partial class ДелоUI : Control
         Visible = false;
     }
 
+    /// <summary>Дорожка под полосой — только когда играют; строка «как
+    /// бросить» — под ней или сразу под полосой.</summary>
+    private void Под_дорожку()
+    {
+        if (_дорожка is null)
+            return;
+        bool есть = _дело?.мини is not null;
+        _дорожка.Visible = _зона.Visible = _метка.Visible = есть;
+        _дорожка.Position = new Vector2(0, ВЫСОТА + 3);
+        _дорожка.Size = new Vector2(ШИРИНА, ДОРОЖКА);
+        _как_бросить.Position = new Vector2(0, ВЫСОТА + 3 + (есть ? ДОРОЖКА + 3 : 0));
+        _как_бросить.Size = new Vector2(ШИРИНА, 18);
+    }
+
+    /// <summary>
+    /// Кадр мини-игры: зона плывёт по дорожке (две волны, не угадать
+    /// по одной), метка — за мышью; время в зоне копится в качество.
+    /// Идёт только пока шкала идёт — ждущий кусок не в счёт.
+    /// </summary>
+    private void Играть(double delta)
+    {
+        if (_дело?.мини is null)
+            return;
+        double т = _прошло;
+        double ширина = System.Math.Clamp(_дело.зона, 0.05, 0.9);
+        double c = 0.5 + 0.30 * System.Math.Sin(1.25 * т + _фаза) + 0.12 * System.Math.Sin(3.3 * т + 2 * _фаза);
+        _где_зона = (float)System.Math.Clamp(c, ширина / 2, 1 - ширина / 2);
+        float мышь = GetViewport().GetMousePosition().X - GlobalPosition.X;
+        _где_метка = System.Math.Clamp(мышь / ШИРИНА, 0f, 1f);
+        _играно += delta;
+        if (System.Math.Abs(_где_метка - _где_зона) <= ширина / 2)
+            _в_зоне += delta;
+    }
+
     private void Показать()
     {
         if (_дело is null || _шкала is null)
             return;
+        if (_дело.мини is not null)
+        {
+            float ширина = (float)System.Math.Clamp(_дело.зона, 0.05, 0.9) * ШИРИНА;
+            _зона.Position = new Vector2(_где_зона * ШИРИНА - ширина / 2, ВЫСОТА + 3);
+            _зона.Size = new Vector2(ширина, ДОРОЖКА);
+            _метка.Position = new Vector2(_где_метка * ШИРИНА - 1.5f, ВЫСОТА + 1);
+            _метка.Size = new Vector2(3, ДОРОЖКА + 4);
+        }
         int точек = 1 + (int)(_прошло / ТОЧКИ) % 3;
         _слово.Text = _ждёт ? _дело.слово + " …" : _дело.слово + new string('.', точек);
         float доля = (float)System.Math.Clamp(_прошло / _дело.секунд, 0, 1);
