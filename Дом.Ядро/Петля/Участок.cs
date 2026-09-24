@@ -327,4 +327,40 @@ public sealed class Участок : IПриют
         где = ВУчастке.УЧАСТОК;
         я.приют = this;
     }
+
+    // ------------------------------------------------------------ сохранение игры
+
+    public System.Text.Json.Nodes.JsonObject Сложить() => new()
+    {
+        ["где"] = где.ToString(),
+        ["кладовая"] = Карман.Числа_в(_кладовая.Ключи.Select(к => new KeyValuePair<string, double>(к, _кладовая[к]))),
+        ["оружейная"] = new System.Text.Json.Nodes.JsonArray(_оружейная.Select(x => (System.Text.Json.Nodes.JsonNode?)x).ToArray()),
+        ["патронов"] = _патронов,
+        ["вещдоки"] = Карман.Числа_в(_вещдоки.Ключи.Select(к => new KeyValuePair<string, double>(к, _вещдоки[к]))),
+        ["тара_вещдоков"] = _тара_вещдоков?.ToString(),
+        ["отобрано"] = new System.Text.Json.Nodes.JsonArray(_отобрано.Select(x => (System.Text.Json.Nodes.JsonNode?)x).ToArray()),
+        ["печь_день"] = _печь_день,
+    };
+
+    /// <summary>Разложить и снова греть героя здесь, если он в участке.</summary>
+    public void Разложить(System.Text.Json.Nodes.JsonObject о, NPC я)
+    {
+        где = Enum.Parse<ВУчастке>(о["где"]!.GetValue<string>());
+        _кладовая.Очистить();
+        foreach (var (к, v) in о["кладовая"]!.AsObject())
+            _кладовая[к] = v!.GetValue<double>();
+        _оружейная.Clear();
+        foreach (var x in о["оружейная"]!.AsArray())
+            _оружейная.Add(x!.GetValue<string>());
+        _патронов = о["патронов"]!.GetValue<double>();
+        _вещдоки.Очистить();
+        foreach (var (к, v) in о["вещдоки"]!.AsObject())
+            _вещдоки[к] = v!.GetValue<double>();
+        _тара_вещдоков = о["тара_вещдоков"]?.GetValue<string>() is string т ? Enum.Parse<Тара>(т) : null;
+        _отобрано.Clear();
+        foreach (var x in о["отобрано"]!.AsArray())
+            _отобрано.Add(x!.GetValue<string>());
+        _печь_день = о["печь_день"]!.GetValue<int>();
+        я.приют = где == ВУчастке.НЕТ ? null : this;
+    }
 }

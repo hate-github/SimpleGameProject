@@ -303,4 +303,27 @@ public sealed class Заражение
         }
         return new Rng((long)(h & 0x7fffffffffffffffUL)).Random();
     }
+
+    // ------------------------------------------------------------ сохранение игры
+
+    public System.Text.Json.Nodes.JsonObject Сложить()
+    {
+        var болезни = new System.Text.Json.Nodes.JsonObject();
+        foreach (var (кто, б) in _болезни.OrderBy(п => п.Key, StringComparer.Ordinal))
+            болезни[кто] = new System.Text.Json.Nodes.JsonObject
+            {
+                ["стадия"] = б.стадия.ToString(), ["с_дня"] = б.с_дня, ["до_дня"] = б.до_дня,
+            };
+        return new() { ["болезни"] = болезни, ["посчитан_день"] = _посчитан_день };
+    }
+
+    public void Разложить(System.Text.Json.Nodes.JsonObject о)
+    {
+        _болезни.Clear();
+        _встречи.Clear();
+        foreach (var (кто, б) in о["болезни"]!.AsObject())
+            _болезни[кто] = new Болезнь(Enum.Parse<Ядро.Стадия>(б!["стадия"]!.GetValue<string>()),
+                                         б["с_дня"]!.GetValue<int>(), б["до_дня"]!.GetValue<int>());
+        _посчитан_день = о["посчитан_день"]!.GetValue<int>();
+    }
 }

@@ -139,6 +139,43 @@ public sealed class Петля
 
     private Дневник? _дневник;
 
+    // ------------------------------------------------------------ сохранение игры
+
+    /// <summary>Что эта жизнь накопила в петле, пока идёт: дневник рассудка
+    /// и надписи пророка, прочитанные в ней (`СохранениеИгры`).</summary>
+    public System.Text.Json.Nodes.JsonObject Сложить_жизнь()
+    {
+        var увидел = new System.Text.Json.Nodes.JsonArray();
+        foreach (var з in _увидел)
+            увидел.Add(new System.Text.Json.Nodes.JsonObject
+            {
+                ["жизнь"] = з.жизнь, ["день"] = з.день, ["вид"] = з.вид.ToString(),
+                ["кто"] = з.кто, ["где"] = з.где, ["текст"] = з.текст,
+            });
+        return new()
+        {
+            ["дневник"] = _дневник?.Сложить(),
+            ["надписи"] = new System.Text.Json.Nodes.JsonArray(_надписи.OrderBy(x => x, StringComparer.Ordinal)
+                .Select(x => (System.Text.Json.Nodes.JsonNode?)x).ToArray()),
+            ["увидел"] = увидел,
+        };
+    }
+
+    /// <summary>Вернуть жизни то, что она накопила, — после `Слушать`.</summary>
+    public void Разложить_жизнь(System.Text.Json.Nodes.JsonObject о)
+    {
+        if (о["дневник"] is System.Text.Json.Nodes.JsonObject д)
+            _дневник?.Разложить(д);
+        _надписи.Clear();
+        foreach (var x in о["надписи"]!.AsArray())
+            _надписи.Add(x!.GetValue<string>());
+        _увидел.Clear();
+        foreach (var з in о["увидел"]!.AsArray())
+            _увидел.Add(new ЗаписьПамяти(з!["жизнь"]!.GetValue<int>(), з["день"]!.GetValue<int>(),
+                Enum.Parse<ВидЗаписи>(з["вид"]!.GetValue<string>()), з["кто"]?.GetValue<string>(),
+                з["где"]?.GetValue<int>(), з["текст"]!.GetValue<string>()));
+    }
+
     /// <summary>С чем герой просыпается.</summary>
     public Начало Начать() => new(
         наследие.жизней + 1,

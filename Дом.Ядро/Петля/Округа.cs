@@ -360,4 +360,52 @@ public sealed class Округа : IУлицы
             _у_соседей.Add(кто.id);
         return $"   И снегоступы — {Util.Vb(кто.sex, "забрал")} тоже.";
     }
+
+    // ------------------------------------------------------------ сохранение игры
+
+    private static System.Text.Json.Nodes.JsonArray Строки_(IEnumerable<string> что)
+        => new(что.OrderBy(x => x, StringComparer.Ordinal).Select(x => (System.Text.Json.Nodes.JsonNode?)x).ToArray());
+
+    public System.Text.Json.Nodes.JsonObject Сложить()
+    {
+        var рассказано = new System.Text.Json.Nodes.JsonObject();
+        foreach (var (кто, н) in _рассказано.OrderBy(п => п.Key, StringComparer.Ordinal))
+            рассказано[кто] = н;
+        return new()
+        {
+            ["знания"] = Строки_(_знания),
+            ["рассказано"] = рассказано,
+            ["у_соседей"] = Строки_(_у_соседей),
+            ["лишились"] = Строки_(_лишились),
+            ["дни_на_снегоступах"] = new System.Text.Json.Nodes.JsonArray(_дни_на_снегоступах.OrderBy(д => д).Select(д => (System.Text.Json.Nodes.JsonNode?)д).ToArray()),
+            ["герой_знает"] = Строки_(_герой_знает),
+            ["выгнан_из_магазина"] = выгнан_из_магазина,
+            ["заражение"] = заражение.Сложить(),
+            ["участок"] = участок?.Сложить(),
+        };
+    }
+
+    public void Разложить(System.Text.Json.Nodes.JsonObject о, NPC я)
+    {
+        void В(HashSet<string> куда, string поле)
+        {
+            куда.Clear();
+            foreach (var x in о[поле]!.AsArray())
+                куда.Add(x!.GetValue<string>());
+        }
+        В(_знания, "знания");
+        _рассказано.Clear();
+        foreach (var (кто, н) in о["рассказано"]!.AsObject())
+            _рассказано[кто] = н!.GetValue<int>();
+        В(_у_соседей, "у_соседей");
+        В(_лишились, "лишились");
+        _дни_на_снегоступах.Clear();
+        foreach (var x in о["дни_на_снегоступах"]!.AsArray())
+            _дни_на_снегоступах.Add(x!.GetValue<int>());
+        В(_герой_знает, "герой_знает");
+        выгнан_из_магазина = о["выгнан_из_магазина"]!.GetValue<bool>();
+        заражение.Разложить(о["заражение"]!.AsObject());
+        if (участок is not null && о["участок"] is System.Text.Json.Nodes.JsonObject у)
+            участок.Разложить(у, я);
+    }
 }

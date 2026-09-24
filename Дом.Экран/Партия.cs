@@ -44,6 +44,7 @@ public sealed class Партия : IDisposable
     private int _ответ;
     private Thread? _поток;
     private Exception? _беда;
+    private bool _дальше;
 
     /// <param name="прогон">Заведённый, но ещё не пущенный прогон.</param>
     /// <param name="кто">id играющего жильца.</param>
@@ -77,10 +78,11 @@ public sealed class Партия : IDisposable
     public Exception? беда => _беда;
 
     /// <summary>Пустить дом. Возвращается сразу: считает он на своём потоке.</summary>
-    public void Начать()
+    public void Начать(bool дальше = false)
     {
         if (_поток is not null)
             throw new InvalidOperationException("партия уже идёт");
+        _дальше = дальше;
         _поток = new Thread(Считать)
         {
             IsBackground = true,        // окно закрыли — поток не держит процесс
@@ -93,7 +95,11 @@ public sealed class Партия : IDisposable
     {
         try
         {
-            _прогон.run();
+            // продолжение сохранённой жизни — с её дня, без нового календаря
+            if (_дальше)
+                _прогон.Дальше();
+            else
+                _прогон.run();
         }
         catch (Exception e)
         {

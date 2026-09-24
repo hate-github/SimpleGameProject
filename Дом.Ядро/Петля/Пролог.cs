@@ -118,4 +118,27 @@ public sealed class Пролог
         день = 0;
         return насторожились;
     }
+
+    // ------------------------------------------------------------ сохранение игры
+
+    public System.Text.Json.Nodes.JsonObject Сложить() => new()
+    {
+        ["дней"] = дней,
+        ["день"] = день,
+        ["подозрение"] = Карман.Числа_в(_подозрение),
+        ["принёс"] = Карман.Числа_в(_принёс),
+        ["предупредил"] = new System.Text.Json.Nodes.JsonArray(_предупредил.OrderBy(x => x, StringComparer.Ordinal).Select(x => (System.Text.Json.Nodes.JsonNode?)x).ToArray()),
+    };
+
+    public static Пролог Разложить(System.Text.Json.Nodes.JsonObject о)
+    {
+        var п = new Пролог(о["дней"]!.GetValue<int>()) { день = о["день"]!.GetValue<int>() };
+        foreach (var (к, v) in о["подозрение"]!.AsObject())
+            п._подозрение[к] = v!.GetValue<double>();
+        foreach (var (к, v) in о["принёс"]!.AsObject())
+            п._принёс[к] = v!.GetValue<double>();
+        foreach (var x in о["предупредил"]!.AsArray())
+            п._предупредил.Add(x!.GetValue<string>());
+        return п;
+    }
 }

@@ -238,4 +238,16 @@ public sealed class Магазин
         }
         return м;
     }
+
+    // ------------------------------------------------------------ сохранение игры
+
+    public System.Text.Json.Nodes.JsonObject Сложить()
+        => Карман.Числа_в(_продано.Select(п => new KeyValuePair<string, double>(п.Key, п.Value)));
+
+    public void Разложить(System.Text.Json.Nodes.JsonObject о)
+    {
+        _продано.Clear();
+        foreach (var (к, v) in о)
+            _продано[к] = (int)v!.GetValue<double>();
+    }
 }

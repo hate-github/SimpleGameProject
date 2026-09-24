@@ -84,4 +84,19 @@ public sealed class Дневник
                 return true;
         return false;
     }
+
+    // ------------------------------------------------------------ сохранение игры
+
+    public System.Text.Json.Nodes.JsonObject Сложить() => new()
+    {
+        ["голодных"] = голодных, ["тёмных"] = тёмных, ["одиноких"] = одиноких, ["дней"] = дней,
+    };
+
+    public void Разложить(System.Text.Json.Nodes.JsonObject о)
+    {
+        голодных = о["голодных"]!.GetValue<int>();
+        тёмных = о["тёмных"]!.GetValue<int>();
+        одиноких = о["одиноких"]!.GetValue<int>();
+        дней = о["дней"]!.GetValue<int>();
+    }
 }

@@ -388,4 +388,24 @@ public sealed class Снаряжение
 
     public override string ToString()
         => _с_собой.Count == 0 ? "ничего" : string.Join(", ", _с_собой);
+
+    // ------------------------------------------------------------ сохранение игры
+
+    public System.Text.Json.Nodes.JsonObject Сложить() => new()
+    {
+        ["с_собой"] = new System.Text.Json.Nodes.JsonArray(_с_собой.Select(x => (System.Text.Json.Nodes.JsonNode?)x).ToArray()),
+        ["дома"] = new System.Text.Json.Nodes.JsonArray(_дома.Select(x => (System.Text.Json.Nodes.JsonNode?)x).ToArray()),
+        ["в_руках"] = в_руках,
+    };
+
+    public void Разложить(System.Text.Json.Nodes.JsonObject о)
+    {
+        _с_собой.Clear();
+        _дома.Clear();
+        foreach (var x in о["с_собой"]!.AsArray())
+            _с_собой.Add(x!.GetValue<string>());
+        foreach (var x in о["дома"]!.AsArray())
+            _дома.Add(x!.GetValue<string>());
+        в_руках = о["в_руках"]?.GetValue<string>();
+    }
 }

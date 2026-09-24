@@ -158,4 +158,20 @@ public sealed class Ноша
            : string.Join(", ", _вещи.Ключи
                .OrderBy(к => к, StringComparer.Ordinal)
                .Select(к => $"{к} {Текст.G(Текст.Округлить(_вещи[к], 2))}"));
+
+    // ------------------------------------------------------------ сохранение игры
+
+    public System.Text.Json.Nodes.JsonObject Сложить() => new()
+    {
+        ["тара"] = тара?.ToString(),
+        ["вещи"] = Карман.Числа_в(_вещи.Ключи.Select(к => new KeyValuePair<string, double>(к, _вещи[к]))),
+    };
+
+    public void Разложить(System.Text.Json.Nodes.JsonObject о)
+    {
+        _вещи.Очистить();
+        тара = о["тара"]?.GetValue<string>() is string т ? Enum.Parse<Тара>(т) : null;
+        foreach (var (к, v) in о["вещи"]!.AsObject())
+            _вещи[к] = v!.GetValue<double>();
+    }
 }

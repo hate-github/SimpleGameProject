@@ -162,4 +162,28 @@ public sealed class Карман
            : string.Join(", ", _вещи.Ключи
                .OrderBy(к => к, StringComparer.Ordinal)
                .Select(к => $"{к} {Текст.G(Текст.Округлить(_вещи[к], 2))}"));
+
+    /// <summary>Словарь чисел — в JSON и обратно (сохранение игры).</summary>
+    internal static System.Text.Json.Nodes.JsonObject Числа_в(IEnumerable<KeyValuePair<string, double>> что)
+    {
+        var о = new System.Text.Json.Nodes.JsonObject();
+        foreach (var (к, v) in что.OrderBy(п => п.Key, StringComparer.Ordinal))
+            о[к] = v;
+        return о;
+    }
+
+    public System.Text.Json.Nodes.JsonObject Сложить() => new()
+    {
+        ["вещи"] = Числа_в(_вещи.Ключи.Select(к => new KeyValuePair<string, double>(к, _вещи[к]))),
+        ["инструменты"] = Числа_в(_инструменты),
+    };
+
+    public void Разложить(System.Text.Json.Nodes.JsonObject о)
+    {
+        Обнулить();
+        foreach (var (к, v) in о["вещи"]!.AsObject())
+            _вещи[к] = v!.GetValue<double>();
+        foreach (var (к, v) in о["инструменты"]!.AsObject())
+            _инструменты[к] = v!.GetValue<double>();
+    }
 }

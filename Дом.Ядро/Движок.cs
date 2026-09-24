@@ -37,9 +37,13 @@ public sealed class Прогон
     /// не знает, где лежат данные, и знать не должно (`Дом.Годот/ЧИТАЙ.md`).
     /// Путь ему даёт тот, кто его завёл, — консоль или движок.
     /// </remarks>
+    /// <param name="жильцы">Как поправить жильцов перед сборкой дома — только
+    /// в игре: герой новой игры дописывается шестнадцатым (`Герой.Заселить`).
+    /// Без него дом собирается из `npcs.json` как есть.</param>
     public Прогон(string каталог, long seed = 1, int days = 30,
                   IReadOnlyDictionary<string, double>? ручки = null,
-                  Хуки? hooks = null, IЖурнал? журнал = null)
+                  Хуки? hooks = null, IЖурнал? журнал = null,
+                  Func<System.Text.Json.JsonElement, System.Text.Json.JsonElement>? жильцы = null)
     {
         this.seed = seed;
         this.days = days;
@@ -67,7 +71,7 @@ public sealed class Прогон
         };
         h.реплики_быт = данные.lines.Массив("быт");
         h.journal = журнал ?? new ЗаглушкаЖурнала();
-        Сборка.build_house(h, данные.npcs);
+        Сборка.build_house(h, жильцы is null ? данные.npcs : жильцы(данные.npcs));
     }
 
     /// <summary>
@@ -82,6 +86,27 @@ public sealed class Прогон
     {
         Мир.build_calendar(h, данные.events, days);
         for (int д = 0; д < days; д++)
+        {
+            one_day();
+            h.hooks.Зов_day(h);
+            if (h.alive().Count == 0)
+            {
+                h.journal.line("В подъезде не осталось никого.", 2);
+                h.journal.flush_day(h);
+                break;
+            }
+        }
+        return h;
+    }
+
+    /// <summary>
+    /// Дожить остальное с того дня, на котором дом остановлен: продолжение
+    /// сохранённой жизни. Календарь не строится заново — он в сохранении,
+    /// как и лента случайности; остальное — как у `run`, день в день.
+    /// </summary>
+    public House Дальше()
+    {
+        for (int д = h.day; д < days; д++)
         {
             one_day();
             h.hooks.Зов_day(h);
