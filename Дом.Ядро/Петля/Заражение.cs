@@ -7,8 +7,8 @@
 // происходит: здоров → задет → заражён → болен → тяжело → мёртв
 // (Safe, Exposed, Infected, Sick, Critical, Dead).
 //
-//   · **задеть** можно в промзоне (`Промзона`): кто знает, какие корпуса
-//     обходить (рассказ Аркадия), задевается реже, но и находит меньше;
+//   · **задеть** можно в промзоне, в опасных корпусах (`Вектор`): кто
+//     знает, какие обходить (Аркадий, журнал дежурного), тот их обходит;
 //   · задетый наутро заболевает с шансом, иначе обошлось;
 //   · стадии держатся по нескольку дней (`дней`, от и до), больной и тяжёлый
 //     теряют здоровье каждый день, в конце — смерть, общей смертью дома
@@ -48,13 +48,11 @@ public sealed record ДанныеЗаражения(
     IReadOnlyDictionary<Стадия, (int от, int до)> дней,
     IReadOnlyDictionary<Стадия, double> урон,
     double передача,
-    double промзона_часов, double задеть, double задеть_зная,
-    IReadOnlyDictionary<string, (int от, int до)> находка,
     IReadOnlyDictionary<Стадия, double> на_ногах)
 {
     public static readonly ДанныеЗаражения НИКАКОГО = new(0.0,
-        new Dictionary<Стадия, (int, int)>(), new Dictionary<Стадия, double>(), 0.0, 0.0, 0.0, 0.0,
-        new Dictionary<string, (int, int)>(StringComparer.Ordinal), new Dictionary<Стадия, double>());
+        new Dictionary<Стадия, (int, int)>(), new Dictionary<Стадия, double>(), 0.0,
+        new Dictionary<Стадия, double>());
 
     public static ДанныеЗаражения Прочитать(JsonElement з)
     {
@@ -67,13 +65,6 @@ public sealed record ДанныеЗаражения(
         var урон = new Dictionary<Стадия, double>();
         foreach (var п in з.GetProperty("урон").EnumerateObject())
             урон[Стадия_(п.Name)] = п.Value.GetDouble();
-        var пз = з.GetProperty("промзона");
-        var находка = new Dictionary<string, (int, int)>(StringComparer.Ordinal);
-        foreach (var п in пз.GetProperty("находка").EnumerateObject())
-        {
-            var пара = п.Value.EnumerateArray().Select(x => x.GetInt32()).ToList();
-            находка[п.Name] = (пара[0], пара[1]);
-        }
         var на_ногах = new Dictionary<Стадия, double>();
         if (з.TryGetProperty("на_ногах", out var нн))
             foreach (var п in нн.EnumerateObject())
@@ -87,9 +78,7 @@ public sealed record ДанныеЗаражения(
             if (!дней.TryGetValue(с, out var д) || д.Item1 < 1 || д.Item2 < д.Item1)
                 throw new InvalidDataException($"мир.json: у стадии «{с}» нужно дней от и до, не меньше одного");
         return new ДанныеЗаражения(з.GetProperty("задетый_заболеет").GetDouble(), дней, урон,
-            з.GetProperty("передача").GetDouble(),
-            пз.GetProperty("часов").GetDouble(), пз.GetProperty("задеть").GetDouble(),
-            пз.GetProperty("задеть_зная").GetDouble(), находка, на_ногах);
+            з.GetProperty("передача").GetDouble(), на_ногах);
     }
 
     private static Стадия Стадия_(string имя) => имя switch
@@ -101,10 +90,6 @@ public sealed record ДанныеЗаражения(
         _ => throw new InvalidDataException($"мир.json: стадии «{имя}» нет"),
     };
 }
-
-/// <summary>Чем кончился поход в промзону: сколько ходил, что нашёл, задело ли.</summary>
-public sealed record Промзона(double часы, Словарь<string, double> нашёл, Словарь<string, double> унёс,
-                              bool задело, bool знал);
 
 /// <summary>Болезнь в доме — часть округи героя.</summary>
 public sealed class Заражение
@@ -251,43 +236,6 @@ public sealed class Заражение
             int держится = от + (int)Math.Floor(Бросок("дней", кто, день) * (до - от + 1));
             _болезни[кто] = new Болезнь(дальше, день + 1, день + 1 + держится);
         }
-    }
-
-    /// <summary>
-    /// Поход в промзону: часы уходят, находка ложится в тару (что не влезло —
-    /// там и осталось), и может задеть — реже, если знаешь, какие корпуса
-    /// обходить. Только пока дом спит на вопросе.
-    /// </summary>
-    public Промзона В_промзону(House h, NPC я, bool знаю_корпуса, РучкиПетли ручки,
-                               bool тратить = true)
-    {
-        // часы — здесь или уже ушли делом, кусками (`тратить: false`)
-        double часы = Math.Min(_д.промзона_часов, тратить ? я.time_left : _д.промзона_часов);
-        if (тратить)
-            я.time_left -= часы;
-        var нашёл = Словари.Числа();
-        int i = 0;
-        foreach (var (что, (от, до)) in _д.находка.OrderBy(п => п.Key, StringComparer.Ordinal))
-        {
-            // кто обходит опасные корпуса, берёт вдвое меньше
-            double сколько = от + Math.Floor(Бросок("находка" + i++, я.id, h.day) * (до - от + 1));
-            if (знаю_корпуса)
-                сколько = Math.Floor(сколько / 2.0);
-            if (сколько > 0)
-                нашёл[что] = сколько;
-        }
-        var унёс = Словари.Числа();
-        if (нашёл.Ключи.Count > 0)
-        {
-            я.ноша ??= new Ноша();
-            var тара = я.ноша.тара ?? Тара.РЮКЗАК;
-            унёс = я.ноша.Положить(тара, нашёл, ручки);
-            foreach (var р in унёс.Ключи)
-                h.stats["принесено_" + р] = h.stats.Взять("принесено_" + р, 0.0) + унёс[р];
-        }
-        bool задело = Бросок("промзона", я.id, h.day) < (знаю_корпуса ? _д.задеть_зная : _д.задеть)
-                      && Задеть(я.id, h.day);
-        return new Промзона(часы, нашёл, унёс, задело, знаю_корпуса);
     }
 
     /// <summary>Бросок от зерна мира, повода, человека и дня: мимо `h.rng`,
