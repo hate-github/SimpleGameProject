@@ -222,6 +222,7 @@ public partial class Мир : Node3D
         Квартира(ЭТАЖ * (Этаж(_своя) - 1));
         Деревья();
         Сугробы();
+        Двор_вещи();
         Здания();
         Походы_ворота();
         Походы_магазин();
@@ -1176,16 +1177,24 @@ public partial class Мир : Node3D
     }
 
     /// <summary>Полка в проходной: по ряду на ресурс, банок столько,
-    /// сколько в шкафу.</summary>
+    /// сколько в шкафу. Еда — моделями автора: хлеб и консервы
+    /// вперемежку; прочее — коробочками своего цвета.</summary>
     private void Полка(StandardMaterial3D доска, float с, float lx, float z, float y)
     {
         for (int ряд = 0; ряд < РЕСУРСЫ.Length; ряд++)
         {
             float ly = 0.45f + ряд * 0.33f;
             Меш(доска, new Vector3(0.4f, 0.05f, 2.2f), Точка(с, lx, y + ly, z));
-            var полка = new List<MeshInstance3D>();
+            var полка = new List<Node3D>();
             for (int i = 0; i < 8; i++)
             {
+                if (РЕСУРСЫ[ряд] == "еда")
+                {
+                    var еда = Еда_на_место(i, Точка(с, lx, y + ly + 0.025f, z - 0.95f + i * 0.27f));
+                    еда.Visible = false;
+                    полка.Add(еда);
+                    continue;
+                }
                 var банка = new MeshInstance3D
                 {
                     Mesh = new BoxMesh { Size = new Vector3(0.12f, 0.16f, 0.12f) },
@@ -1253,7 +1262,7 @@ public partial class Мир : Node3D
     private AudioStreamPlayer3D? _кипение;
     private OmniLight3D? _лампочка;
     private List<MeshInstance3D>? _доски;
-    private readonly List<List<MeshInstance3D>> _полки = new();
+    private readonly List<List<Node3D>> _полки = new();
 
     private const float КОМНАТА = 5.0f;
 
