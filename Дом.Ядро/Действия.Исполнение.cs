@@ -265,6 +265,8 @@ public static partial class Действия
         // один и тот же до последнего слова.
         h.hooks.Зов_execute(h, npc, key, target, детали);
         var итог = _execute(h, npc, key, target, детали);
+        // мини-игра перед делом — на одно дело (только у игрока)
+        npc.сыграно = null;
         h.hooks.Зов_после_execute(h, npc, key, target, детали, итог);
         return итог;
     }
@@ -349,7 +351,8 @@ public static partial class Действия
 
         // у работы есть шанс провала (GDD 7: «провал — потеря материалов,
         // травма руки»)
-        if (Каталог.СТРОЙКА.Есть(key) && !h.rng.Chance(npc.success(b)))
+        if (Каталог.СТРОЙКА.Есть(key)
+            && !h.rng.Chance(Поправки.Шанс_игры(npc, МиниИгра.РЕМОНТ, npc.success(b))))   // «Ремонт» (ГДД 7)
         {
             string мат_ключ = Каталог.ПОСТРОЙКИ.Есть(key)
                 ? Каталог.ПОСТРОЙКИ.Взять(key, null!).материалы
