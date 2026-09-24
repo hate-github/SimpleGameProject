@@ -45,6 +45,7 @@ public sealed class Партия : IDisposable
     private Thread? _поток;
     private Exception? _беда;
     private bool _дальше;
+    private bool _брошена;
 
     /// <param name="прогон">Заведённый, но ещё не пущенный прогон.</param>
     /// <param name="кто">id играющего жильца.</param>
@@ -166,6 +167,24 @@ public sealed class Партия : IDisposable
         return true;
     }
 
+    /// <summary>
+    /// Бросить жизнь посреди метели — выход в главное меню. Дом на своём
+    /// потоке просыпается на вопросе (или доходит до следующего) и кончается
+    /// броском `OperationCanceledException`. Без этого поток так и спал бы
+    /// на вопросе, держа целый дом, — по одному на каждый выход в меню.
+    /// </summary>
+    public void Бросить()
+    {
+        lock (_замок)
+        {
+            _брошена = true;
+            if (_вопрос is null)
+                return;                 // считает — споткнётся о следующий вопрос
+            _вопрос = null;
+        }
+        _ответ_готов.Release();
+    }
+
     /// <summary>Дождаться, пока дом задаст вопрос или кончится. Нужно тем,
     /// кто играет не кадрами, а по шагам, — то есть проверке.</summary>
     public ВопросИгроку? Дождаться(int мс = 30_000)
@@ -197,10 +216,18 @@ public sealed class Партия : IDisposable
     private int Спросить(ВопросИгроку в)
     {
         lock (_замок)
+        {
+            if (_брошена)
+                throw new OperationCanceledException("партию бросили");
             _вопрос = в;
+        }
         _ответ_готов.Wait();
         lock (_замок)
+        {
+            if (_брошена)
+                throw new OperationCanceledException("партию бросили");
             return _ответ;
+        }
     }
 
     public void Dispose() => _ответ_готов.Dispose();
