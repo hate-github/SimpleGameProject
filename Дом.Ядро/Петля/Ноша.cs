@@ -82,6 +82,11 @@ public sealed class Ноша
 
     public bool пусто => _вещи.Ключи.Count == 0;
 
+    /// <summary>Собрана из своего шкафа в дорогу (к бункеру): у своего
+    /// порога сама не разгружается — иначе собранное тут же легло бы
+    /// обратно на полку. Разобрать — руками, у полки.</summary>
+    public bool в_дорогу { get; private set; }
+
     public IReadOnlyList<string> ресурсы => _вещи.Ключи;
 
     public double Сколько(string ресурс) => _вещи.Взять(ресурс, 0.0);
@@ -120,6 +125,20 @@ public sealed class Ноша
         return положено;
     }
 
+    /// <summary>Собрать в дорогу из своего шкафа — сколько влезло.</summary>
+    public double Собрать(NPC я, Тара т, string ресурс, double сколько, РучкиПетли ручки)
+    {
+        сколько = Math.Min(сколько, Math.Min(я.stock.Взять(ресурс, 0.0), свободно(т, ручки)));
+        if (сколько <= 0.0)
+            return 0.0;
+        var взять = Словари.Числа();
+        взять[ресурс] = сколько;
+        Положить(т, взять, ручки);
+        я.stock[ресурс] = я.stock.Взять(ресурс, 0.0) - сколько;
+        в_дорогу = true;
+        return сколько;
+    }
+
     /// <summary>Разгрузить дома: всё — в шкаф героя, тара освобождается.</summary>
     public Словарь<string, double> Разгрузить(NPC я)
     {
@@ -150,6 +169,7 @@ public sealed class Ноша
     {
         _вещи.Очистить();
         тара = null;
+        в_дорогу = false;
     }
 
     public override string ToString()
@@ -165,12 +185,14 @@ public sealed class Ноша
     {
         ["тара"] = тара?.ToString(),
         ["вещи"] = Карман.Числа_в(_вещи.Ключи.Select(к => new KeyValuePair<string, double>(к, _вещи[к]))),
+        ["в_дорогу"] = в_дорогу,
     };
 
     public void Разложить(System.Text.Json.Nodes.JsonObject о)
     {
         _вещи.Очистить();
         тара = о["тара"]?.GetValue<string>() is string т ? Enum.Parse<Тара>(т) : null;
+        в_дорогу = о["в_дорогу"]?.GetValue<bool>() ?? false;
         foreach (var (к, v) in о["вещи"]!.AsObject())
             _вещи[к] = v!.GetValue<double>();
     }

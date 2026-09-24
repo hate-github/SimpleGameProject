@@ -147,6 +147,9 @@ public sealed class Летопись
     /// <summary>Бункер: сколько часов искать и шанс найти, пока видно.</summary>
     public (double часов, double найти) бункер { get; private set; }
 
+    /// <summary>Что внутри бункера (`Бункер`) — или null: внутрь не ходят.</summary>
+    public ДанныеБункера? убежище { get; private set; }
+
     /// <summary>Заражение с «Вектора-3»: стадии, урон, передача, промзона.</summary>
     public ДанныеЗаражения заражение { get; private set; } = ДанныеЗаражения.НИКАКОГО;
 
@@ -377,7 +380,11 @@ public sealed class Летопись
                         с.GetProperty("говорит").GetString()!,
                         с.TryGetProperty("снегоступы", out var с2) && с2.GetBoolean())).ToList()));
         if (корень.TryGetProperty("бункер", out var бн))
+        {
             л.бункер = (бн.GetProperty("часов").GetDouble(), бн.GetProperty("найти").GetDouble());
+            if (бн.TryGetProperty("дверь", out _))
+                л.убежище = ДанныеБункера.Прочитать(бн);
+        }
         if (корень.TryGetProperty("заражение", out var зр))
             л.заражение = ДанныеЗаражения.Прочитать(зр);
         if (корень.TryGetProperty("снегоступы", out var сн))
