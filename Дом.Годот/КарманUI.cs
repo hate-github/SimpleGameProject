@@ -33,6 +33,12 @@
 // И главное, чего этот экран не прячет: **вещь исчезает из мира.** Кто
 // стоит с героем в одной квартире, это видит, и экран говорит об этом
 // прямо — до того, как игрок нажмёт, а не после.
+//
+// Еда здесь — вещи (docs/ЕДА_ПЛАН.md, этап 2): ячейками с иконками,
+// снятыми с моделей автора, в трёх местах — на полке (у полки), в ноше
+// и в кармане. Навёл — подпись; нажал — карточка (`КарточкаЕды`):
+// модель крутится, рядом описание и дела — съесть, в карман, на полку.
+// Прочие запасы — строками, как были: моделей у них пока нет.
 
 using Godot;
 using Дом.Экран;
@@ -44,8 +50,16 @@ public partial class КарманUI : PanelContainer
 {
     private VBoxContainer _шкаф = null!;
     private VBoxContainer _внутри = null!;
+    private VBoxContainer _в_ноше = null!;
     private Label _шкаф_шапка = null!;
     private Label _внутри_шапка = null!;
+    private Label _ноша_шапка = null!;
+    private Label _наведено = null!;
+    private ИконкиЕды _иконки = null!;
+    private КарточкаЕды _карточка = null!;
+    private Control _покров = null!;
+    private ЯчейкаЕды? _открыта;
+    private string _весть = "";
     private Label _заголовок = null!;
     private Label _свидетели = null!;
     private Label _где = null!;
@@ -124,7 +138,14 @@ public partial class КарманUI : PanelContainer
         столбец.AddChild(две);
 
         (_шкаф, _шкаф_шапка) = Колонка(две);
+        (_в_ноше, _ноша_шапка) = Колонка(две);
         (_внутри, _внутри_шапка) = Колонка(две);
+
+        // что под мышью — строкой под ячейками: подсказка Godot на паузе
+        // может и не прийти, а эта приходит всегда
+        _наведено = new Label { HorizontalAlignment = HorizontalAlignment.Center };
+        _наведено.AddThemeColorOverride("font_color", new Color("#d8b070"));
+        столбец.AddChild(_наведено);
 
         _инструменты = new VBoxContainer();
         _инструменты.AddThemeConstantOverride("separation", 2);
@@ -137,6 +158,32 @@ public partial class КарманUI : PanelContainer
         _закрыть = new Button();
         _закрыть.Pressed += Убрать;
         столбец.AddChild(_закрыть);
+
+        _иконки = new ИконкиЕды();
+        AddChild(_иконки);
+
+        // карточка — поверх всего, на затемнении: нажал мимо — закрылась
+        _покров = new Control { Visible = false, MouseFilter = MouseFilterEnum.Stop };
+        _покров.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+        AddChild(_покров);
+        var тень = new ColorRect { Color = new Color(0, 0, 0, 0.6f), MouseFilter = MouseFilterEnum.Stop };
+        тень.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+        тень.GuiInput += e =>
+        {
+            if (e is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left })
+                _карточка.Убрать();
+        };
+        _покров.AddChild(тень);
+        var по_центру = new CenterContainer { MouseFilter = MouseFilterEnum.Ignore };
+        по_центру.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+        _покров.AddChild(по_центру);
+        _карточка = new КарточкаЕды();
+        _карточка.Закрыта = () =>
+        {
+            _покров.Visible = false;
+            _открыта = null;
+        };
+        по_центру.AddChild(_карточка);
     }
 
     private static (VBoxContainer, Label) Колонка(HBoxContainer куда)
@@ -191,6 +238,9 @@ public partial class КарманUI : PanelContainer
         Visible = false;
         GetTree().Paused = false;
         _свидетели.Text = "";
+        _наведено.Text = "";
+        _весть = "";
+        _карточка.Убрать();
         _дела = System.Array.Empty<(string, System.Action)>();
         Сменился();
     }
@@ -199,7 +249,11 @@ public partial class КарманUI : PanelContainer
     {
         var я = Сеанс!.я;
         var карман = я.карман;
-        foreach (var столбец in new[] { _шкаф, _внутри })
+        // еда вещами сводится с числами дома, пока он спит: экран открыт
+        // только тогда
+        var продукты = Продукты.У(я);
+        продукты?.Сверить(Сеанс.дом, я);
+        foreach (var столбец in new[] { _шкаф, _в_ноше, _внутри })
             foreach (var узел in столбец.GetChildren().Skip(1))
             {
                 столбец.RemoveChild(узел);
@@ -230,7 +284,7 @@ public partial class КарманUI : PanelContainer
             foreach (var р in я.stock.Ключи.OrderBy(x => x, StringComparer.Ordinal))
             {
                 double сколько = я.stock.Взять(р, 0.0);
-                if (сколько <= 0.0)
+                if (сколько <= 0.0 || (продукты is not null && р == Продукты.ЕДА))
                     continue;
                 string строка = $"{р} {Текст.G(Текст.Округлить(сколько, 2))}";
                 if (карман is null)
@@ -241,12 +295,30 @@ public partial class КарманUI : PanelContainer
                         всё: () => Положить(р, сколько));
             }
 
+        if (у_полки && продукты is not null)
+            Сетка(_шкаф, продукты, МестоЕды.ПОЛКА);
+
+        // ноша — что несут: смотреть и есть можно, выложить — у порога
+        var ноша = я.ноша;
+        _в_ноше.Visible = ноша is { пусто: false };
+        if (ноша is { пусто: false, тара: Тара тара } && Ручки() is { } ручки_)
+        {
+            _ноша_шапка.Text = $"{тара.Где()} — {Текст.G(Текст.Округлить(ноша.занято, 1))} из {Текст.G(тара.мест(ручки_))}";
+            foreach (var р in ноша.ресурсы.OrderBy(x => x, StringComparer.Ordinal))
+                if (продукты is null || р != Продукты.ЕДА)
+                    Надпись(_в_ноше, $"{р} {Текст.G(Текст.Округлить(ноша.Сколько(р), 2))}");
+            if (продукты is not null)
+                Сетка(_в_ноше, продукты, МестоЕды.НОША);
+        }
+
         _внутри.Visible = карман is not null;
         _внутри_шапка.Text = у_полки ? "в кармане — на полку" : "в кармане";
         if (карман is not null)
         {
             foreach (var р in карман.ресурсы.OrderBy(x => x, StringComparer.Ordinal))
             {
+                if (продукты is not null && р == Продукты.ЕДА)
+                    continue;
                 string строка = $"{р} {Текст.G(Текст.Округлить(карман.Сколько(р), 2))}";
                 if (у_полки)
                     Ряд(_внутри, "←  " + строка, свободно: true,
@@ -255,8 +327,27 @@ public partial class КарманUI : PanelContainer
                 else
                     Надпись(_внутри, строка);
             }
+            if (продукты is not null)
+                Сетка(_внутри, продукты, МестоЕды.КАРМАН);
             if (карман.ресурсы.Count == 0)
                 Надпись(_внутри, "пусто");
+        }
+
+        // карточка открыта — показать её заново: вещь могла стать початой,
+        // а стопка — меньше
+        if (_открыта is { } была && продукты is not null)
+        {
+            var все = Продукты.МЕСТА.SelectMany(м => Инвентарь.Ячейки(продукты, м, Порция())).ToList();
+            var та = все.FirstOrDefault(я_ => я_.номера.Contains(_карточка.номер ?? -1))
+                     ?? все.FirstOrDefault(я_ => я_.где == была.где && я_.вид == была.вид && я_.состояние == была.состояние)
+                     ?? все.FirstOrDefault(я_ => я_.где == была.где && я_.вид == была.вид);
+            if (та is null)
+            {
+                _карточка.Убрать();
+                _наведено.Text = _весть;
+            }
+            else
+                Открыть(та);
         }
 
         // мысли, которые делаются у полки
@@ -394,6 +485,99 @@ public partial class КарманUI : PanelContainer
         }
     }
 
+    // ------------------------------------------------------------ еда ячейками
+
+    private double Порция() => Сеанс is null ? 45.0 : Действия.порция(Сеанс.дом, Сеанс.я, Сеанс.дом.B);
+
+    /// <summary>Ячейки еды места: иконка с модели, «×2» у стопки, подпись
+    /// при наведении, карточка по нажатию.</summary>
+    private void Сетка(VBoxContainer куда, Продукты продукты, МестоЕды где)
+    {
+        var ячейки = Инвентарь.Ячейки(продукты, где, Порция());
+        if (ячейки.Count == 0)
+            return;
+        var сетка = new GridContainer { Columns = 4 };
+        сетка.AddThemeConstantOverride("h_separation", 6);
+        сетка.AddThemeConstantOverride("v_separation", 6);
+        foreach (var ячейка in ячейки)
+        {
+            var я_ = ячейка;
+            var иконка = _иконки.Дай(я_.модель, я_.меши);
+            var к = new Button
+            {
+                CustomMinimumSize = new Vector2(84, 92),
+                Icon = иконка,
+                ExpandIcon = true,
+                IconAlignment = HorizontalAlignment.Center,
+                VerticalIconAlignment = VerticalAlignment.Top,
+                Text = иконка is null ? я_.имя : (я_.штук > 1 ? $"×{я_.штук}" : " "),
+                TooltipText = я_.подпись,
+                ClipText = true,
+            };
+            if (я_.свежесть != Свежесть.СВЕЖАЯ)
+                к.AddThemeColorOverride("font_color", new Color("#c86a5a"));
+            к.MouseEntered += () => _наведено.Text = я_.подпись;
+            к.MouseExited += () =>
+            {
+                if (_наведено.Text == я_.подпись)
+                    _наведено.Text = "";
+            };
+            к.Pressed += () =>
+            {
+                _весть = "";
+                Открыть(я_);
+            };
+            сетка.AddChild(к);
+        }
+        куда.AddChild(сетка);
+    }
+
+    /// <summary>Карточка стопки: дела — съесть всегда; у полки — ещё
+    /// в карман с полки и на полку из кармана.</summary>
+    private void Открыть(ЯчейкаЕды ячейка)
+    {
+        if (Сеанс is null || Продукты.У(Сеанс.я) is not { } продукты
+            || продукты.Найти(ячейка.номера[0]) is not { } вещь)
+            return;
+        var дела = new List<(string, System.Action)> { ("съесть", () => Съесть(вещь)) };
+        if (у_полки && ячейка.где == МестоЕды.ПОЛКА && Сеанс.я.карман is not null)
+            дела.Add(("в карман", () => Переложить(вещь, МестоЕды.КАРМАН)));
+        if (у_полки && ячейка.где == МестоЕды.КАРМАН)
+            дела.Add(("на полку", () => Переложить(вещь, МестоЕды.ПОЛКА)));
+        _открыта = ячейка;
+        _покров.Visible = true;
+        _карточка.Показать(ячейка, дела, _весть);
+    }
+
+    private void Съесть(Продукт вещь)
+    {
+        if (Сеанс is null || Продукты.У(Сеанс.я) is not { } продукты)
+            return;
+        string имя = продукты.Вид(вещь).имя;
+        var с = продукты.Съесть(Сеанс.дом, Сеанс.я, вещь);
+        _весть = с.почему ?? (с.отравился
+            ? $"{имя}: съел — и сразу понял, что зря. Мутит; сытости вдвое меньше, пить хочется"
+            : $"{имя}: съел {(Math.Abs(с.единиц - продукты.Вид(вещь).единиц) < 1e-6 ? "всё" : "сколько влезло")} — "
+              + $"сытость +{Текст.G(Math.Round(с.сытости))}"
+              + (с.настроения > 0.05 ? ", и на душе чуть легче" : ""));
+        Обновить();
+    }
+
+    private void Переложить(Продукт вещь, МестоЕды куда)
+    {
+        if (Сеанс is null || Продукты.У(Сеанс.я) is not { } продукты)
+            return;
+        string имя = продукты.Вид(вещь).имя;
+        string? почему = продукты.Переложить(Сеанс.дом, Сеанс.я, вещь, куда, out var видели);
+        _весть = почему ?? (куда == МестоЕды.КАРМАН ? $"{имя} — в кармане, в мире её больше нет" : $"{имя} — на полке");
+        _свидетели.Text = видели.Count == 0
+            ? ""
+            : "Это видели: " + string.Join(", ", видели.Select(
+                  в => Сеанс.дом.get(в.кто)?.@short ?? в.кто))
+              + " — вещь исчезла у них на глазах.";
+        Обновить();
+    }
+
     private static void Надпись(VBoxContainer куда, string текст)
     {
         var l = new Label { Text = текст };
@@ -449,6 +633,13 @@ public partial class КарманUI : PanelContainer
     {
         if (!Visible)
             return;
+        // Esc при карточке закрывает карточку, а не весь экран
+        if (_карточка.Visible && e is InputEventKey { Pressed: true, Echo: false, Keycode: Key.Escape })
+        {
+            _карточка.Убрать();
+            AcceptEvent();
+            return;
+        }
         if (Управление.Нажато(e, Клавиши.КАРМАН)
             || e is InputEventKey { Pressed: true, Echo: false, Keycode: Key.Escape }
             || (у_полки && Управление.Нажато(e, Клавиши.ДЕЙСТВИЕ)))

@@ -43,50 +43,6 @@ public partial class Мир
     private const string УРНА = "res://модели/двор/Trash can.fbx";
     private const string СКАМЕЙКА = "res://модели/двор/Bench.fbx";
 
-    // меш и его рамка по (путь, вариант): сцену модели не разворачивать
-    // на каждую банку — их на полках магазина полторы сотни
-    private static readonly Dictionary<(string, string, bool), (Mesh меш, Aabb рамка)?> _меши = new();
-
-    /// <param name="двусторонне">Рисовать грани с обеих сторон. Для
-    /// вывернутых моделей (витрина: «НАИЗНАНКУ» — скамейка и обе урны,
-    /// сентябрь 2026): односторонне у них видна изнанка — дальняя стенка
-    /// сквозь ближнюю. С обеих сторон Godot у обратной грани сам
-    /// переворачивает нормаль, и свет ложится правильно. Копия меша —
-    /// одна на все урны, не на каждую.</param>
-    private static (Mesh меш, Aabb рамка)? Меш_модели(string путь, string вариант, bool двусторонне = false)
-    {
-        if (_меши.TryGetValue((путь, вариант, двусторонне), out var есть))
-            return есть;
-        (Mesh, Aabb)? найдено = null;
-        var сцена = ResourceLoader.Exists(путь) ? GD.Load<PackedScene>(путь) : null;
-        if (сцена is not null)
-        {
-            var образец = сцена.Instantiate<Node3D>();
-            var меши = new List<MeshInstance3D>();
-            Найти(образец, меши);
-            var м = меши.FirstOrDefault(x => x.Name.ToString().Contains(вариант, StringComparison.OrdinalIgnoreCase));
-            if (м?.Mesh is { } меш)
-            {
-                if (двусторонне)
-                {
-                    var копия = (Mesh)меш.Duplicate();
-                    for (int п = 0; п < копия.GetSurfaceCount(); п++)
-                        if (м.GetActiveMaterial(п) is BaseMaterial3D мат)
-                        {
-                            var с_обеих = (BaseMaterial3D)мат.Duplicate();
-                            с_обеих.CullMode = BaseMaterial3D.CullModeEnum.Disabled;
-                            копия.SurfaceSetMaterial(п, с_обеих);
-                        }
-                    меш = копия;
-                }
-                найдено = (меш, меш.GetAabb());
-            }
-            образец.Free();
-        }
-        _меши[(путь, вариант, двусторонне)] = найдено;
-        return найдено;
-    }
-
     /// <summary>
     /// Вещь из модели автора: вариант по имени, большая сторона —
     /// <paramref name="размер"/> метров, низ — на <paramref name="где"/>.Y,
@@ -97,13 +53,16 @@ public partial class Мир
     /// внутри масштаба — тела под масштабом Godot считает плохо.
     /// Нет модели — null, и зовущий ставит заглушку.
     /// </summary>
+    /// <param name="мерка">Рамка целой вещи: половина батона и ломоть
+    /// меряются по целому батону, иначе ломоть встал бы размером с буханку.</param>
     private Node3D? Вещь_модели(string путь, string вариант, float размер, Vector3 где, float поворот,
-                                bool форма = false, bool двусторонне = false)
+                                bool форма = false, bool двусторонне = false, Aabb? мерка = null)
     {
-        if (Меш_модели(путь, вариант, двусторонне) is not { } м)
+        if (МоделиАвтора.Меш(путь, вариант, двусторонне) is not { } м)
             return null;
         var рамка = м.рамка;
-        float больше = Math.Max(рамка.Size.X, Math.Max(рамка.Size.Y, рамка.Size.Z));
+        var по = мерка ?? рамка;
+        float больше = Math.Max(по.Size.X, Math.Max(по.Size.Y, по.Size.Z));
         if (больше <= 1e-6f)
             return null;
         float масштаб = размер / больше;
@@ -170,6 +129,43 @@ public partial class Мир
                 float поворот = хлеб ? -90 : ((номер * 7 + а * 37 + б * 53) % 41) - 20;
                 Еда_на_место(какой, где + сдвиг, поворот);
             }
+    }
+
+    // ---------- еда героя на полке ----------
+
+    private readonly List<Vector3> _места_еды = new();
+    private readonly List<Node3D> _еда_по_вещам = new();
+
+    /// <summary>
+    /// Еда героя на своей полке — **его вещи**, а не чередование по числу
+    /// (docs/ЕДА_ПЛАН.md, этап 3): две банки свинины и батон в плесени —
+    /// ровно они и лежат, в своих вариантах. Мест на доске восемь; вещей
+    /// больше — лежат первые. <paramref name="вещи"/> null — полка как
+    /// раньше, коробочками по числу (у героя нет вещей).
+    /// </summary>
+    public void Еда_на_полке(IReadOnlyList<(string модель, IReadOnlyList<string> меши)>? вещи)
+    {
+        foreach (var у in _еда_по_вещам)
+            if (IsInstanceValid(у))
+                у.QueueFree();
+        _еда_по_вещам.Clear();
+        int ряд = Array.IndexOf(РЕСУРСЫ, "еда");
+        if (вещи is null || ряд < 0 || ряд >= _полки.Count)
+            return;
+        foreach (var у in _полки[ряд])
+            у.Visible = false;
+        for (int i = 0; i < Math.Min(вещи.Count, _места_еды.Count); i++)
+        {
+            var (модель, меши) = вещи[i];
+            if (МоделиАвтора.Первый(модель, меши) is not { } н)
+                continue;
+            var е = ЕДА.FirstOrDefault(е_ => е_.путь == модель);
+            var целая = е.меш is null ? null : МоделиАвтора.Меш(модель, е.меш)?.рамка;
+            var узел = Вещь_модели(модель, н.имя, е.размер > 0 ? е.размер : 0.1f, _места_еды[i], е.поворот,
+                                   мерка: целая);
+            if (узел is not null)
+                _еда_по_вещам.Add(узел);
+        }
     }
 
     // ---------- двор: урны и скамейки ----------
