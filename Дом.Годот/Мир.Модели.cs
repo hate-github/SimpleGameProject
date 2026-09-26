@@ -24,21 +24,24 @@ namespace Дом.Годот;
 
 public partial class Мир
 {
-    /// <summary>Еда на полки: модель, вариант (часть имени меша), размер по
-    /// большей стороне в метрах, поворот вокруг вертикали (хлеб — поперёк
-    /// полки). Порядок — чередование на полке.</summary>
-    private static readonly (string путь, string меш, float размер, float поворот)[] ЕДА =
+    /// <summary>Еда на полки: модель, вариант (часть имени меша) целой вещи,
+    /// размер по большей стороне в метрах, поворот вокруг вертикали (хлеб —
+    /// поперёк полки), шаг выкладки поперёк полки и сколько рядов вглубь.
+    /// Порядок — чередование на полке.</summary>
+    private static readonly (string путь, string меш, float размер, float поворот, float шаг, int вглубь)[] ЕДА =
     {
-        ("res://модели/еда/Canned beef.fbx", "beef unopen fresh", 0.10f, 0),
-        ("res://модели/еда/Loaf.fbx", "full fresh", 0.28f, 90),
-        ("res://модели/еда/Canned sprats.fbx", "sprats unopen fresh", 0.10f, 0),
-        ("res://модели/еда/Canned pork.fbx", "pork unopen fresh", 0.10f, 0),
-        ("res://модели/еда/Black bread.fbx", "full fresh", 0.22f, 90),
-        ("res://модели/еда/Canned condensed milk.fbx", "condensed milk unopen", 0.09f, 0),
+        ("res://модели/еда/Canned beef.fbx", "beef unopen fresh", 0.10f, 0, 0.115f, 2),
+        ("res://модели/еда/Loaf.fbx", "full fresh", 0.28f, 90, 0.14f, 1),
+        ("res://модели/еда/Canned sprats.fbx", "sprats unopen fresh", 0.10f, 0, 0.115f, 2),
+        ("res://модели/еда/Canned peas.fbx", "peas unopen fresh", 0.10f, 0, 0.115f, 2),
+        ("res://модели/еда/Canned pork.fbx", "pork unopen fresh", 0.10f, 0, 0.115f, 2),
+        ("res://модели/еда/Black bread.fbx", "full fresh", 0.22f, 90, 0.14f, 1),
+        ("res://модели/еда/Canned condensed milk.fbx", "condensed milk unopen", 0.09f, 0, 0.115f, 2),
+        ("res://модели/еда/potato.fbx", "1 kg fresh", 0.26f, 0, 0.28f, 1),
     };
 
     /// <summary>Банки — то, что лежит в НЗ бункера.</summary>
-    private static readonly int[] КОНСЕРВЫ = { 0, 3, 2, 5 };
+    private static readonly int[] КОНСЕРВЫ = { 0, 4, 2, 6, 3 };
 
     private const string УРНА = "res://модели/двор/Trash can.fbx";
     private const string СКАМЕЙКА = "res://модели/двор/Bench.fbx";
@@ -98,7 +101,7 @@ public partial class Мир
     /// нет модели — коробочка цвета еды, как было.</summary>
     private Node3D Еда_на_место(int номер, Vector3 где, float поворот = 0)
     {
-        var (путь, меш, размер, свой) = ЕДА[((номер % ЕДА.Length) + ЕДА.Length) % ЕДА.Length];
+        var (путь, меш, размер, свой, _, _) = ЕДА[((номер % ЕДА.Length) + ЕДА.Length) % ЕДА.Length];
         return Вещь_модели(путь, меш, размер, где, свой + поворот)
                ?? Меш(Материал(new Color("#8a6a4a"), 0.6f), new Vector3(0.12f, 0.16f, 0.12f),
                       где with { Y = где.Y + 0.08f });
@@ -107,7 +110,8 @@ public partial class Мир
     /// <summary>
     /// Выкладка одного товара на полке, что тянется вдоль X: поперёк —
     /// сколько влезет в <paramref name="ширина"/>, но не больше четырёх;
-    /// вглубь — две банки или один хлеб (хлеб лежит поперёк доски, вдоль Z).
+    /// вглубь — сколько рядов у этой еды в таблице: две банки, один хлеб
+    /// (лежит поперёк доски, вдоль Z), одна кучка картошки.
     /// <paramref name="где"/> — середина выкладки на доске. Банки чуть
     /// повёрнуты каждая по-своему: ровный строй этикеток читается как
     /// текстура, а не как полка. <paramref name="консервы"/> — только банки
@@ -119,9 +123,9 @@ public partial class Мир
             ? КОНСЕРВЫ[((номер % КОНСЕРВЫ.Length) + КОНСЕРВЫ.Length) % КОНСЕРВЫ.Length]
             : ((номер % ЕДА.Length) + ЕДА.Length) % ЕДА.Length;
         bool хлеб = ЕДА[какой].поворот != 0;
-        float шаг = хлеб ? 0.14f : 0.115f;
+        float шаг = ЕДА[какой].шаг;
         int поперёк = Math.Clamp((int)(ширина / шаг), 1, 4);
-        int вглубь = хлеб ? 1 : 2;
+        int вглубь = ЕДА[какой].вглубь;
         for (int а = 0; а < поперёк; а++)
             for (int б = 0; б < вглубь; б++)
             {
