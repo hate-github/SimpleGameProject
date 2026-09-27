@@ -61,6 +61,14 @@ public enum СостояниеУлицы { ЧИСТО, СНЕГ, ГЛУБОКИ�
 /// во сколько раз дольше дорога и во сколько — в снегоступах.</summary>
 public sealed record ПроходУлицы(bool без_снегоступов, double часы, double на_снегоступах);
 
+/// <summary>Дорога домой, когда туда уже не пройти без снегоступов: по пояс
+/// в снегу — во столько раз дольше обычного «часы» и столько тепла долой.
+/// Домой дойти можно всегда; туда — только если пройти.</summary>
+public sealed record ПоПояс(double раз, double тепла)
+{
+    public static readonly ПоПояс ОБЫЧНО = new(1.5, 25.0);
+}
+
 /// <summary>
 /// Событие мира: с какого утра (<paramref name="день"/>), где, что это было
 /// и что стало с местом. <paramref name="шанс"/> — случится ли вообще,
@@ -243,6 +251,9 @@ public sealed class Летопись
         return снегоступы && у == СостояниеУлицы.ЗАВАЛЕНО ? п.на_снегоступах : п.часы;
     }
 
+    /// <summary>Как идут домой по завалу без снегоступов (`мир.json`, «улицы.по_пояс»).</summary>
+    public ПоПояс по_пояс { get; private set; } = ПоПояс.ОБЫЧНО;
+
     /// <summary>Пройти ли сегодня к этому месту — без снегоступов или в них.</summary>
     public bool Пройти(string место, int день, long зерно, bool снегоступы)
         => снегоступы || Проход(Улица(место, день, зерно)).без_снегоступов;
@@ -345,6 +356,8 @@ public sealed class Летопись
                 л._сдвиг[x.Name] = x.Value.GetInt32();
             if (у.TryGetProperty("дверь_завалена", out var дз))
                 л._дверь_завалена = Уровень(дз.GetString()!, "«дверь_завалена»");
+            if (у.TryGetProperty("по_пояс", out var пп))
+                л.по_пояс = new ПоПояс(пп.GetProperty("раз").GetDouble(), пп.GetProperty("тепла").GetDouble());
             foreach (var x in у.GetProperty("состояния").EnumerateObject())
             {
                 double часы = x.Value.GetProperty("часы").GetDouble();
