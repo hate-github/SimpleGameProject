@@ -51,6 +51,42 @@ public static class Звуки
     /// звук и попадает на шину своего канала громкости. Фон не замирает,
     /// пока открыты настройки: там его и крутят, и крутить надо на слух.
     /// </summary>
+    /// <summary>
+    /// Разовый звук без места — то, что делает сам герой (перезарядка,
+    /// топор, жарка на его печке, нож по овощу): слышно ровно так же,
+    /// где бы ни стоял слушающий. Шина — «шаги и вещи». Длинную запись
+    /// (<paramref name="секунд"/> больше нуля) играет куском со случайного
+    /// места и гасит к концу куска.
+    /// </summary>
+    public static AudioStreamPlayer? Сыграть(Node куда, string имя, float громкость = 0f, float секунд = 0f)
+    {
+        if (Взять(имя) is not { } поток)
+            return null;
+        var п = new AudioStreamPlayer { Stream = поток, VolumeDb = громкость, Bus = Шины.ШАГИ, Name = "звук_" + имя };
+        куда.AddChild(п);
+        Пустить(п, поток, громкость, секунд);
+        return п;
+    }
+
+    /// <summary>Пустить звук: целиком — и убрать, когда кончится; куском —
+    /// со случайного места, погасить за полсекунды до конца куска.</summary>
+    public static void Пустить(Node п, AudioStream поток, float громкость, float секунд)
+    {
+        double длина = поток.GetLength();
+        if (секунд <= 0f || длина <= секунд + 0.5)
+        {
+            п.Connect("finished", Callable.From(п.QueueFree));
+            п.Call("play", 0.0f);
+            return;
+        }
+        float откуда = (float)GD.RandRange(0.0, длина - секунд - 0.2);
+        п.Call("play", откуда);
+        var гаснет = п.CreateTween();
+        гаснет.TweenInterval(System.Math.Max(0.1, секунд - 0.5));
+        гаснет.TweenProperty(п, "volume_db", громкость - 40f, 0.5);
+        гаснет.TweenCallback(Callable.From(п.QueueFree));
+    }
+
     public static AudioStreamPlayer3D Точка(Node куда, string имя, Vector3 где,
                                             float громкость = 0f, float размер = 2f,
                                             float дальше_не = 25f, bool петля = false)
