@@ -34,6 +34,9 @@ public interface IУбежище : IПриют
 
     bool Печь_топится(int день);
 
+    /// <summary>Сколько топлива уходит, чтобы затопить на день.</summary>
+    double топлива_на_день { get; }
+
     /// <summary>Затопить печь на сегодня — null, или почему нет.</summary>
     string? Затопить(House h);
 }

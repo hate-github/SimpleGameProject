@@ -209,6 +209,7 @@ public sealed class Бункер : IУбежище
 
     public string Где => "убежище";
     public bool Доступно => открыт;
+    public double топлива_на_день => данные.печь_топлива;
     public void Изъять(string ресурс, double сколько)
         => _запас[ресурс] = Math.Max(0.0, _запас.Взять(ресурс, 0.0) - сколько);
     public void Добавить(string ресурс, double сколько)
