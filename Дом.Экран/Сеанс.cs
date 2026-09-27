@@ -30,7 +30,7 @@ using Дом.Ядро;
 
 namespace Дом.Экран;
 
-public sealed class Сеанс
+public sealed partial class Сеанс
 {
     private readonly List<СтрокаЛенты> _лента = new();
     private readonly List<Событие> _события = new();
@@ -46,8 +46,13 @@ public sealed class Сеанс
             throw new ArgumentException($"нет такого жильца: {кто}", nameof(кто));
         дом.hooks.on_событие.Add((_, с) =>
         {
+            // знал ли герой это в ту минуту — для плана его глазами (`ПланГероя`)
+            bool знал = Знал_сразу(с);
             lock (_замок)
+            {
                 _события.Add(с);
+                _знал.Add(знал);
+            }
         });
         хроника = new Хроника(дом);
     }
