@@ -111,6 +111,13 @@ public static class Обнаружения
         foreach (var (thief_id, victim_id) in losses)
         {
             var victim = h.get(victim_id);
+            // его нет в доме (только игрок: живёт в участке, в убежище) —
+            // пропажу он заметит, когда вернётся, а не этим утром
+            if (victim is not null && victim.alive && victim.нет_в_доме())
+            {
+                h.ожидает.пропажи.Add((thief_id, victim_id));
+                continue;
+            }
             if (victim is not null && victim.alive
                 && h.rng.Chance(h.B["кража_шанс_заметить_пропажу"]))
                 Конфликт.notice_theft(h, victim, thief_id: thief_id);

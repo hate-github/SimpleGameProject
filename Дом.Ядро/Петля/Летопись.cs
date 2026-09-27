@@ -69,6 +69,10 @@ public sealed record ПоПояс(double раз, double тепла)
     public static readonly ПоПояс ОБЫЧНО = new(1.5, 25.0);
 }
 
+/// <summary>Квартира героя, пока он живёт не дома (`мир.json`, «пустая_квартира»):
+/// через сколько ночей она ничья, шанс за ночь и доля шкафа.</summary>
+public sealed record ПустаяКвартира(int дней, double вскроют, double доля);
+
 /// <summary>
 /// Событие мира: с какого утра (<paramref name="день"/>), где, что это было
 /// и что стало с местом. <paramref name="шанс"/> — случится ли вообще,
@@ -254,6 +258,9 @@ public sealed class Летопись
     /// <summary>Как идут домой по завалу без снегоступов (`мир.json`, «улицы.по_пояс»).</summary>
     public ПоПояс по_пояс { get; private set; } = ПоПояс.ОБЫЧНО;
 
+    /// <summary>Квартира героя без него (`мир.json`, «пустая_квартира»); null — не вскрывают.</summary>
+    public ПустаяКвартира? пустая_квартира { get; private set; }
+
     /// <summary>Пройти ли сегодня к этому месту — без снегоступов или в них.</summary>
     public bool Пройти(string место, int день, long зерно, bool снегоступы)
         => снегоступы || Проход(Улица(место, день, зерно)).без_снегоступов;
@@ -382,6 +389,15 @@ public sealed class Летопись
             }
         if (корень.TryGetProperty("участок", out var уч))
             л.участок = ДанныеУчастка.Прочитать(уч);
+        if (корень.TryGetProperty("пустая_квартира", out var пк))
+        {
+            л.пустая_квартира = new ПустаяКвартира(пк.GetProperty("дней").GetInt32(),
+                                                   пк.GetProperty("вскроют").GetDouble(),
+                                                   пк.GetProperty("доля").GetDouble());
+            if (л.пустая_квартира.дней < 1 || л.пустая_квартира.вскроют is < 0 or > 1
+                || л.пустая_квартира.доля is <= 0 or > 1)
+                throw new InvalidDataException("мир.json: «пустая_квартира» — от ночи, шанс от нуля до единицы, доля больше нуля");
+        }
         if (корень.TryGetProperty("новости", out var нв))
             foreach (var x in нв.EnumerateObject())
                 л._новости[int.Parse(x.Name, System.Globalization.CultureInfo.InvariantCulture)] = x.Value.GetString()!;

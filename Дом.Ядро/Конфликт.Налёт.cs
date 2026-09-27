@@ -37,6 +37,10 @@ public static partial class Конфликт
             if (string.Equals(p.id, target.id, StringComparison.Ordinal)
                 || p.health < 40 || p.injuries.Count >= 2)
                 continue;
+            // его нет в доме (только игрок: участок, убежище, двор) — звать
+            // некого: с ним нельзя поговорить, и ответить «пойду» ему нечем
+            if (p.нет_в_доме())
+                continue;
             if (p.dependents > 0)
                 continue;                 // его руки связаны (GDD 12.6)
             // свою же дверь не ломают: под одной крышей — значит на одной стороне

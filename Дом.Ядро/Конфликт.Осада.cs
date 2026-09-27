@@ -68,7 +68,8 @@ public static partial class Конфликт
     /// </summary>
     public static bool кричать(House h, NPC target, IReadOnlyList<NPC> crew, Баланс b)
     {
-        if (!target.здесь())
+        // за дверью никого (только игрок) — кричать некому
+        if (!target.здесь() || target.нет_в_доме())
             return false;
         var состав = new HashSet<string>(crew.Select(c => c.id), StringComparer.Ordinal);
         var соседи = h.others(target).Where(p => !состав.Contains(p.id)).ToList();
@@ -110,7 +111,7 @@ public static partial class Конфликт
         // те, кто живёт в этой квартире, дерутся за неё по определению
         foreach (var p in h.others(target))
         {
-            if (crew_ids.Contains(p.id) || d.Contains(p))
+            if (crew_ids.Contains(p.id) || d.Contains(p) || p.нет_в_доме())
                 continue;
             if (string.Equals(p.living_with, target.id, StringComparison.Ordinal)
                 || string.Equals(target.living_with, p.id, StringComparison.Ordinal))
@@ -121,6 +122,10 @@ public static partial class Конфликт
             if (d.Contains(p))
                 continue;
             if (crew_ids.Contains(p.id) || p.health < 40)
+                continue;
+            // его нет в доме (только игрок): стука за стеной он не слышит,
+            // и выйти на лестницу ему неоткуда
+            if (p.нет_в_доме())
                 continue;
             double will = p.trust.Взять(target.id, 3.0) * 0.6 + p.t01("лояльность") * 4.0
                           + p.t01("храбрость") * 3.0;
