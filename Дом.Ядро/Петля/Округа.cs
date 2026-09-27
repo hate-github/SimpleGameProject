@@ -93,6 +93,7 @@ public sealed class Округа : IУлицы
     private readonly HashSet<int> _дни_на_снегоступах = new();
     private readonly HashSet<string> _герой_знает = new(StringComparer.Ordinal);
     private readonly HashSet<string> _знания = new(StringComparer.Ordinal);
+    private readonly object _замок_знаний = new();   // знакомятся на потоке дома, читает экран
     private readonly Dictionary<string, int> _рассказано = new(StringComparer.Ordinal);
     private readonly Queue<(string кто, string говорит)> _рассказы = new();
     private readonly object _замок_рассказов = new();
@@ -124,11 +125,19 @@ public sealed class Округа : IУлицы
         о.участок?.Слушать(h, о);
         // знатоки: герой пришёл к ним сам — рассказ по ступеням. Наблюдатель
         // исполнения: дом не трогает, пишет только в округу
-        h.hooks.after_execute.Add((дом, npc, ключ, цель, _, _) =>
+        h.hooks.after_execute.Add((дом, npc, ключ, цель, _, итог) =>
         {
             if (string.Equals(npc.id, герой, StringComparison.Ordinal) && цель is NPC знаток
                 && ДРУЖЕСКИЕ.Contains(ключ))
                 о.Пришёл_к(дом, npc, знаток);
+            // лицом к лицу — познакомились (`Знакомство`): он к соседу или сосед к нему
+            if (итог == Исход.СДЕЛАНО && цель is NPC т && Знакомство.ЛИЦОМ.Contains(ключ))
+            {
+                if (string.Equals(npc.id, герой, StringComparison.Ordinal))
+                    о.Узнал(Знакомство.ИМЯ + т.id);
+                else if (string.Equals(т.id, герой, StringComparison.Ordinal))
+                    о.Узнал(Знакомство.ИМЯ + npc.id);
+            }
         });
         h.hooks.on_outing.Add((дом, npc, _, м, _) =>
         {
@@ -154,17 +163,28 @@ public sealed class Округа : IУлицы
 
     /// <summary>Что герой знает о мире: где промзона, где искать бункер.
     /// Узнаёт от знатоков; держится до конца жизни.</summary>
-    public IReadOnlyCollection<string> знания => _знания;
+    public IReadOnlyCollection<string> знания
+    {
+        get { lock (_замок_знаний) return _знания.ToList(); }
+    }
 
-    public bool Знает(string что) => _знания.Contains(что);
+    public bool Знает(string что)
+    {
+        lock (_замок_знаний)
+            return _знания.Contains(что);
+    }
 
-    public void Узнал(string что) => _знания.Add(что);
+    public void Узнал(string что)
+    {
+        lock (_замок_знаний)
+            _знания.Add(что);
+    }
 
     /// <summary>Что из узнанного переживёт эту жизнь (`Наследие.знания`):
     /// всё, что он знает о мире, и кто делает себе снегоступы — со слов
     /// самих мастеров. Кто отнял снегоступы у него — нет: в новой жизни
     /// того не было.</summary>
-    public IEnumerable<string> Помнит() => _знания.OrderBy(з => з, StringComparer.Ordinal);
+    public IEnumerable<string> Помнит() => знания.OrderBy(з => з, StringComparer.Ordinal);
 
     /// <summary>Вспомнить прошлые жизни: знания — как будто только что
     /// узнал; «снегоступы:кто» — что этот мастер делает их себе.</summary>
@@ -408,7 +428,7 @@ public sealed class Округа : IУлицы
             рассказано[кто] = н;
         return new()
         {
-            ["знания"] = Строки_(_знания),
+            ["знания"] = Строки_(знания),
             ["рассказано"] = рассказано,
             ["у_соседей"] = Строки_(_у_соседей),
             ["лишились"] = Строки_(_лишились),
@@ -430,7 +450,8 @@ public sealed class Округа : IУлицы
             foreach (var x in о[поле]!.AsArray())
                 куда.Add(x!.GetValue<string>());
         }
-        В(_знания, "знания");
+        lock (_замок_знаний)
+            В(_знания, "знания");
         _рассказано.Clear();
         foreach (var (кто, н) in о["рассказано"]!.AsObject())
             _рассказано[кто] = н!.GetValue<int>();

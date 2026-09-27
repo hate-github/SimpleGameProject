@@ -188,12 +188,13 @@ public sealed class Сеанс
     {
         var @out = new List<ЖилецНаПлане>();
         foreach (var п in дом.people.Значения.OrderBy(x => x.apt))
+            // номер квартиры план и так пишет: незнакомый — просто «сосед»
             @out.Add(new ЖилецНаПлане(
-                п.apt, п.id, п.@short, п.role, п.здесь(),
+                п.apt, п.id, Знакомство.Знает(дом, я, п) ? п.@short : Знакомство.Сосед(п), п.role, п.здесь(),
                 п.здесь() ? null : п.died_day,
                 п.здесь() ? null : п.cause,
-                !string.IsNullOrEmpty(п.living_with)
-                    ? дом.get(п.living_with!)?.@short : null));
+                !string.IsNullOrEmpty(п.living_with) && дом.get(п.living_with!) is NPC хозяин
+                    ? Знакомство.Как_зовут(дом, я, хозяин) : null));
         return @out;
     }
 
@@ -301,7 +302,7 @@ public sealed class Сеанс
             if (!о.здесь())
                 continue;
             @out.Add(new СоседВЗнании(
-                о.id, о.@short, о.apt,
+                о.id, Знакомство.Как_зовут(дом, п, о), о.apt,
                 п.believed(о.id, "еда"),
                 п.believed(о.id, "топливо"),
                 п.сведения_о(о.id).aware,

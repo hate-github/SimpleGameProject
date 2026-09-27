@@ -128,9 +128,6 @@ public partial class ДомУзел
               + "; следы на снегу — к нашему дому";
     }
 
-    /// <summary>Как герой называет соседа.</summary>
-    private static string Как_зовут(NPC p) => p.@short;
-
     /// <summary>Что ядро участка хочет сказать (слышал из камеры) — когда дом спит.</summary>
     private void Весть_участка()
     {
