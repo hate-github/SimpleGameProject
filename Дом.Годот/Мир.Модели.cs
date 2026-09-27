@@ -38,6 +38,7 @@ public partial class Мир
         ("res://модели/еда/Black bread.fbx", "full fresh", 0.22f, 90, 0.14f, 1),
         ("res://модели/еда/Canned condensed milk.fbx", "condensed milk unopen", 0.09f, 0, 0.115f, 2),
         ("res://модели/еда/potato.fbx", "1 kg fresh", 0.26f, 0, 0.28f, 1),
+        ("res://модели/еда/onion.fbx", "1 kg fresh", 0.24f, 0, 0.26f, 1),
     };
 
     /// <summary>Банки — то, что лежит в НЗ бункера.</summary>
