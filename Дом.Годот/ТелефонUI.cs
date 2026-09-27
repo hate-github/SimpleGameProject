@@ -1,4 +1,6 @@
-// Телефон (ГДД 19). Три приложения: мысли, чат подъезда и заметки.
+// Телефон (ГДД 19). Четыре приложения: мысли, чат подъезда, заметки
+// и сервисы — займы и доставка, пока город живёт обычной жизнью
+// (до метели; `ДомУзел.Сервисы`).
 //
 // Мысли — это вопрос дня: что приходит в голову сделать, по весу, как дом
 // его и собрал (порядок не трогается, вес показан). Мысли одного дела
@@ -44,6 +46,12 @@ public partial class ТелефонUI : PanelContainer
     private IReadOnlyList<string> _подсказки = System.Array.Empty<string>();
     private RichTextLabel _чат = null!;
     private RichTextLabel _заметки = null!;
+    private VBoxContainer? _сервисы;
+    private Label _сервисы_шапка = null!;
+
+    /// <summary>Что во вкладке «сервисы»: шапка (деньги, долги, заказ) и строки;
+    /// строка без дела — подпись раздела. Ставится корневым узлом.</summary>
+    public System.Func<(string шапка, IReadOnlyList<СтрокаОкна> строки)>? Сервисы_дай { get; set; }
     private TabContainer _вкладки = null!;
     private int _показано;                  // сколько реплик чата уже на экране
     private int _заметок = -1;              // сколько заметок нарисовано
@@ -109,6 +117,69 @@ public partial class ТелефонUI : PanelContainer
         Мысли_страница();
         _чат = Страница("чат");
         _заметки = Страница("заметки");
+        Сервисы_страница();
+    }
+
+    private void Сервисы_страница()
+    {
+        var прокрутка = new ScrollContainer
+        {
+            Name = "сервисы",
+            HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled,
+        };
+        _вкладки.AddChild(прокрутка);
+        var столбец = new VBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+        столбец.AddThemeConstantOverride("separation", 6);
+        прокрутка.AddChild(столбец);
+        _сервисы_шапка = new Label { AutowrapMode = TextServer.AutowrapMode.WordSmart };
+        _сервисы_шапка.AddThemeColorOverride("font_color", new Color("#e8d8a8"));
+        столбец.AddChild(_сервисы_шапка);
+        _сервисы = new VBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+        _сервисы.AddThemeConstantOverride("separation", 2);
+        столбец.AddChild(_сервисы);
+    }
+
+    /// <summary>Перерисовать «сервисы»: после каждого нажатия — деньги
+    /// и долги меняются.</summary>
+    public void Сервисы_обновить()
+    {
+        if (_сервисы is null)
+            return;
+        foreach (var узел in _сервисы.GetChildren())
+        {
+            _сервисы.RemoveChild(узел);
+            узел.QueueFree();
+        }
+        if (Сервисы_дай?.Invoke() is not { } дано)
+        {
+            _сервисы_шапка.Text = "сервисов нет";
+            return;
+        }
+        _сервисы_шапка.Text = дано.шапка;
+        foreach (var с in дано.строки)
+        {
+            if (с.сделать is not { } сделать)
+            {
+                var подпись = new Label { Text = с.текст, AutowrapMode = TextServer.AutowrapMode.WordSmart };
+                подпись.AddThemeColorOverride("font_color", new Color("#a8a294"));
+                _сервисы.AddChild(подпись);
+                continue;
+            }
+            var кнопка = new Button
+            {
+                Text = с.текст,
+                Disabled = !с.можно,
+                Alignment = HorizontalAlignment.Left,
+                FocusMode = Control.FocusModeEnum.None,
+                AutowrapMode = TextServer.AutowrapMode.WordSmart,
+            };
+            кнопка.Pressed += () =>
+            {
+                сделать();
+                Сервисы_обновить();
+            };
+            _сервисы.AddChild(кнопка);
+        }
     }
 
     private void Мысли_страница()
@@ -303,6 +374,7 @@ public partial class ТелефонUI : PanelContainer
     /// </summary>
     public void Обновить()
     {
+        Сервисы_обновить();
         if (Сеанс is not null)
         {
             var чат = Сеанс.Вида(ВидСтроки.ЧАТ);
