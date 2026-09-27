@@ -858,7 +858,13 @@ public partial class Мир : Node3D
         var порог = _петля.Position with { Y = герой.Y };
         // заваленную снаружи не открыть
         bool рядом = !Завалено && герой.DistanceTo(порог) < 2.2f;
+        float было = _створка;
         _створка = Mathf.MoveToward(_створка, рядом ? 1 : 0, (float)шаг * 2.2f);
+        // тронулась — скрипнула; встала на место — хлопнула
+        if (было <= 0.001f && _створка > 0.001f)
+            Звук_двери("дверь_открыть");
+        else if (было > 0.001f && _створка <= 0.001f)
+            Звук_двери("дверь_закрыть");
         // наружу, а не внутрь: открытая внутрь створка встала бы ровно
         // на порог, где и стоит тот, кто её открыл
         _петля.RotationDegrees = new Vector3(0, 95 * _створка, 0);
@@ -1119,9 +1125,11 @@ public partial class Мир : Node3D
             OmniRange = 5.0f,
         };
         AddChild(_огонь);
-        // пока топится, на печи греется вода
+        // пока топится, на печи греется вода и трещит огонь
         _кипение = Звуки.Точка(this, "кипение", Точка(с, lx, y + 0.8f, z),
                                громкость: -16f, размер: 1.2f, дальше_не: 9f, петля: true);
+        _треск_печи = Звуки.Точка(this, "огонь_2", Точка(с, lx, y + 0.45f, z),
+                                  громкость: -14f, размер: 1.2f, дальше_не: 9f, петля: true);
     }
 
     // Размеры квартиры. Местная система: `lx` — вглубь от лестницы,
@@ -1223,6 +1231,11 @@ public partial class Мир : Node3D
             if (что.топится) _кипение.Play();
             else _кипение.Stop();
         }
+        if (_треск_печи is not null && что.топится != _треск_печи.Playing)
+        {
+            if (что.топится) _треск_печи.Play((float)GD.RandRange(0.0, 50.0));
+            else _треск_печи.Stop();
+        }
         if (_лампочка is not null)
             _лампочка.LightEnergy = что.свет ? 2.4f : 0.0f;
 
@@ -1263,6 +1276,34 @@ public partial class Мир : Node3D
     private StaticBody3D? _печь;
     private OmniLight3D? _огонь;
     private AudioStreamPlayer3D? _кипение;
+    private AudioStreamPlayer3D? _треск_печи;
+
+    // печки участка и убежища: трещат, пока топятся (`Треск`)
+    private readonly Dictionary<string, AudioStreamPlayer3D> _треск = new(StringComparer.Ordinal);
+
+    /// <summary>
+    /// Печка <paramref name="где"/> («участок», «бункер») топится — трещит
+    /// огонь петлёй у неё; погасла — тихо. Печки ещё нет в мире — ничего.
+    /// </summary>
+    public void Треск(string где, Vector3? точка, bool горит)
+    {
+        if (_треск.TryGetValue(где, out var п) && !IsInstanceValid(п))
+        {
+            _треск.Remove(где);
+            п = null;
+        }
+        if (п is null)
+        {
+            if (!горит || точка is not Vector3 т)
+                return;
+            п = Звуки.Точка(this, "огонь_2", т, громкость: -12f, размер: 1.5f, дальше_не: 10f, петля: true);
+            _треск[где] = п;
+        }
+        if (горит && !п.Playing)
+            п.Play((float)GD.RandRange(0.0, 50.0));
+        else if (!горит && п.Playing)
+            п.Stop();
+    }
     private OmniLight3D? _лампочка;
     private List<MeshInstance3D>? _доски;
     private readonly List<List<Node3D>> _полки = new();
@@ -1605,6 +1646,22 @@ public partial class Мир : Node3D
         });
     }
 
+
+    /// <summary>Дверь подъезда открылась или закрылась — звук у неё.</summary>
+    private void Звук_двери(string имя)
+    {
+        if (_петля is null || Звуки.Взять(имя) is not { } поток)
+            return;
+        var п = Звуки.Точка(this, имя, _петля.Position + new Vector3(0, 1.1f, 0),
+                            громкость: -4f, размер: 2.5f, дальше_не: 18f);
+        Звуки.Пустить(п, поток, -4f, 0f);
+    }
+
+    /// <summary>Где стоит фигура соседа — или null: на лестнице его не видно.</summary>
+    public Vector3? Где_сосед(string id)
+        => _люди.TryGetValue(id, out var с) && IsInstanceValid(с) && с.Visible
+            ? с.GlobalPosition + new Vector3(0, 1.5f, 0)
+            : null;
 
     /// <summary>Где стоят у этой двери — то место, откуда в неё стучат
     /// и откуда из неё слышно. Ничего нет — значит такой двери в доме

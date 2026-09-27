@@ -4,7 +4,8 @@
 // рыжий свет, который дрожит, и столб дыма над крышей видно издали
 // и сквозь метель. Горит — сильно; сгорело — тонкая струйка, без света.
 // Заменить на настоящий огонь — поменять этот узел, а не того, кто
-// решает, что горит.
+// решает, что горит. Пока горит — слышно: огонь с ветром петлёй
+// (запись автора), издалека, как всякое здание за валом.
 
 using Godot;
 
@@ -17,6 +18,7 @@ public partial class Пожар : Node3D
     private OmniLight3D _свет = null!;
     private GpuParticles3D _дым = null!;
     private Сила _сила = Сила.НЕТ;
+    private AudioStreamPlayer3D? _гул;
     private double _часы;
     private float _энергия;
 
@@ -93,6 +95,8 @@ public partial class Пожар : Node3D
             VisibilityAabb = new Aabb(new Vector3(-30, -2, -30), new Vector3(60, 60, 60)),
         };
         AddChild(_дым);
+        _гул = Звуки.Точка(this, "пожар", рамка.GetCenter(), громкость: -2f,
+                           размер: Mathf.Max(6f, ширина), дальше_не: 90f, петля: true);
         Как(_сила);
     }
 
@@ -105,6 +109,13 @@ public partial class Пожар : Node3D
         _свет.Visible = сила == Сила.ГОРИТ;
         _дым.Emitting = сила != Сила.НЕТ;
         _дым.Amount = сила == Сила.ГОРИТ ? 48 : 12;
+        if (_гул is not null && (сила == Сила.ГОРИТ) != _гул.Playing)
+        {
+            if (сила == Сила.ГОРИТ)
+                _гул.Play((float)GD.RandRange(0.0, 60.0));
+            else
+                _гул.Stop();
+        }
     }
 
     public override void _Process(double delta)

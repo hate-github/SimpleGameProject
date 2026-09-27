@@ -68,7 +68,8 @@ public sealed record Долгое(string слово, double секунд, System
                             string? в_руках = null,
                             Дом.Ядро.МиниИгра? мини = null,
                             double зона = 0.22,
-                            bool смотреть = true);
+                            bool смотреть = true,
+                            System.Action? щелчок = null);
 
 public partial class ДелоUI : Control
 {
@@ -443,6 +444,7 @@ public partial class ДелоUI : Control
         if (e is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left })
         {
             _щелчки.Add(_прошло);
+            _дело.щелчок?.Invoke();          // удар в такт — звуком (`Слух.Щелчок`)
             GetViewport().SetInputAsHandled();
         }
     }
