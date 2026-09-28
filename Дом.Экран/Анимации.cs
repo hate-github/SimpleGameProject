@@ -16,6 +16,15 @@
 // Что когда играть, решает этот слой, без движка, — и потому проверяется
 // из консоли: держат — Restrained, ранен — Injured, идёт дело — его
 // движение с его инструментом, идёт — Walk, стоит — Idle.
+//
+// **Клипы людей пришли из Mixamo** (28.09.2026, `Дом.Годот/модели/люди`):
+// `ЛЮДИ` — какой файл каким клипом игры стал. Один файл бывает несколькими
+// клипами: удар сверху — это и топор, и дубина, и удар по замку. Вверх
+// по лестнице — свой шаг (`Walk_Stairs`): лестница здесь «предмет»
+// в имени клипа, и нет клипа — идёт обычный шаг. Раздел консоли «люди»
+// сверяет, что имя клипа — движение из списка (с предметом из данных
+// или лестницей), что файл лежит и что всё, что делает сосед, играется
+// клипом, а не заглушкой.
 
 using Дом.Ядро;
 
@@ -38,8 +47,43 @@ public sealed record Движение(Анимация что, string? ассе�
     public bool разовое => что is Анимация.Interact or Анимация.Equip or Анимация.Unequip;
 }
 
+/// <summary>Клип человека: имя клипа игры, файл Mixamo без расширения
+/// и шаг ли это — клип ходьбы, из которого вынимается ход вперёд
+/// (фигуру ведёт навигация) и по которому подгоняется скорость ног.</summary>
+public sealed record КлипЧеловека(string клип, string файл, bool шаг = false);
+
 public static class Анимации
 {
+    /// <summary>Вверх по лестнице: «предмет» в имени клипа шага
+    /// (`Walk_Stairs`, `Run_Stairs`).</summary>
+    public const string ЛЕСТНИЦА = "Stairs";
+
+    /// <summary>Клипы людей из Mixamo: имя клипа игры ← файл.</summary>
+    public static readonly IReadOnlyList<КлипЧеловека> ЛЮДИ = new КлипЧеловека[]
+    {
+        new("Idle", "Idle"),
+        new("Walk", "Walking", шаг: true),
+        new("Run", "Running", шаг: true),
+        new($"Walk_{ЛЕСТНИЦА}", "Ascending Stairs", шаг: true),
+        new($"Run_{ЛЕСТНИЦА}", "Running Up Stairs", шаг: true),
+        new("Injured", "Injured Walking", шаг: true),
+        // руками — кулаком; стволом — с плеча; прочим — сверху вниз
+        new("Attack", "Punching"),
+        new("Attack_Rifle", "Firing Rifle"),
+        new("Attack_Shotgun", "Firing Rifle"),
+        new("Attack_Pistol", "Firing Rifle"),
+        new("Attack_Axe", "Standing Melee Attack Downward"),
+        new("Attack_Club", "Standing Melee Attack Downward"),
+        new("Attack_Knife", "Standing Melee Attack Downward"),
+        new("Attack_Crowbar", "Standing Melee Attack Downward"),
+        new("Attack_Hammer", "Standing Melee Attack Downward"),
+        // по замку и разбор квартиры — тем же ударом сверху
+        new("BreakLock", "Standing Melee Attack Downward"),
+        new("UseTool", "Standing Melee Attack Downward"),
+        // полез внутрь: ящики, чужой шкаф, тело
+        new("Loot", "Looking Through Files Low"),
+    };
+
     /// <summary>Какие клипы искать для движения — по порядку: с предметом,
     /// потом без него.</summary>
     public static IReadOnlyList<string> Клипы(Движение д)

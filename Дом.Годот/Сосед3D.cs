@@ -16,6 +16,12 @@
 //
 // Руки и движения — те же узлы, что у героя (`Руки3D`, `Аниматор`):
 // идёт — Walk, спешит на стук — Run, стоит — по делу.
+//
+// С 28.09.2026 у соседа тело — модель автора со скелетом и клипами Mixamo
+// (`Люди`): пальто и лицо — цветами по маске, то, что в руках, — в правой
+// кисти (гнездо на кости), по лестнице вверх — свой шаг, и там медленнее:
+// по ступеням хрущёвки не разбежишься. Ноги идут со скоростью фигуры
+// (`Аниматор.Скорость`). Нет модели — капсула, как было.
 
 using Godot;
 using Дом.Экран;
@@ -43,6 +49,8 @@ public partial class Сосед3D : StaticBody3D
 
     private const float ШАГ = 1.25f;       // м/с — по лестнице хрущёвки не разбежишься
     private const float БЕГОМ = 2.6f;
+    private const float НА_ЛЕСТНИЦЕ = 0.6f; // доля скорости на ступенях
+    private const float КРУТО = 0.35f;     // подъём к шагу по горизонтали — это уже лестница
 
     public static Сосед3D Собрать(string id, string имя, Color пальто, Color лицо)
     {
@@ -50,27 +58,43 @@ public partial class Сосед3D : StaticBody3D
         // корпус — то, что качается на ходу и клонится от ран
         var корпус = new Node3D { Name = "корпус" };
         с.AddChild(корпус);
-        корпус.AddChild(new MeshInstance3D
+        // правая рука: тот же узел, что у героя у камеры; предмет в ней
+        // повёрнут так же, как держала его капсула
+        var рука = new Transform3D(Basis.FromEuler(new Vector3(-130, 0, 0) * (Mathf.Pi / 180f)),
+                                   new Vector3(0.32f, 0.92f, -0.12f));
+        с.руки = new Руки3D { Name = "руки" };
+        if (Люди.Собрать(пальто, лицо) is { } модель)
         {
-            Mesh = new CapsuleMesh { Height = 1.55f, Radius = 0.26f },
-            MaterialOverride = new StandardMaterial3D { AlbedoColor = пальто, Roughness = 0.95f },
-            Position = new Vector3(0, 0.78f, 0),
-        });
-        корпус.AddChild(new MeshInstance3D
+            корпус.AddChild(модель.корень);
+            // в ладонь: чуть ниже запястья, в осях фигуры; дальше — за костью
+            var кисть = Люди.Кисть_в_покое(модель);
+            рука.Origin = кисть.Origin + new Vector3(0, -0.06f, 0);
+            модель.кисть.AddChild(с.руки);
+            с.руки.Transform = кисть.AffineInverse() * рука;
+            с.аниматор = new Аниматор
+            {
+                Name = "аниматор", Рука = с.руки, Тело = корпус,
+                Проигрыватель = модель.проигрыватель, Шаг_клипа = Люди.Шаг,
+            };
+        }
+        else
         {
-            Mesh = new SphereMesh { Height = 0.24f, Radius = 0.12f },
-            MaterialOverride = new StandardMaterial3D { AlbedoColor = лицо, Roughness = 0.9f },
-            Position = new Vector3(0, 1.66f, 0),
-        });
-        // правая рука: тот же узел, что у героя у камеры
-        с.руки = new Руки3D
-        {
-            Name = "руки",
-            Position = new Vector3(0.32f, 0.92f, -0.12f),
-            RotationDegrees = new Vector3(-130, 0, 0),
-        };
-        корпус.AddChild(с.руки);
-        с.аниматор = new Аниматор { Name = "аниматор", Рука = с.руки, Тело = корпус };
+            корпус.AddChild(new MeshInstance3D
+            {
+                Mesh = new CapsuleMesh { Height = 1.55f, Radius = 0.26f },
+                MaterialOverride = new StandardMaterial3D { AlbedoColor = пальто, Roughness = 0.95f },
+                Position = new Vector3(0, 0.78f, 0),
+            });
+            корпус.AddChild(new MeshInstance3D
+            {
+                Mesh = new SphereMesh { Height = 0.24f, Radius = 0.12f },
+                MaterialOverride = new StandardMaterial3D { AlbedoColor = лицо, Roughness = 0.9f },
+                Position = new Vector3(0, 1.66f, 0),
+            });
+            корпус.AddChild(с.руки);
+            с.руки.Transform = рука;
+            с.аниматор = new Аниматор { Name = "аниматор", Рука = с.руки, Тело = корпус };
+        }
         с.AddChild(с.аниматор);
         с._форма = new CollisionShape3D
         {
@@ -141,7 +165,15 @@ public partial class Сосед3D : StaticBody3D
     {
         if (!идёт)
             return;
-        float шаг = (_бегом ? БЕГОМ : ШАГ) * (float)delta;
+        // ступени: вверх — свой шаг, и вверх и вниз — медленнее
+        var впереди = _путь[_точка] - Position;
+        float по_земле = new Vector2(впереди.X, впереди.Z).Length();
+        bool лестница = Mathf.Abs(впереди.Y) > КРУТО * Mathf.Max(по_земле, 0.05f);
+        float скорость = (_бегом ? БЕГОМ : ШАГ) * (лестница ? НА_ЛЕСТНИЦЕ : 1f);
+        аниматор.Играть(new Движение(_бегом ? Анимация.Run : Анимация.Walk,
+                                      лестница && впереди.Y > 0 ? Анимации.ЛЕСТНИЦА : null));
+        аниматор.Скорость(скорость);
+        float шаг = скорость * (float)delta;
         while (шаг > 0 && _точка < _путь.Length)
         {
             var к = _путь[_точка] - Position;
