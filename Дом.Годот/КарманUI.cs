@@ -104,9 +104,8 @@ public partial class КарманUI : PanelContainer
         var фон = new StyleBoxFlat { BgColor = new Color("#12110f") };
         AddThemeStyleboxOverride("panel", фон);
 
-        var середина = new CenterContainer();
-        середина.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-        AddChild(середина);
+        // не влезло в экран — листается (`Прокрутка`)
+        var середина = Прокрутка.По_центру(this);
 
         var столбец = new VBoxContainer { CustomMinimumSize = new Vector2(760, 0) };
         столбец.AddThemeConstantOverride("separation", 8);

@@ -31,9 +31,8 @@ public partial class ПоходUI : PanelContainer
         SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
         AddThemeStyleboxOverride("panel",
             new StyleBoxFlat { BgColor = new Color(0.07f, 0.065f, 0.06f, 0.92f) });
-        var середина = new CenterContainer();
-        середина.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-        AddChild(середина);
+        // не влезло в экран — листается (`Прокрутка`)
+        var середина = Прокрутка.По_центру(this);
         var столбец = new VBoxContainer { CustomMinimumSize = new Vector2(620, 0) };
         столбец.AddThemeConstantOverride("separation", 12);
         середина.AddChild(столбец);
