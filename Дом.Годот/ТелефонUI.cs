@@ -30,6 +30,14 @@
 // Чего здесь нет и не будет: возможности написать самому. Игрок в чат
 // не пишет — пока в симуляции нет действия «написать в чат», приделать
 // поле ввода значило бы приделать кнопку, которая ничего не делает.
+//
+// **Телефон в руке** (просьба автора, 28.09.2026: «чтобы доставался телефон,
+// а не вылезало окно»). Это не панель в углу, а сам телефон: корпус,
+// экран, строка состояния с часами героя; по клавише он выезжает снизу
+// справа — как из кармана в правую руку — и уезжает вниз, когда его убрали.
+// Пока он в руке, в руке нет ничего другого (`ДомУзел` прячет предмет).
+// Что «открыт» — отдельно от того, виден ли: убранный телефон ещё уезжает
+// вниз, а мышь и время уже вернулись миру.
 
 using Godot;
 using Дом.Экран;
@@ -53,6 +61,8 @@ public partial class ТелефонUI : PanelContainer
     /// строка без дела — подпись раздела. Ставится корневым узлом.</summary>
     public System.Func<(string шапка, IReadOnlyList<СтрокаОкна> строки)>? Сервисы_дай { get; set; }
     private TabContainer _вкладки = null!;
+    private Label _время = null!;
+    private Tween? _ход;
     private int _показано;                  // сколько реплик чата уже на экране
     private int _заметок = -1;              // сколько заметок нарисовано
     private readonly HashSet<string> _раскрыто = new(System.StringComparer.Ordinal);   // какие дела раскрыты
@@ -106,13 +116,73 @@ public partial class ТелефонUI : PanelContainer
     /// закрепляет её на экране.</summary>
     public System.Action<int, string>? Выбрано { get; set; }
 
+    /// <summary>Часы героя для строки состояния. Ставится корневым узлом.</summary>
+    public System.Func<string>? Часы_дай { get; set; }
+
+    /// <summary>Телефон убран и уехал вниз — корню: вернуть мышь миру.</summary>
+    public System.Action? Спрятан { get; set; }
+
+    /// <summary>Телефон в руке. Уезжающий вниз — уже не в руке.</summary>
+    public bool открыт { get; private set; }
+
+    /// <summary>Размер телефона — по экрану 1280×800: в правой руке, не на весь экран.</summary>
+    public static readonly Vector2 РАЗМЕР = new(340, 640);
+
+    private const float ЕХАТЬ = 0.22f;       // секунд — выехать или уехать
+
     public override void _Ready()
     {
+        Visible = false;
+        Size = РАЗМЕР;
+        CustomMinimumSize = РАЗМЕР;
+        // шрифт экрана мельче, чем у окон: телефон узкий, а строк много
+        Theme = new Theme { DefaultFontSize = 14 };
+        // корпус: тёмный, скруглённый; сверху динамик, снизу полоска —
+        // рисует `_Draw` в полях корпуса
+        AddThemeStyleboxOverride("panel", new StyleBoxFlat
+        {
+            BgColor = new Color("#131313"),
+            BorderColor = new Color("#34322e"),
+            BorderWidthLeft = 3, BorderWidthRight = 3, BorderWidthTop = 3, BorderWidthBottom = 3,
+            CornerRadiusTopLeft = 34, CornerRadiusTopRight = 34,
+            CornerRadiusBottomLeft = 34, CornerRadiusBottomRight = 34,
+            ContentMarginLeft = 11, ContentMarginRight = 11,
+            ContentMarginTop = 30, ContentMarginBottom = 26,
+            ShadowColor = new Color(0, 0, 0, 0.55f),
+            ShadowSize = 14,
+        });
+        var экран = new PanelContainer { SizeFlagsVertical = Control.SizeFlags.ExpandFill };
+        экран.AddThemeStyleboxOverride("panel", new StyleBoxFlat
+        {
+            BgColor = new Color("#1c1b19"),
+            CornerRadiusTopLeft = 16, CornerRadiusTopRight = 16,
+            CornerRadiusBottomLeft = 16, CornerRadiusBottomRight = 16,
+            ContentMarginLeft = 8, ContentMarginRight = 8,
+            ContentMarginTop = 6, ContentMarginBottom = 8,
+        });
+        AddChild(экран);
+        var столбец = new VBoxContainer();
+        столбец.AddThemeConstantOverride("separation", 4);
+        экран.AddChild(столбец);
+
+        // строка состояния: часы героя слева, сеть и заряд справа
+        var состояние = new HBoxContainer();
+        _время = new Label();
+        _время.AddThemeColorOverride("font_color", new Color("#e0dac8"));
+        _время.AddThemeFontSizeOverride("font_size", 13);
+        состояние.AddChild(_время);
+        состояние.AddChild(new Control { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill });
+        var сеть = new Label { Text = "▂▄▆  ▮▮▮▯" };
+        сеть.AddThemeColorOverride("font_color", new Color("#8e897c"));
+        сеть.AddThemeFontSizeOverride("font_size", 11);
+        состояние.AddChild(сеть);
+        столбец.AddChild(состояние);
+
         _вкладки = new TabContainer
         {
             SizeFlagsVertical = Control.SizeFlags.ExpandFill,
         };
-        AddChild(_вкладки);
+        столбец.AddChild(_вкладки);
 
         Мысли_страница();
         _чат = Страница("чат");
@@ -232,13 +302,15 @@ public partial class ТелефонUI : PanelContainer
             _мысли_шапка.Text = "время идёт — мысли придут, когда будет пора решать";
             return;
         }
-        if (в.вопрос != Вопрос.ЧТО_ДЕЛАТЬ)
+        if (в.вопрос is not (Вопрос.ЧТО_ДЕЛАТЬ or Вопрос.НОЧЬ))
         {
             _мысли_шапка.Text = "сейчас не до раздумий — ответь на то, что спрашивают";
             return;
         }
-        _мысли_шапка.Text = в.заголовок.Split('\n')[0]
-                            + " — нажми мысль, чтобы понять, где это делается";
+        // ночь — тоже мысли (`ДомУзел.Сон`): где лечь и чем заняться до утра
+        _мысли_шапка.Text = в.вопрос == Вопрос.НОЧЬ
+            ? "ночь — спать ложатся в постель; нажми мысль, чтобы понять, где это"
+            : в.заголовок.Split('\n')[0] + " — нажми мысль, чтобы понять, где это делается";
         // дела — в порядке их лучшей мысли; мысли внутри — как были, по весу
         var дела = new List<(string ключ, List<int> номера)>();
         for (int i = 0; i < в.варианты.Count; i++)
@@ -317,6 +389,79 @@ public partial class ТелефонUI : PanelContainer
 
     /// <summary>Открыть телефон на мыслях.</summary>
     public void К_мыслям() => _вкладки.CurrentTab = 0;
+
+    /// <summary>Открыта ли вкладка мыслей.</summary>
+    public bool на_мыслях => _вкладки.CurrentTab == 0;
+
+    /// <summary>Достать телефон: выезжает снизу в правую руку.</summary>
+    public void Достать()
+    {
+        открыт = true;
+        _ход?.Kill();
+        var экран = GetViewportRect().Size;
+        Size = РАЗМЕР;
+        float x = экран.X - РАЗМЕР.X - Mathf.Max(24f, экран.X * 0.09f);
+        float в_руке = экран.Y - РАЗМЕР.Y - 14f;
+        if (!Visible)
+            Position = new Vector2(x, экран.Y + 16f);
+        Position = Position with { X = x };
+        Visible = true;
+        Часы();
+        _ход = CreateTween().SetEase(Tween.EaseType.Out).SetTrans(Tween.TransitionType.Cubic);
+        _ход.TweenProperty(this, "position:y", в_руке, ЕХАТЬ);
+    }
+
+    /// <summary>Убрать телефон: уезжает вниз; <paramref name="сразу"/> —
+    /// без дороги (другой экран поверх).</summary>
+    public void Спрятать(bool сразу = false)
+    {
+        if (!открыт && !Visible)
+            return;
+        открыт = false;
+        _ход?.Kill();
+        if (сразу)
+        {
+            Visible = false;
+            Спрятан?.Invoke();
+            return;
+        }
+        var экран = GetViewportRect().Size;
+        _ход = CreateTween().SetEase(Tween.EaseType.In).SetTrans(Tween.TransitionType.Cubic);
+        _ход.TweenProperty(this, "position:y", экран.Y + 16f, ЕХАТЬ);
+        _ход.TweenCallback(Callable.From(() =>
+        {
+            if (!открыт)
+                Visible = false;
+            Спрятан?.Invoke();
+        }));
+    }
+
+    public override void _Process(double delta)
+    {
+        if (!Visible)
+            return;
+        Часы();
+        // Подпись с переносом строк, пока её ширина ещё ноль, просит высоту
+        // в строку на слово, и корпус вырастает под неё — а сам потом не
+        // сжимается (проба: 1808 точек вместо 640). Каждый кадр — свой
+        // размер; меньше настоящего минимума Godot всё равно не даст
+        if (Size != РАЗМЕР)
+            Size = РАЗМЕР;
+    }
+
+    private void Часы() => _время.Text = Часы_дай?.Invoke() ?? "";
+
+    /// <summary>Динамик сверху и полоска снизу — в полях корпуса.</summary>
+    public override void _Draw()
+    {
+        var тёмное = new Color("#2a2826");
+        var динамик = new StyleBoxFlat { BgColor = тёмное };
+        динамик.SetCornerRadiusAll(3);
+        динамик.Draw(GetCanvasItem(), new Rect2(Size.X / 2 - 34, 13, 68, 6));
+        var полоска = new StyleBoxFlat { BgColor = new Color("#4a4740") };
+        полоска.SetCornerRadiusAll(2);
+        полоска.Draw(GetCanvasItem(), new Rect2(Size.X / 2 - 44, Size.Y - 15, 88, 4));
+    }
 
     private void Выбрать(int i)
     {
