@@ -202,6 +202,35 @@ public partial class Герой : CharacterBody3D
 		}
 	}
 
+	private double _стоит;          // сколько секунд жмут ход, а тело ни с места
+
+	/// <summary>
+	/// Застрял: ход жмут, а тело полсекунды не сдвинулось ни на миллиметр,
+	/// и сдвинуться некуда ни в одну сторону — капсулу зажала тонкая
+	/// двусторонняя форма (порог гаража, 30.09.2026: автор стоял у выхода,
+	/// пока не вышел из игры). Тогда — на два сантиметра вверх: этого хватает,
+	/// чтобы капсула вышла из формы, а тяжесть вернёт её на пол. Упёрся
+	/// в стену — не застрял: назад или вбок путь есть, и ничего не делается.
+	/// </summary>
+	private void Выбраться(double delta, bool жмут, Vector3 до)
+	{
+		var сдвиг = GlobalPosition - до;
+		if (!жмут || new Vector2(сдвиг.X, сдвиг.Z).Length() > 0.001f)
+		{
+			_стоит = 0;
+			return;
+		}
+		if ((_стоит += delta) < 0.5)
+			return;
+		_стоит = 0;
+		foreach (var к in new[] { Vector3.Forward, Vector3.Back, Vector3.Left, Vector3.Right })
+			if (!TestMove(GlobalTransform, к * 0.05f))
+				return;                                // есть куда — не застрял
+		GlobalPosition += Vector3.Up * 0.02f;
+		GD.Print($"[застрял] {GlobalPosition.X:F2} {GlobalPosition.Y:F2} {GlobalPosition.Z:F2}: "
+				 + "сдвинуться некуда ни в одну сторону — поднял на 2 см");
+	}
+
 	public override void _PhysicsProcess(double delta)
 	{
 		_часы += delta;
@@ -210,9 +239,9 @@ public partial class Герой : CharacterBody3D
 		var v = Velocity;
 		v.Y -= 12.0f * (float)delta;                   // тяжесть
 
+		var куда = Vector2.Zero;
 		if (Свободен && !Скован)
 		{
-			var куда = Vector2.Zero;
 			if (Управление.Зажато(Клавиши.ВПЕРЁД)) куда.Y -= 1;
 			if (Управление.Зажато(Клавиши.НАЗАД)) куда.Y += 1;
 			if (Управление.Зажато(Клавиши.ВЛЕВО)) куда.X -= 1;
@@ -235,6 +264,7 @@ public partial class Герой : CharacterBody3D
 		Velocity = v;
 		UpDirection = Vector3.Up;
 		FloorMaxAngle = Mathf.DegToRad(60);            // по ступеням лезем сами
+		var до = GlobalPosition;
 		MoveAndSlide();
 
 		// Пол под ногами — тоже касание, и в списке он всегда. Помеха —
@@ -252,6 +282,8 @@ public partial class Герой : CharacterBody3D
 				Помеха = Помеха.Length == 0 ? кто.Name.ToString()
 										   : Помеха + "," + кто.Name;
 		}
+
+		Выбраться(delta, куда != Vector2.Zero, до);
 
 		// шаг — на каждые ШАГ_ДЛИНА пути по полу; тронулся — первый почти сразу
 		float по_земле = new Vector2(Velocity.X, Velocity.Z).Length();
