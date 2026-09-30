@@ -332,6 +332,11 @@ public static partial class Действия
         else if (string.Equals(key, "кладовая", StringComparison.Ordinal))
         {
             var к = target as Кладовая;
+            if (к is not null && Взлом.Застанет(h, npc, к))
+            {
+                mark(h, npc, key, target);
+                return Исход.СОРВАНО;   // у замка бьёт герой — пришедший его застал
+            }
             if (к is null || к.пусто())
             {
                 mark(h, npc, key, target);
@@ -342,6 +347,11 @@ public static partial class Действия
         else if (string.Equals(key, "вскрыть_кладовую", StringComparison.Ordinal))
         {
             var к = target as Кладовая;
+            if (к is not null && Взлом.Застанет(h, npc, к))
+            {
+                mark(h, npc, key, target);
+                return Исход.СОРВАНО;   // у замка бьёт герой — при нём замок не сорвать
+            }
             if (к is null || к.пусто() || h.есть_ключ(npc, к))
             {
                 mark(h, npc, key, target);
