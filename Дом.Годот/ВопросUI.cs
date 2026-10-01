@@ -37,6 +37,14 @@
 // разговор и о чём, понять было нельзя. Теперь сверху — кто перед тобой
 // («Лида, кв.9»), под ним — что происходит и о чём спрашивают, а ответы
 // подписаны словами (`Дом.Экран.Разговор`). Порядок и вес — прежние.
+//
+// **Лицо** (просьба автора 01.10.2026: «при диалоге — окно, как на
+// скриншоте, но в стиле игры»). Есть собеседник и у него есть лицо
+// (`ПортретUI`, `data/лица.json`) — окно становится разговором: слева
+// лицо в рамке, справа кто и что говорит, ниже ответы, и стоит оно внизу
+// экрана, чтобы сосед в дверях оставался виден. Сверху — тонкая полоса
+// цвета вести: так разговор отличается от вопроса без собеседника, который
+// по-прежнему посередине.
 
 using Godot;
 using Дом.Экран;
@@ -52,6 +60,9 @@ public partial class ВопросUI : PanelContainer
     private Сцена? _сцена;
     private ScrollContainer _окно = null!;
     private VBoxContainer _кнопки = null!;
+    private ПортретUI _портрет = null!;
+    private StyleBoxFlat _рамка = null!, _рамка_разговора = null!;
+    private bool _разговор;
     private System.Action<int>? _ответить;
     private ВопросИгроку? _текущий;
 
@@ -66,7 +77,7 @@ public partial class ВопросUI : PanelContainer
     {
         Visible = false;
         MouseFilter = MouseFilterEnum.Stop;
-        AddThemeStyleboxOverride("panel", new StyleBoxFlat
+        _рамка = new StyleBoxFlat
         {
             BgColor = new Color(0.07f, 0.065f, 0.06f, 0.94f),
             BorderColor = new Color("#8a8474"),
@@ -78,11 +89,26 @@ public partial class ВопросUI : PanelContainer
             ContentMarginRight = 16,
             ContentMarginTop = 12,
             ContentMarginBottom = 12,
-        });
+        };
+        // разговор: та же рамка, плотнее, и полоса цвета вести сверху
+        _рамка_разговора = (StyleBoxFlat)_рамка.Duplicate();
+        _рамка_разговора.BgColor = new Color(0.06f, 0.055f, 0.05f, 0.97f);
+        _рамка_разговора.BorderColor = new Color("#d8b070");
+        _рамка_разговора.BorderWidthTop = 3;
+        _рамка_разговора.BorderWidthLeft = 0;
+        _рамка_разговора.BorderWidthRight = 0;
+        _рамка_разговора.BorderWidthBottom = 0;
+        _рамка_разговора.ContentMarginTop = 14;
+        AddThemeStyleboxOverride("panel", _рамка);
 
-        var столбец = new VBoxContainer();
+        var ряд = new HBoxContainer();
+        ряд.AddThemeConstantOverride("separation", 18);
+        AddChild(ряд);
+        _портрет = new ПортретUI();
+        ряд.AddChild(_портрет);
+        var столбец = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
         столбец.AddThemeConstantOverride("separation", 8);
-        AddChild(столбец);
+        ряд.AddChild(столбец);
 
         _заголовок = new Label { AutowrapMode = TextServer.AutowrapMode.WordSmart };
         _заголовок.AddThemeFontSizeOverride("font_size", 20);
@@ -121,12 +147,16 @@ public partial class ВопросUI : PanelContainer
         _сцена = сцена;
         _ответить = ответить;
         Visible = в.вопрос is not (Вопрос.ЧТО_ДЕЛАТЬ or Вопрос.НОЧЬ);
+        // есть собеседник с лицом — это разговор: лицо слева, окно внизу
+        _разговор = Visible && _портрет.Показать(в.с_кем);
+        AddThemeStyleboxOverride("panel", _разговор ? _рамка_разговора : _рамка);
         Разложить();
     }
 
     public void Убрать()
     {
         Visible = false;
+        _разговор = false;
         _текущий = null;
         _сцена = null;
         _ответить = null;
@@ -168,18 +198,19 @@ public partial class ВопросUI : PanelContainer
         Лечь();
     }
 
-    /// <summary>Посередине экрана; высота — по числу вариантов, но не выше
-    /// экрана.</summary>
+    /// <summary>Посередине экрана, а разговор — внизу и шире; высота —
+    /// по числу вариантов, но не выше экрана.</summary>
     private void Лечь()
     {
         var экран = GetParentControl()?.Size ?? GetViewportRect().Size;
         int строк = _кнопки.GetChildCount();
-        float ширина = Mathf.Min(760, экран.X * 0.62f);
-        float список = Mathf.Min(экран.Y * 0.6f, строк * ВЫСОТА_КНОПКИ);
+        float ширина = _разговор ? Mathf.Min(1000, экран.X * 0.8f) : Mathf.Min(760, экран.X * 0.62f);
+        float список = Mathf.Min(экран.Y * (_разговор ? 0.42f : 0.6f), строк * ВЫСОТА_КНОПКИ);
         _окно.CustomMinimumSize = new Vector2(0, список);
         float высота = Mathf.Min(экран.Y - 80, GetCombinedMinimumSize().Y);
         Size = new Vector2(ширина, высота);
-        Position = new Vector2((экран.X - ширина) / 2, (экран.Y - высота) / 2);
+        Position = new Vector2((экран.X - ширина) / 2,
+                               _разговор ? экран.Y - высота - 28 : (экран.Y - высота) / 2);
     }
 
     public override void _Process(double delta)
