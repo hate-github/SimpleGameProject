@@ -18,10 +18,17 @@
 //   · все клипы — петлёй: состояние длится, пока длится дело;
 //   · рост — 1.75 м по скелету в покое;
 //   · лицом в −Z, как ходит фигура соседа; Mixamo ставит лицом в +Z;
+//   · покой скелета бывает развёрнут: в файле с курткой (30.09) он стоял лицом
+//     в +Z, в файле с одеждой (02.10, сохранён из Blender) — в +X, как привязка.
+//     Клипы задают повороты костей целиком, и на ходу тело смотрит одинаково,
+//     а покой — нет; где покой нужен (предмет в кисти), он сперва
+//     поворачивается вокруг вертикали лицом в +Z (`Лицом_вперёд`);
 //   · краска — по зонам и материалам (`Дом.Экран.Тела`): зона тела — цветом
-//     соседа для неё, серое у вещи — цветом его пальто, цветное — как у автора.
-//     Цвета соседа — `instance uniform`, сетки и материалы — одни на всех.
-//     Кофта (торс и руки) под верхней вещью вынута из сетки тела.
+//     соседа для неё, серое у вещи — цветом соседа для этой вещи (пальто,
+//     брюки, обувь, шапка, перчатки), цветное — как у автора. Цвета соседа —
+//     `instance uniform`, сетки и материалы — одни на всех; шейдер собирается
+//     из списка красок, и новая краска — строка в `Тела.Униформа`.
+//     Зоны тела под одеждой (`ВещьТела.прячет`) вынуты из сетки тела.
 // Нет файлов — null, и сосед остаётся капсулой: без модели игра идёт.
 
 using Godot;
@@ -44,8 +51,8 @@ public static class Люди
     public sealed record Модель(Node3D корень, AnimationPlayer проигрыватель, Skeleton3D скелет,
                                 BoneAttachment3D кисть);
 
-    /// <summary>Цвета соседа: верхняя вещь, кожа, кофта, брюки, обувь.</summary>
-    public sealed record Цвета(Color верх, Color кожа, Color кофта, Color брюки, Color обувь);
+    /// <summary>Цвета соседа по краске: верхняя вещь, кожа, кофта, брюки, обувь, шапка, перчатки.</summary>
+    public sealed record Цвета(IReadOnlyDictionary<Краска, Color> краски);
 
     private static bool _пробовали;
     private static PackedScene? _основа;
@@ -63,28 +70,26 @@ public static class Люди
     /// <summary>Во сколько раз модель изменена до роста в 1.75 м.</summary>
     public static float Масштаб => _масштаб;
 
-    // role — номер `Дом.Экран.Краска`: 0 — свой цвет, дальше — цвета соседа
-    private const string ШЕЙДЕР = @"
-shader_type spatial;
-render_mode diffuse_lambert, specular_disabled;
-instance uniform vec4 coat : source_color = vec4(0.35, 0.30, 0.25, 1.0);
-instance uniform vec4 shirt : source_color = vec4(0.40, 0.40, 0.40, 1.0);
-instance uniform vec4 skin : source_color = vec4(0.80, 0.65, 0.55, 1.0);
-instance uniform vec4 pants : source_color = vec4(0.20, 0.20, 0.22, 1.0);
-instance uniform vec4 boots : source_color = vec4(0.12, 0.10, 0.09, 1.0);
-uniform int role = 0;
-uniform vec4 own : source_color = vec4(0.8, 0.8, 0.8, 1.0);
-uniform float shade = 1.0;
-void fragment() {
-    vec3 c = own.rgb;
-    if (role == 1) c = coat.rgb;
-    else if (role == 2) c = shirt.rgb;
-    else if (role == 3) c = skin.rgb;
-    else if (role == 4) c = pants.rgb;
-    else if (role == 5) c = boots.rgb;
-    ALBEDO = min(c * shade, vec3(1.0));
-    ROUGHNESS = 0.95;
-}";
+    /// <summary>
+    /// Шейдер людей: role — номер `Дом.Экран.Краска` (0 — свой цвет из файла),
+    /// на каждую краску с цветом соседа — свой `instance uniform` из `Тела.Униформа`.
+    /// </summary>
+    private static string Шейдер()
+    {
+        var краски = System.Enum.GetValues<Краска>().Where(к => Тела.Униформа(к) is not null).ToList();
+        var код = new System.Text.StringBuilder();
+        код.Append("shader_type spatial;\nrender_mode diffuse_lambert, specular_disabled;\n");
+        foreach (var к in краски)
+            код.Append($"instance uniform vec4 {Тела.Униформа(к)} : source_color = vec4(0.5, 0.5, 0.5, 1.0);\n");
+        код.Append("uniform int role = 0;\n");
+        код.Append("uniform vec4 own : source_color = vec4(0.8, 0.8, 0.8, 1.0);\n");
+        код.Append("uniform float shade = 1.0;\n");
+        код.Append("void fragment() {\n    vec3 c = own.rgb;\n");
+        foreach (var к in краски)
+            код.Append($"    if (role == {(int)к}) c = {Тела.Униформа(к)}.rgb;\n");
+        код.Append("    ALBEDO = min(c * shade, vec3(1.0));\n    ROUGHNESS = 0.95;\n}\n");
+        return код.ToString();
+    }
 
     private static Shader? _шейдер;
     private static readonly Dictionary<string, ShaderMaterial> _материалы = new(System.StringComparer.Ordinal);
@@ -101,6 +106,13 @@ void fragment() {
     };
     private static readonly Color[] ОБУВЬ = { new("#1c1917"), new("#2a2320"), new("#1a1c20") };
     private static readonly Color[] КОЖА = { new("#8a6f56"), new("#93775d"), new("#7f654f"), new("#9a806a") };
+    // шапка у автора — тёмно-серая (0.32 при эталоне 0.8), и цвет соседа темнеет
+    // до 0.4: поэтому шапки ярче прочего — вязаные, в цвет, а не в тон пальто
+    private static readonly Color[] ШАПКИ =
+    {
+        new("#8c3b3b"), new("#3d5a8c"), new("#4f7a4f"), new("#8c7a52"), new("#9a9a9a"), new("#6b4f8c"), new("#3a3a3a"),
+    };
+    private static readonly Color[] ПЕРЧАТКИ = { new("#2b2b2b"), new("#3d3027"), new("#45474f"), new("#5c4033"), new("#2f3640") };
 
     /// <summary>Цвета соседа по имени: пальто и лицо даёт мир, прочее — выбор от имени.</summary>
     public static Цвета Цвета_соседа(string id, Color пальто, Color лицо)
@@ -113,9 +125,16 @@ void fragment() {
             return (h & 0x7fffffff) % n;
         }
         var кожа = КОЖА[Выбор(id, "кожа", КОЖА.Length)];
-        // лицо от мира — основа, оттенок кожи — от имени
-        return new Цвета(пальто, лицо.Lerp(кожа, 0.5f), КОФТЫ[Выбор(id, "кофта", КОФТЫ.Length)],
-                         БРЮКИ[Выбор(id, "брюки", БРЮКИ.Length)], ОБУВЬ[Выбор(id, "обувь", ОБУВЬ.Length)]);
+        return new Цвета(new Dictionary<Краска, Color>
+        {
+            [Краска.ВЕРХ] = пальто,
+            [Краска.КОЖА] = лицо.Lerp(кожа, 0.5f),        // лицо от мира — основа, оттенок кожи — от имени
+            [Краска.КОФТА] = КОФТЫ[Выбор(id, "кофта", КОФТЫ.Length)],
+            [Краска.БРЮКИ] = БРЮКИ[Выбор(id, "брюки", БРЮКИ.Length)],
+            [Краска.ОБУВЬ] = ОБУВЬ[Выбор(id, "обувь", ОБУВЬ.Length)],
+            [Краска.ШАПКА] = ШАПКИ[Выбор(id, "шапка", ШАПКИ.Length)],
+            [Краска.ПЕРЧАТКИ] = ПЕРЧАТКИ[Выбор(id, "перчатки", ПЕРЧАТКИ.Length)],
+        });
     }
 
     /// <summary>Собрать модель человека в цветах соседа. Нет файлов — null.</summary>
@@ -125,7 +144,14 @@ void fragment() {
             return null;
         var корень = _основа!.Instantiate<Node3D>();
         var скелет = корень.FindChildren("*", "Skeleton3D", true, false).Cast<Skeleton3D>().First();
-        var игрок = корень.FindChildren("*", "AnimationPlayer", true, false).Cast<AnimationPlayer>().First();
+        var игрок = корень.FindChildren("*", "AnimationPlayer", true, false).Cast<AnimationPlayer>().FirstOrDefault();
+        if (игрок is null)
+        {
+            // тело без своей анимации (сохранено из Blender, 02.10) импорт оставляет
+            // без проигрывателя — заводим его у корня, где его кладёт импорт Mixamo
+            игрок = new AnimationPlayer { Name = "AnimationPlayer" };
+            корень.AddChild(игрок);
+        }
         foreach (var имя in игрок.GetAnimationLibraryList())
             игрок.RemoveAnimationLibrary(имя);
         игрок.AddAnimationLibrary("", _клипы);
@@ -144,11 +170,9 @@ void fragment() {
                 меш.Visible = false;        // сетки нет в таблице — не надевать (консоль «люди» об этом скажет)
                 continue;
             }
-            меш.SetInstanceShaderParameter("coat", цвета.верх);
-            меш.SetInstanceShaderParameter("shirt", цвета.кофта);
-            меш.SetInstanceShaderParameter("skin", цвета.кожа);
-            меш.SetInstanceShaderParameter("pants", цвета.брюки);
-            меш.SetInstanceShaderParameter("boots", цвета.обувь);
+            foreach (var (краска, цвет) in цвета.краски)
+                if (Тела.Униформа(краска) is { } униформа)
+                    меш.SetInstanceShaderParameter(униформа, цвет);
         }
         корень.Scale = Vector3.One * _масштаб;
         корень.RotationDegrees = new Vector3(0, 180, 0);      // Mixamo — лицом в +Z, сосед ходит в −Z
@@ -161,11 +185,26 @@ void fragment() {
     /// Где гнездо кисти в покое — в осях того, кто держит модель (корень
     /// модели стоит в нём с поворотом и масштабом <see cref="Собрать"/>).
     /// По нему руки кладутся в ладонь: их место в кисти считается один раз.
+    /// Покой — лицом в +Z, как у Mixamo, каким бы его ни сохранил файл.
     /// </summary>
     public static Transform3D Кисть_в_покое(Модель м)
     {
         int кость = м.скелет.FindBone(КИСТЬ);
-        return м.корень.Transform * м.скелет.Transform * м.скелет.GetBoneGlobalRest(кость);
+        return м.корень.Transform * м.скелет.Transform * Лицом_вперёд(м.скелет) * м.скелет.GetBoneGlobalRest(кость);
+    }
+
+    /// <summary>
+    /// Поворот покоя скелета вокруг вертикали так, чтобы левая нога была
+    /// в +X — лицом в +Z, как у Mixamo. У файла с курткой (30.09) — без
+    /// поворота, у файла из Blender (02.10) — на −90°.
+    /// </summary>
+    public static Transform3D Лицом_вперёд(Skeleton3D скелет)
+    {
+        int л = скелет.FindBone("mixamorig_LeftUpLeg"), п = скелет.FindBone("mixamorig_RightUpLeg");
+        if (л < 0 || п < 0)
+            return Transform3D.Identity;
+        var влево = скелет.GetBoneGlobalRest(л).Origin - скелет.GetBoneGlobalRest(п).Origin;
+        return new Transform3D(new Basis(Vector3.Up, Mathf.Atan2(влево.Z, влево.X)), Vector3.Zero);
     }
 
     private static bool Загрузить()
@@ -185,10 +224,8 @@ void fragment() {
         var скелет = образец.FindChildren("*", "Skeleton3D", true, false).Cast<Skeleton3D>().First();
         (_бёдра, _рост_скелета) = Покой(скелет);
         _масштаб = РОСТ / _рост_скелета;
-        _шейдер = new Shader { Code = ШЕЙДЕР };
-        bool верх = ТЕЛО.вещи.Any(в => в.краска == Краска.ВЕРХ);
-        var прятать = верх ? ТЕЛО.под_верхом.ToHashSet(System.StringComparer.Ordinal)
-                           : new HashSet<string>(System.StringComparer.Ordinal);
+        _шейдер = new Shader { Code = Шейдер() };
+        var прятать = ТЕЛО.под_вещами.ToHashSet(System.StringComparer.Ordinal);
         foreach (var меш in скелет.FindChildren("*", "MeshInstance3D", true, false).Cast<MeshInstance3D>())
         {
             string имя = меш.Name;
@@ -315,8 +352,14 @@ void fragment() {
     private static string Материал(ArrayMesh меш, int s) =>
         меш.SurfaceGetMaterial(s)?.ResourceName is { Length: > 0 } имя ? имя : меш.SurfaceGetName(s);
 
+    /// <summary>Цвет поверхности из файла (sRGB, как отдаёт движок); материала
+    /// нет — эталонный серый, то есть ровно цвет соседа.</summary>
+    private static Color Свой(ArrayMesh меш, int s) =>
+        (меш.SurfaceGetMaterial(s) as BaseMaterial3D)?.AlbedoColor
+        ?? new Color((float)Тела.ЭТАЛОН, (float)Тела.ЭТАЛОН, (float)Тела.ЭТАЛОН).LinearToSrgb();
+
     /// <summary>
-    /// Сетка тела для соседей: без зон, что прячутся под верхней вещью, и каждая
+    /// Сетка тела для соседей: без зон, что прячутся под одеждой, и каждая
     /// зона — краской из таблицы. Зона не из таблицы — своим цветом (консоль
     /// «люди» об этом скажет).
     /// </summary>
@@ -332,7 +375,7 @@ void fragment() {
             сетка.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, исходная.SurfaceGetArrays(s), flags: формат);
             int новая = сетка.GetSurfaceCount() - 1;
             сетка.SurfaceSetName(новая, зона);
-            var свой = (исходная.SurfaceGetMaterial(s) as BaseMaterial3D)?.AlbedoColor ?? new Color(0.8f, 0.8f, 0.8f);
+            var свой = Свой(исходная, s);
             сетка.SurfaceSetMaterial(новая, ТЕЛО.зоны.TryGetValue(зона, out var краска)
                 ? Краской(краска, свой, 1f)
                 : Краской(Краска.СВОЯ, свой, 1f));
@@ -347,7 +390,7 @@ void fragment() {
         var сетка = (ArrayMesh)исходная.Duplicate();
         for (int s = 0; s < сетка.GetSurfaceCount(); s++)
         {
-            var свой = (сетка.SurfaceGetMaterial(s) as BaseMaterial3D)?.AlbedoColor ?? new Color(0.8f, 0.8f, 0.8f);
+            var свой = Свой(сетка, s);
             var л = свой.SrgbToLinear();
             var (краска, доля) = Тела.Покраска(вещи, л.R, л.G, л.B);
             сетка.SurfaceSetMaterial(s, Краской(краска, свой, (float)доля));
