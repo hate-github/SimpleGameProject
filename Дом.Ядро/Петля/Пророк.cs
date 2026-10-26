@@ -26,6 +26,11 @@ namespace Дом.Ядро;
 public sealed class Пророк
 {
     private readonly Словарь<string, string> _надписи = Словари.Строкой<string>();
+    private readonly Dictionary<string, IReadOnlyList<string>> _реплики = new(StringComparer.Ordinal);
+
+    /// <summary>Состояния, на которые у него есть реплики: три порога
+    /// рассудка (кроме невозврата — там петли уже нет) и нирвана.</summary>
+    public static readonly IReadOnlyList<string> СОСТОЯНИЯ = new[] { "обычно", "тревога", "отстранение", "нирвана" };
 
     private Пророк(string слово) => this.слово = слово;
 
@@ -38,6 +43,28 @@ public sealed class Пророк
 
     /// <summary>Что написано в этом месте — или ничего.</summary>
     public string? Надпись(string место) => _надписи.Взять(место, null!);
+
+    /// <summary>
+    /// Что Аркадий говорит герою у двери сверх приветствия (ГДД 12.6: «его
+    /// реплики меняются в зависимости от рассудка игрока — этого не замечает
+    /// никто, кроме них двоих»). В первой жизни — ничего: он просто знал про
+    /// метель. Дальше — по порогу рассудка, в нирване — своё. <paramref name="раз"/> —
+    /// который это разговор: строки идут по кругу, без броска.
+    /// </summary>
+    public string? Реплика(Наследие н, РучкиПетли ручки, int раз)
+    {
+        if (н.жизней == 0 && !н.нирвана)
+            return null;
+        string состояние = н.нирвана ? "нирвана" : Рассудок.Где(н.рассудок, ручки) switch
+        {
+            Порог.ОБЫЧНО => "обычно",
+            Порог.ТРЕВОГА => "тревога",
+            _ => "отстранение",
+        };
+        return _реплики.TryGetValue(состояние, out var строки) && строки.Count > 0
+            ? строки[((раз % строки.Count) + строки.Count) % строки.Count]
+            : null;
+    }
 
     /// <summary>Совпало ли то, что набрал игрок.</summary>
     public bool Сошлось(string набрано)
@@ -52,6 +79,12 @@ public sealed class Пророк
         var п = new Пророк(корень.GetProperty("слово").GetString()!);
         foreach (var н in корень.GetProperty("надписи").EnumerateObject())
             п._надписи[н.Name] = н.Value.GetString()!;
+        if (корень.TryGetProperty("реплики", out var реплики))
+            foreach (var р in реплики.EnumerateObject())
+                п._реплики[р.Name] = р.Value.EnumerateArray().Select(x => x.GetString()!).ToList();
+        foreach (var с in п._реплики.Keys)
+            if (!СОСТОЯНИЯ.Contains(с))
+                throw new InvalidDataException($"пророк.json: реплики на «{с}» — такого состояния нет");
         if (п.слово.Trim().Length == 0)
             throw new InvalidDataException("пророк.json: слово пустое");
         if (п._надписи.Count == 0)
