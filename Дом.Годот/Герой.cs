@@ -156,7 +156,7 @@ public partial class Герой : CharacterBody3D
 		};
 		AddChild(_шаги);
 
-		Input.MouseMode = Input.MouseModeEnum.Captured;
+		Input.MouseMode = Управление.Захват;
 	}
 
 	private RayCast3D _луч = null!;
@@ -183,7 +183,7 @@ public partial class Герой : CharacterBody3D
 
 	private void Следить_за_захватом(double delta)
 	{
-		bool взята = Input.MouseMode == Input.MouseModeEnum.Captured;
+		bool взята = Управление.Захвачена;
 		_с_захвата = взята ? _с_захвата + delta : 0;
 	}
 
@@ -192,7 +192,7 @@ public partial class Герой : CharacterBody3D
 		// Esc мышь здесь больше не отпускает: он открывает настройки
 		// (корневой узел), и выйти из игры можно оттуда
 		if (e is InputEventMouseMotion м && Свободен && !Скован && _с_захвата > 0.25
-			&& Input.MouseMode == Input.MouseModeEnum.Captured)
+			&& Управление.Захвачена)
 		{
 			float к = Чувствительность * Множитель_мыши;
 			RotateY(-м.Relative.X * к);

@@ -84,11 +84,24 @@ public static class Управление
         }
     }
 
+    /// <summary>
+    /// Каким режимом мыши «захватывать» её для взгляда. Обычно — захват.
+    /// Но под фоновой пробой MCP (`Настроить.В_фоне`) окно стоит за краем
+    /// экрана, а захват в Windows зажимает системный курсор в окне: курсор
+    /// автора уехал бы туда же. Тогда захват — скрытый курсор: взгляд,
+    /// щелчки и подсказки идут так же, а мышь автора свободна.
+    /// </summary>
+    public static Input.MouseModeEnum Захват
+        => Настроить.В_фоне ? Input.MouseModeEnum.Hidden : Input.MouseModeEnum.Captured;
+
+    /// <summary>Мышь сейчас у взгляда, а не у экранов.</summary>
+    public static bool Захвачена => Input.MouseMode == Захват;
+
     /// <summary>Нажато ли действие этим событием. Повтор зажатой клавиши
     /// нажатием не считается: один вопрос — одно нажатие (этап 3).</summary>
     public static bool Нажато(InputEvent e, string действие)
     {
-        if (e is InputEventMouseButton && Input.MouseMode != Input.MouseModeEnum.Captured)
+        if (e is InputEventMouseButton && !Захвачена)
             return false;
         return e.IsActionPressed(действие, allowEcho: false);
     }
