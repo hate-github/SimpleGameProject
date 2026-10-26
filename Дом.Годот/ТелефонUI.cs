@@ -62,6 +62,9 @@ public partial class ТелефонUI : PanelContainer
     public System.Func<(string шапка, IReadOnlyList<СтрокаОкна> строки)>? Сервисы_дай { get; set; }
     private TabContainer _вкладки = null!;
     private Label _время = null!;
+    private Label _сеть = null!;
+    private Button _провести = null!;
+    private bool _был_сел;
     private Tween? _ход;
     private int _показано;                  // сколько реплик чата уже на экране
     private int _заметок = -1;              // сколько заметок нарисовано
@@ -119,6 +122,18 @@ public partial class ТелефонUI : PanelContainer
     /// <summary>Часы героя для строки состояния. Ставится корневым узлом.</summary>
     public System.Func<string>? Часы_дай { get; set; }
 
+    /// <summary>Сеть и заряд для строки состояния: «▂▄▆█ 87%». Ставится
+    /// корневым узлом (ГДД 19; `Дом.Ядро/Петля/Телефон.cs`).</summary>
+    public System.Func<string>? Сеть_дай { get; set; }
+
+    /// <summary>Сел ли телефон: тогда остаются только мысли — это голова
+    /// героя, а не приложение.</summary>
+    public System.Func<bool>? Сел_дай { get; set; }
+
+    /// <summary>«Провести время» (ГДД 19): час, заряд — за настроение.
+    /// Решает и тратит корневой узел.</summary>
+    public System.Action? Провести_время { get; set; }
+
     /// <summary>Телефон убран и уехал вниз — корню: вернуть мышь миру.</summary>
     public System.Action? Спрятан { get; set; }
 
@@ -172,10 +187,10 @@ public partial class ТелефонUI : PanelContainer
         _время.AddThemeFontSizeOverride("font_size", 13);
         состояние.AddChild(_время);
         состояние.AddChild(new Control { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill });
-        var сеть = new Label { Text = "▂▄▆  ▮▮▮▯" };
-        сеть.AddThemeColorOverride("font_color", new Color("#8e897c"));
-        сеть.AddThemeFontSizeOverride("font_size", 11);
-        состояние.AddChild(сеть);
+        _сеть = new Label();
+        _сеть.AddThemeColorOverride("font_color", new Color("#8e897c"));
+        _сеть.AddThemeFontSizeOverride("font_size", 11);
+        состояние.AddChild(_сеть);
         столбец.AddChild(состояние);
 
         _вкладки = new TabContainer
@@ -188,6 +203,16 @@ public partial class ТелефонUI : PanelContainer
         _чат = Страница("чат");
         _заметки = Страница("заметки");
         Сервисы_страница();
+
+        // развлечения — одна кнопка (ГДД 19), под экраном, на любой вкладке
+        _провести = new Button
+        {
+            Text = "провести время",
+            FocusMode = Control.FocusModeEnum.None,
+            TooltipText = "час в телефоне: настроение лучше, заряд меньше",
+        };
+        _провести.Pressed += () => Провести_время?.Invoke();
+        столбец.AddChild(_провести);
     }
 
     private void Сервисы_страница()
@@ -449,7 +474,21 @@ public partial class ТелефонUI : PanelContainer
             Size = РАЗМЕР;
     }
 
-    private void Часы() => _время.Text = Часы_дай?.Invoke() ?? "";
+    private void Часы()
+    {
+        _время.Text = Часы_дай?.Invoke() ?? "";
+        _сеть.Text = Сеть_дай?.Invoke() ?? "";
+        // сел — вкладки приложений прячутся, остаются мысли; зарядился — назад
+        bool сел = Сел_дай?.Invoke() == true;
+        _провести.Disabled = сел;
+        if (сел == _был_сел)
+            return;
+        _был_сел = сел;
+        for (int i = 1; i < _вкладки.GetTabCount(); i++)
+            _вкладки.SetTabHidden(i, сел);
+        if (сел)
+            _вкладки.CurrentTab = 0;
+    }
 
     /// <summary>Динамик сверху и полоска снизу — в полях корпуса.</summary>
     public override void _Draw()
@@ -534,8 +573,9 @@ public partial class ТелефонUI : PanelContainer
                 // «  [чат] Толик: замёрз» → «Толик: замёрз»: скобки нужны
                 // консоли, чтобы строка не терялась среди прочих, а здесь
                 // весь экран и так про чат
-                string текст = с.текст.Replace("  [чат] ", "",
-                                               System.StringComparison.Ordinal);
+                // его глазами: незнакомый — «сосед из кв.N» (`Сеанс.Его_глазами`)
+                string текст = с.ДляГероя.Replace("  [чат] ", "",
+                                                  System.StringComparison.Ordinal);
                 _чат.AppendText($"[color=#6f6a5e]день {с.день}[/color]  "
                                 + $"{Экранировать(текст)}\n");
             }
