@@ -40,6 +40,10 @@ public partial class НастройкиUI : PanelContainer
     /// (настройки открыты из него), выходить некуда.</summary>
     public System.Func<System.Action?> В_меню { get; set; } = () => null;
 
+    /// <summary>Что сделать перед выходом из игры: кончившуюся жизнь —
+    /// записать (`ДомУзел.Дожить_и_закрыть`).</summary>
+    public System.Action Перед_выходом { get; set; } = () => { };
+
     public bool открыт => Visible;
 
     private static readonly Color СВЕТЛО = new("#e8e2d0");
@@ -154,6 +158,7 @@ public partial class НастройкиUI : PanelContainer
     private void Выйти()
     {
         Записать_если_надо();
+        Перед_выходом();
         GetTree().Quit();
     }
 

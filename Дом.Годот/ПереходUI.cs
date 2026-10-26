@@ -82,10 +82,19 @@ public partial class ПереходUI : PanelContainer
         _столбец.AddChild(_дальше);
     }
 
+    /// <summary>
+    /// Экран без ответа: жизнь кончилась, а дом ещё доживает метель
+    /// (`ДомУзел.Ждать_дом`). Ни кнопки, ни пробела — разбор встанет
+    /// на его место сам, обычным `Показать`.
+    /// </summary>
+    public void Ждать(string заголовок, IEnumerable<string> строки)
+        => Показать(заголовок, строки, null);
+
     /// <summary>Показать экран. <paramref name="спросить_слово"/> —
-    /// только для точки невозврата.</summary>
+    /// только для точки невозврата. Без <paramref name="ответ"/> — экран
+    /// ожидания: кнопки нет, пробел и Enter ничего не делают.</summary>
     public void Показать(string заголовок, IEnumerable<string> строки,
-                         System.Action<string> ответ, bool спросить_слово = false,
+                         System.Action<string>? ответ, bool спросить_слово = false,
                          System.Func<IReadOnlyList<(string текст, string? кнопка, bool можно, System.Action? сделать)>>? ряды = null)
     {
         _ряды_дай = ряды;
@@ -107,6 +116,9 @@ public partial class ПереходUI : PanelContainer
         _поле.Text = "";
         _ответ = ответ;
         Visible = true;
+        _дальше.Visible = ответ is not null;
+        if (ответ is null)
+            return;                 // ждать: фокус некуда ставить — кнопки нет
 
         // Пока спрашивают слово, кнопку нельзя брать клавишей: фокус после
         // показа встаёт не сразу, и пробел уходил на кнопку — вместе с тем,
@@ -184,7 +196,7 @@ public partial class ПереходUI : PanelContainer
     /// </summary>
     public override void _UnhandledInput(InputEvent e)
     {
-        if (!Visible || _поле.Visible || e is not InputEventKey к
+        if (!Visible || _поле.Visible || _ответ is null || e is not InputEventKey к
             || !к.Pressed || к.Echo)
             return;
         if (к.Keycode is Key.Space or Key.Enter or Key.KpEnter)   // клавиша: «дальше» между жизнями — не действие игры
