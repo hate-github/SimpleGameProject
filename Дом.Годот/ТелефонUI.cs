@@ -15,7 +15,9 @@
 //
 // Чат — общий чат жильцов: он уже есть в симуляции и уже что-то делает
 // с домом. Реплика в нём — не украшение, а способ узнать, у кого что есть
-// и кто кого боится.
+// и кто кого боится. Под ним — «написать в чат» (ГДД 14: «игрок выбирает
+// тему»): пять тем, у «кто это был?» — кого назвать. Что реплика делает
+// с домом — `Дом.Ядро/Петля/ЧатГероя.cs`; когда можно — решает узел.
 //
 // Заметки — то, что герой записал о людях и местах (ГДД 10) и что
 // переносится между жизнями. Разница между вкладками принципиальная:
@@ -27,9 +29,10 @@
 // Что сказано и кем — решено в `Дом.Ядро/Чат.cs`; что записано и о ком —
 // в `Дом.Ядро/Петля`.
 //
-// Чего здесь нет и не будет: возможности написать самому. Игрок в чат
-// не пишет — пока в симуляции нет действия «написать в чат», приделать
-// поле ввода значило бы приделать кнопку, которая ничего не делает.
+// Поля ввода нет и не будет: слова — заготовленные (ГДД 14: «реплики
+// заготовлены вручную»), выбирается тема. Раньше не было и тем: пока
+// в симуляции не было действия «написать в чат», кнопка ничего бы не делала;
+// теперь у реплики героя те же последствия, что у соседской (`Чат.Последствия`).
 //
 // **Телефон в руке** (просьба автора, 28.09.2026: «чтобы доставался телефон,
 // а не вылезало окно»). Это не панель в углу, а сам телефон: корпус,
@@ -53,6 +56,19 @@ public partial class ТелефонUI : PanelContainer
     private ВопросИгроку? _вопрос;
     private IReadOnlyList<string> _подсказки = System.Array.Empty<string>();
     private RichTextLabel _чат = null!;
+    private VBoxContainer _написать = null!;     // темы — или соседи для «кто это был?»
+    private Label _написать_шапка = null!;
+    private string? _тема_выбрана;               // тема ждёт, кого назвать
+
+    /// <summary>Почему сейчас не написать в чат — или null, если можно.
+    /// Ставится корневым узлом.</summary>
+    public System.Func<string?>? Чат_нельзя { get; set; }
+
+    /// <summary>Кого можно назвать в «кто это был?»: id и как его зовёт герой.</summary>
+    public System.Func<IReadOnlyList<(string id, string имя)>>? Соседи_дай { get; set; }
+
+    /// <summary>Написать в чат: тема (`ЧатГероя.ТЕМЫ`) и, у подозрения, кого.</summary>
+    public System.Action<string, string?>? Написать { get; set; }
     private RichTextLabel _заметки = null!;
     private RichTextLabel _новости = null!;
     private int _новостей = -1;             // сколько новостей нарисовано
@@ -206,7 +222,7 @@ public partial class ТелефонUI : PanelContainer
         столбец.AddChild(_вкладки);
 
         Мысли_страница();
-        _чат = Страница("чат");
+        Чат_страница();
         _заметки = Страница("заметки");
         Сервисы_страница();
         _новости = Страница("новости");
@@ -220,6 +236,96 @@ public partial class ТелефонUI : PanelContainer
         };
         _провести.Pressed += () => Провести_время?.Invoke();
         столбец.AddChild(_провести);
+    }
+
+    private void Чат_страница()
+    {
+        var столбец = new VBoxContainer { Name = "чат" };
+        столбец.AddThemeConstantOverride("separation", 4);
+        _вкладки.AddChild(столбец);
+        var прокрутка = new ScrollContainer
+        {
+            HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled,
+            SizeFlagsVertical = Control.SizeFlags.ExpandFill,
+        };
+        столбец.AddChild(прокрутка);
+        _чат = new RichTextLabel
+        {
+            BbcodeEnabled = true,
+            FitContent = true,
+            ScrollActive = false,
+            SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
+        };
+        прокрутка.AddChild(_чат);
+        _написать_шапка = new Label { AutowrapMode = TextServer.AutowrapMode.WordSmart };
+        _написать_шапка.AddThemeColorOverride("font_color", new Color("#a8a294"));
+        столбец.AddChild(_написать_шапка);
+        _написать = new VBoxContainer();
+        столбец.AddChild(_написать);
+    }
+
+    /// <summary>
+    /// Перерисовать «написать»: пять тем — или, когда выбрано «кто это был?»,
+    /// кого назвать. Нельзя — строка почему, без кнопок.
+    /// </summary>
+    public void Написать_обновить()
+    {
+        if (_написать is null)
+            return;
+        foreach (var узел in _написать.GetChildren())
+        {
+            _написать.RemoveChild(узел);
+            узел.QueueFree();
+        }
+        if (Чат_нельзя?.Invoke() is { } нельзя)
+        {
+            _тема_выбрана = null;
+            _написать_шапка.Text = $"написать: {нельзя}";
+            return;
+        }
+        var ряд = new HFlowContainer();
+        ряд.AddThemeConstantOverride("h_separation", 4);
+        ряд.AddThemeConstantOverride("v_separation", 4);
+        _написать.AddChild(ряд);
+        Button Кнопка(string текст, System.Action сделать)
+        {
+            var к = new Button { Text = текст, FocusMode = Control.FocusModeEnum.None };
+            к.Pressed += () => сделать();
+            ряд.AddChild(к);
+            return к;
+        }
+        if (_тема_выбрана is { } тема)
+        {
+            _написать_шапка.Text = "кого назвать?";
+            foreach (var (id, имя) in Соседи_дай?.Invoke() ?? System.Array.Empty<(string, string)>())
+                Кнопка(имя, () =>
+                {
+                    _тема_выбрана = null;
+                    Написать?.Invoke(тема, id);
+                    // только «написать»: дом уже живёт написанные минуты,
+                    // а чат узел дописал, пока он спал (`Написать_в_чат`)
+                    Написать_обновить();
+                });
+            Кнопка("← назад", () =>
+            {
+                _тема_выбрана = null;
+                Написать_обновить();
+            });
+            return;
+        }
+        _написать_шапка.Text = "написать в чат:";
+        foreach (var (т, подпись) in ЧатГероя.ТЕМЫ)
+            Кнопка(подпись, () =>
+            {
+                if (string.Equals(т, "подозрение", System.StringComparison.Ordinal))
+                {
+                    _тема_выбрана = т;
+                    Написать_обновить();
+                    return;
+                }
+                Написать?.Invoke(т, null);
+                Написать_обновить();
+            });
     }
 
     private void Сервисы_страница()
@@ -439,6 +545,7 @@ public partial class ТелефонUI : PanelContainer
         Position = Position with { X = x };
         Visible = true;
         Часы();
+        Написать_обновить();
         _ход = CreateTween().SetEase(Tween.EaseType.Out).SetTrans(Tween.TransitionType.Cubic);
         _ход.TweenProperty(this, "position:y", в_руке, ЕХАТЬ);
     }
@@ -566,6 +673,7 @@ public partial class ТелефонUI : PanelContainer
     public void Обновить()
     {
         Сервисы_обновить();
+        Написать_обновить();
         if (Сеанс is not null)
         {
             var чат = Сеанс.Вида(ВидСтроки.ЧАТ);

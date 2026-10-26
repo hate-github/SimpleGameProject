@@ -33,6 +33,10 @@ public static class Чат
         {
             if (said >= limit)
                 break;
+            // игрок пишет сам, когда решит (`Петля/ЧатГероя.cs`): дом не пишет
+            // за него — ни просьбы, ни паники, и броска на него не тратит
+            if (p.пишет_сам)
+                continue;
             string? key = null;
             // пороги подобраны под то, что чат живёт лишь до десятого дня
             // (GDD 19): с прежними «паника > 70» и «настроение < 35» обе темы
@@ -102,64 +106,80 @@ public static class Чат
 
             // --- а вот теперь то, чего у чата не было: последствия ---
             var слышат = others.Where(_ => rng.Chance(h.network)).ToList();
-            if (string.Equals(key, "просьба", StringComparison.Ordinal))
-                // «у меня кончается» — это заявление на весь подъезд
-                foreach (var o in слышат)
-                {
-                    Социальное.adjust(o, p.id, aware: b["чат_осведомлённость"]);
-                    Социальное.note_signal(o, p.id, "еда", 0.5, 0.3);
-                    Социальное.add_panic(o, b["чат_паника_от_просьбы"]);
-                }
-            else if (string.Equals(key, "паника", StringComparison.Ordinal))
-                foreach (var o in слышат)
-                    Социальное.add_panic(o,
-                        b["чат_паника"] * (0.7 + 0.6 * o.t01("вспыльчивость")));
-            else if (string.Equals(key, "подозрение", StringComparison.Ordinal))
-            {
-                // реплика называет соседа по имени — и дом это запоминает
-                if (!string.Equals(who.id, p.id, StringComparison.Ordinal))
-                {
-                    Социальное.judge(h, who, "воровство",
-                        hate: b["чат_подозрение_ненависть"], trust: -0.4,
-                        witnesses: слышат);
-                    Социальное.adjust(p, who.id, hate: b["чат_подозрение_ненависть"],
-                                      trust: -0.5);
-                    // и те, кто это прочёл, запоминают, на кого думать. Знают
-                    // об этом только они: разговор, которого сосед не слышал,
-                    // на его подозрения не влияет
-                    bool знает = p.знает_о_кражах();
-                    foreach (var o in слышат)
-                    {
-                        o.memory.Add(new Память
-                        {
-                            день = h.day, вид = Вид.НАЗВАЛИ_ВОРОМ, кто = who.id,
-                        });
-                        // а «в доме крадут» они выносят отсюда, только если
-                        // говорящий знает это сам, а не тычет пальцем после
-                        // драки: эта реплика идёт после любого происшествия,
-                        // не только кражи
-                        if (знает)
-                            o.memory.Add(new Память
-                            {
-                                день = h.day, вид = Вид.СЛЫШАЛ_О_ВОРЕ, кто = who.id,
-                            });
-                    }
-                    h.bump("обвинений_в_чате");
-                }
-            }
-            else if (string.Equals(key, "тоска", StringComparison.Ordinal))
-                foreach (var o in слышат)
-                {
-                    o.mood = Util.Clamp(o.mood + b["чат_настроение"]);
-                    Социальное.adjust(o, p.id, trust: b["чат_доверие"]);
-                }
-            else if (string.Equals(key, "быт", StringComparison.Ordinal))
-                foreach (var o in слышат)
-                {
-                    o.mood = Util.Clamp(o.mood + b["чат_настроение"] * 0.5);
-                    Социальное.adjust(o, p.id, trust: b["чат_доверие"] * 0.5);
-                }
+            Последствия(h, p, key, who, слышат);
             p.день_разговора = h.day;
         }
+    }
+
+    /// <summary>
+    /// Что реплика делает с теми, кто её прочёл (<paramref name="слышат"/>):
+    /// просьба — осведомлённость о нужде и паника, паника заражает, подозрение
+    /// с названным <paramref name="who"/> — наговор, тоска и быт — настроение
+    /// и доверие к пишущему. Броска здесь нет: кто прочёл, решает зовущий.
+    ///
+    /// Вынесено из <see cref="daily_chat"/> для героя, который пишет сам
+    /// (`Петля/ЧатГероя.cs`, ГДД 14: «реплика в общем чате действует на всех,
+    /// кто ещё в сети»). У соседей порядок прежний — эталон цел.
+    /// </summary>
+    public static void Последствия(House h, NPC p, string key, NPC who, List<NPC> слышат)
+    {
+        var b = h.B;
+        if (string.Equals(key, "просьба", StringComparison.Ordinal))
+            // «у меня кончается» — это заявление на весь подъезд
+            foreach (var o in слышат)
+            {
+                Социальное.adjust(o, p.id, aware: b["чат_осведомлённость"]);
+                Социальное.note_signal(o, p.id, "еда", 0.5, 0.3);
+                Социальное.add_panic(o, b["чат_паника_от_просьбы"]);
+            }
+        else if (string.Equals(key, "паника", StringComparison.Ordinal))
+            foreach (var o in слышат)
+                Социальное.add_panic(o,
+                    b["чат_паника"] * (0.7 + 0.6 * o.t01("вспыльчивость")));
+        else if (string.Equals(key, "подозрение", StringComparison.Ordinal))
+        {
+            // реплика называет соседа по имени — и дом это запоминает
+            if (!string.Equals(who.id, p.id, StringComparison.Ordinal))
+            {
+                Социальное.judge(h, who, "воровство",
+                    hate: b["чат_подозрение_ненависть"], trust: -0.4,
+                    witnesses: слышат);
+                Социальное.adjust(p, who.id, hate: b["чат_подозрение_ненависть"],
+                                  trust: -0.5);
+                // и те, кто это прочёл, запоминают, на кого думать. Знают
+                // об этом только они: разговор, которого сосед не слышал,
+                // на его подозрения не влияет
+                bool знает = p.знает_о_кражах();
+                foreach (var o in слышат)
+                {
+                    o.memory.Add(new Память
+                    {
+                        день = h.day, вид = Вид.НАЗВАЛИ_ВОРОМ, кто = who.id,
+                    });
+                    // а «в доме крадут» они выносят отсюда, только если
+                    // говорящий знает это сам, а не тычет пальцем после
+                    // драки: эта реплика идёт после любого происшествия,
+                    // не только кражи
+                    if (знает)
+                        o.memory.Add(new Память
+                        {
+                            день = h.day, вид = Вид.СЛЫШАЛ_О_ВОРЕ, кто = who.id,
+                        });
+                }
+                h.bump("обвинений_в_чате");
+            }
+        }
+        else if (string.Equals(key, "тоска", StringComparison.Ordinal))
+            foreach (var o in слышат)
+            {
+                o.mood = Util.Clamp(o.mood + b["чат_настроение"]);
+                Социальное.adjust(o, p.id, trust: b["чат_доверие"]);
+            }
+        else if (string.Equals(key, "быт", StringComparison.Ordinal))
+            foreach (var o in слышат)
+            {
+                o.mood = Util.Clamp(o.mood + b["чат_настроение"] * 0.5);
+                Социальное.adjust(o, p.id, trust: b["чат_доверие"] * 0.5);
+            }
     }
 }
