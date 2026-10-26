@@ -56,6 +56,7 @@ public partial class ВопросUI : PanelContainer
 {
     private Label _заголовок = null!;
     private Label _что = null!;
+    private Label _мысль = null!;
     private Label _подвал = null!;
     private Сцена? _сцена;
     private ScrollContainer _окно = null!;
@@ -119,6 +120,11 @@ public partial class ВопросUI : PanelContainer
         _что.AddThemeFontSizeOverride("font_size", 16);
         _что.AddThemeColorOverride("font_color", new Color("#e8d8a8"));
         столбец.AddChild(_что);
+        // что герой помнит о нём из прошлых жизней (ГДД 10) — своей строкой
+        _мысль = new Label { AutowrapMode = TextServer.AutowrapMode.WordSmart };
+        _мысль.AddThemeFontSizeOverride("font_size", 15);
+        _мысль.AddThemeColorOverride("font_color", new Color("#b9a4c8"));
+        столбец.AddChild(_мысль);
 
         // Список прокручивается, а не растёт без предела: ночью вариантов
         // бывает по два на соседа
@@ -179,6 +185,8 @@ public partial class ВопросUI : PanelContainer
         _заголовок.Text = сцена is { кто.Length: > 0 } ? сцена.кто : _текущий.заголовок;
         _что.Text = сцена?.что ?? "";
         _что.Visible = _что.Text.Length > 0;
+        _мысль.Text = сцена?.мысль is { } мысль ? $"— {мысль}" : "";
+        _мысль.Visible = _мысль.Text.Length > 0;
         _подвал.Text = $"день {_текущий.день} · ответ — щелчком или цифрой";
         for (int i = 0; i < _текущий.варианты.Count; i++)
         {
