@@ -60,6 +60,9 @@ public partial class КарманUI : PanelContainer
     private Control _покров = null!;
     private ЯчейкаЕды? _открыта;
     private string _весть = "";
+    private ПорядокЕды _порядок = ПорядокЕды.ИМЯ;   // как разложены ячейки (ГДД 9)
+    private string _найти = "";                      // что ищут
+    private Button _порядок_кнопка = null!;
     private Label _заголовок = null!;
     private Label _свидетели = null!;
     private Label _где = null!;
@@ -131,6 +134,35 @@ public partial class КарманUI : PanelContainer
         };
         _свидетели.AddThemeColorOverride("font_color", new Color("#c86a5a"));
         столбец.AddChild(_свидетели);
+
+        // ГДД 9: «список с поиском и сортировкой (вес, имя, категория, свежесть)»
+        var порядок = new HBoxContainer();
+        порядок.AddThemeConstantOverride("separation", 10);
+        столбец.AddChild(порядок);
+        _порядок_кнопка = new Button
+        {
+            Text = "порядок: " + Инвентарь.Словом(_порядок),
+            FocusMode = Control.FocusModeEnum.None,
+        };
+        _порядок_кнопка.Pressed += () =>
+        {
+            _порядок = (ПорядокЕды)(((int)_порядок + 1) % System.Enum.GetValues<ПорядокЕды>().Length);
+            _порядок_кнопка.Text = "порядок: " + Инвентарь.Словом(_порядок);
+            Обновить();
+        };
+        порядок.AddChild(_порядок_кнопка);
+        var найти = new LineEdit
+        {
+            PlaceholderText = "найти…",
+            SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
+            ClearButtonEnabled = true,
+        };
+        найти.TextChanged += т =>
+        {
+            _найти = т;
+            Обновить();
+        };
+        порядок.AddChild(найти);
 
         var две = new HBoxContainer();
         две.AddThemeConstantOverride("separation", 24);
@@ -280,7 +312,7 @@ public partial class КарманUI : PanelContainer
         _шкаф.Visible = у_полки;
         _шкаф_шапка.Text = карман is null ? "на полке" : "на полке — в карман";
         if (у_полки)
-            foreach (var р in я.stock.Ключи.OrderBy(x => x, StringComparer.Ordinal))
+            foreach (var р in я.stock.Ключи.Where(р => Инвентарь.Найдено(р, _найти)).OrderBy(x => x, StringComparer.Ordinal))
             {
                 double сколько = я.stock.Взять(р, 0.0);
                 if (сколько <= 0.0 || (продукты is not null && р == Продукты.ЕДА))
@@ -303,7 +335,7 @@ public partial class КарманUI : PanelContainer
         if (ноша is { пусто: false, тара: Тара тара } && Ручки() is { } ручки_)
         {
             _ноша_шапка.Text = $"{тара.Где()} — {Текст.G(Текст.Округлить(ноша.занято, 1))} из {Текст.G(тара.мест(ручки_))}";
-            foreach (var р in ноша.ресурсы.OrderBy(x => x, StringComparer.Ordinal))
+            foreach (var р in ноша.ресурсы.Where(р => Инвентарь.Найдено(р, _найти)).OrderBy(x => x, StringComparer.Ordinal))
                 if (продукты is null || р != Продукты.ЕДА)
                     Надпись(_в_ноше, $"{р} {Текст.G(Текст.Округлить(ноша.Сколько(р), 2))}");
             if (продукты is not null)
@@ -314,7 +346,7 @@ public partial class КарманUI : PanelContainer
         _внутри_шапка.Text = у_полки ? "в кармане — на полку" : "в кармане";
         if (карман is not null)
         {
-            foreach (var р in карман.ресурсы.OrderBy(x => x, StringComparer.Ordinal))
+            foreach (var р in карман.ресурсы.Where(р => Инвентарь.Найдено(р, _найти)).OrderBy(x => x, StringComparer.Ordinal))
             {
                 if (продукты is not null && р == Продукты.ЕДА)
                     continue;
@@ -492,7 +524,7 @@ public partial class КарманUI : PanelContainer
     /// при наведении, карточка по нажатию.</summary>
     private void Сетка(VBoxContainer куда, Продукты продукты, МестоЕды где)
     {
-        var ячейки = Инвентарь.Ячейки(продукты, где, Порция());
+        var ячейки = Инвентарь.Упорядочить(Инвентарь.Ячейки(продукты, где, Порция()), _порядок, _найти);
         if (ячейки.Count == 0)
             return;
         var сетка = new GridContainer { Columns = 4 };
