@@ -96,6 +96,15 @@ public sealed class Округа : IУлицы
     private readonly ДанныеСнегоступов _снегоступы;
     private readonly HashSet<string> _у_соседей = new(StringComparer.Ordinal);
     private readonly HashSet<string> _лишились = new(StringComparer.Ordinal);
+    private readonly HashSet<string> _видели_чудо = new(StringComparer.Ordinal);    // при ком вещь ушла в карман
+    private readonly HashSet<string> _сказали_о_чуде = new(StringComparer.Ordinal); // кто уже сказал об этом герою
+
+    /// <summary>Этот сосед видел, как вещь исчезла в кармане (`Карман.Подозрение`).</summary>
+    public void Видел_чудо(string кто) => _видели_чудо.Add(кто);
+
+    /// <summary>Скажет ли он герою об этом сейчас: видел — и ещё не говорил;
+    /// говорит один раз (ГДД 9: «уникальная реплика свидетеля»).</summary>
+    public bool Скажет_о_чуде(string кто) => _видели_чудо.Contains(кто) && _сказали_о_чуде.Add(кто);
     private readonly HashSet<int> _дни_на_снегоступах = new();
     private readonly HashSet<string> _герой_знает = new(StringComparer.Ordinal);
     private readonly HashSet<string> _знания = new(StringComparer.Ordinal);
@@ -535,6 +544,8 @@ public sealed class Округа : IУлицы
             ["вектор"] = вектор?.Сложить(),
             ["сервисы"] = сервисы?.Сложить(),
             ["телефон"] = телефон.Сложить(),
+            ["видели_чудо"] = Строки_(_видели_чудо),
+            ["сказали_о_чуде"] = Строки_(_сказали_о_чуде),
             ["нет_с_дня"] = _нет_с_дня,
             ["вынесли"] = Карман.Числа_в(_вынесли.Ключи.Select(к => new KeyValuePair<string, double>(к, _вынесли[к]))),
         };
@@ -569,6 +580,15 @@ public sealed class Округа : IУлицы
             вектор.Разложить(в);
         сервисы?.Разложить(о["сервисы"] as System.Text.Json.Nodes.JsonObject);
         телефон.Разложить(о["телефон"] as System.Text.Json.Nodes.JsonObject);
+        // в старом сейве их нет — никто ничего не видел
+        _видели_чудо.Clear();
+        _сказали_о_чуде.Clear();
+        if (о["видели_чудо"] is System.Text.Json.Nodes.JsonArray видели)
+            foreach (var x in видели)
+                _видели_чудо.Add(x!.GetValue<string>());
+        if (о["сказали_о_чуде"] is System.Text.Json.Nodes.JsonArray сказали)
+            foreach (var x in сказали)
+                _сказали_о_чуде.Add(x!.GetValue<string>());
         _нет_с_дня = о["нет_с_дня"]?.GetValue<int>();
         lock (_замок_квартиры)
         {
