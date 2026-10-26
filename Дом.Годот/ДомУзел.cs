@@ -727,8 +727,9 @@ public partial class ДомУзел : Node
     {
         foreach (var з in знания)
         {
-            if (з.StartsWith(Знакомство.ИМЯ, System.StringComparison.Ordinal))
-                continue;               // имена — одной строкой ниже
+            if (з.StartsWith(Знакомство.ИМЯ, System.StringComparison.Ordinal)
+                || з.StartsWith(Реплики.ЗНАНИЕ, System.StringComparison.Ordinal))
+                continue;               // имена и тоны — одной строкой ниже
             yield return з switch
             {
                 "вектор_есть" => "промзона «Вектор-3» за школой, за железкой",
@@ -747,6 +748,14 @@ public partial class ДомУзел : Node
             .Select(з => Сначала_заглавная(з[Знакомство.ИМЯ.Length..])).ToList();
         if (имена.Count > 0)
             yield return "кого как зовут: " + string.Join(", ", имена);
+        // как с кем говорить («Разговор»: попал в тон — запомнил)
+        var тоны = знания.Where(з => з.StartsWith(Реплики.ЗНАНИЕ, System.StringComparison.Ordinal))
+            .Select(з => з[Реплики.ЗНАНИЕ.Length..].Split(':'))
+            .Where(ч => ч.Length == 2 && System.Enum.TryParse<Тон>(ч[1], out _))
+            .Select(ч => $"{Сначала_заглавная(ч[0])} — {Реплики.Кратко(System.Enum.Parse<Тон>(ч[1]))}")
+            .ToList();
+        if (тоны.Count > 0)
+            yield return "как с кем говорить: " + string.Join(", ", тоны);
     }
 
     private static string Сначала_заглавная(string s)
