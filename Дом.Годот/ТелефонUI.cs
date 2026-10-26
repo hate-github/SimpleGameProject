@@ -54,6 +54,8 @@ public partial class ТелефонUI : PanelContainer
     private IReadOnlyList<string> _подсказки = System.Array.Empty<string>();
     private RichTextLabel _чат = null!;
     private RichTextLabel _заметки = null!;
+    private RichTextLabel _новости = null!;
+    private int _новостей = -1;             // сколько новостей нарисовано
     private VBoxContainer? _сервисы;
     private Label _сервисы_шапка = null!;
 
@@ -125,6 +127,10 @@ public partial class ТелефонUI : PanelContainer
     /// <summary>Сеть и заряд для строки состояния: «▂▄▆█ 87%». Ставится
     /// корневым узлом (ГДД 19; `Дом.Ядро/Петля/Телефон.cs`).</summary>
     public System.Func<string>? Сеть_дай { get; set; }
+
+    /// <summary>Новости (ГДД 19): до метели — летопись, в метель — события
+    /// дня, пока ловит сеть. Ставится корневым узлом (`Дом.Экран.Новости`).</summary>
+    public System.Func<IReadOnlyList<Новость>>? Новости_дай { get; set; }
 
     /// <summary>Сел ли телефон: тогда остаются только мысли — это голова
     /// героя, а не приложение.</summary>
@@ -203,6 +209,7 @@ public partial class ТелефонUI : PanelContainer
         _чат = Страница("чат");
         _заметки = Страница("заметки");
         Сервисы_страница();
+        _новости = Страница("новости");
 
         // развлечения — одна кнопка (ГДД 19), под экраном, на любой вкладке
         _провести = new Button
@@ -579,6 +586,17 @@ public partial class ТелефонUI : PanelContainer
                 _чат.AppendText($"[color=#6f6a5e]день {с.день}[/color]  "
                                 + $"{Экранировать(текст)}\n");
             }
+        }
+
+        // Новости — целиком, когда их стало больше: их мало, и последняя
+        // строка («сети нет») меняет смысл всей ленты
+        if (Новости_дай?.Invoke() is { } новости && новости.Count != _новостей)
+        {
+            _новости.Clear();
+            foreach (var н in новости)
+                _новости.AppendText($"[color=#6f6a5e]{(н.день == -1 ? "накануне" : н.день < 0 ? $"за {-н.день} дня" : $"день {н.день}")}[/color]  "
+                                    + $"{Экранировать(н.текст)}\n");
+            _новостей = новости.Count;
         }
 
         // Заметки перерисовываются целиком, а не дописываются. Дописывать
