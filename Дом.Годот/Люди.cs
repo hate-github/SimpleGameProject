@@ -143,7 +143,12 @@ public static class Люди
         if (!Загрузить())
             return null;
         var корень = _основа!.Instantiate<Node3D>();
-        var скелет = корень.FindChildren("*", "Skeleton3D", true, false).Cast<Skeleton3D>().First();
+        // скелет в этом файле `Загрузить` уже нашёл; не нашёлся — капсула, а не падение
+        if (корень.FindChildren("*", "Skeleton3D", true, false).Cast<Skeleton3D>().FirstOrDefault() is not { } скелет)
+        {
+            корень.Free();
+            return null;
+        }
         var игрок = корень.FindChildren("*", "AnimationPlayer", true, false).Cast<AnimationPlayer>().FirstOrDefault();
         if (игрок is null)
         {
@@ -219,9 +224,24 @@ public static class Люди
             return false;
         }
         _основа = GD.Load<PackedScene>(основа);
+        if (_основа is null)
+        {
+            GD.PrintErr($"{основа} не читается как сцена — соседи капсулами");
+            return false;
+        }
 
+        // Файлы приходят от автора из разных программ (Mixamo, Blender), и чего
+        // в них нет, заранее не скажешь: тело из Blender пришло без проигрывателя
+        // анимации (02.10). Чего не хватает — строка в журнале и капсула или
+        // заглушка, а не исключение посреди постройки мира
         var образец = _основа.Instantiate<Node3D>();
-        var скелет = образец.FindChildren("*", "Skeleton3D", true, false).Cast<Skeleton3D>().First();
+        if (образец.FindChildren("*", "Skeleton3D", true, false).Cast<Skeleton3D>().FirstOrDefault() is not { } скелет)
+        {
+            GD.PrintErr($"в {основа} нет скелета — соседи капсулами");
+            образец.Free();
+            _основа = null;
+            return false;
+        }
         (_бёдра, _рост_скелета) = Покой(скелет);
         _масштаб = РОСТ / _рост_скелета;
         _шейдер = new Shader { Code = Шейдер() };
@@ -245,21 +265,40 @@ public static class Люди
         }
 
         _клипы = new AnimationLibrary();
-        // один файл — один клип, сколько бы имён игры он ни получил
+        // Один файл читается один раз, сколько бы имён игры он ни получил (удар
+        // сверху — и топор, и дубина, и замок). Но в библиотеку под каждым именем
+        // идёт своя копия: один и тот же ресурс под двумя именами проигрыватель
+        // кэширует дважды и на каждом соседе пишет ошибку движка
+        // `animation_track_num_to_track_cache.has(p_animation)` — 18 имён из 10
+        // файлов давали восемь таких строк на постройку мира, в журналах
+        // партий автора их набралось 1024 (обзор 27.10.2026)
         var взятые = new Dictionary<string, (Animation клип, float шаг)>(System.StringComparer.Ordinal);
+        var негодные = new HashSet<string>(System.StringComparer.Ordinal);
         foreach (var к in Анимации.ЛЮДИ)
         {
-            if (!взятые.TryGetValue(к.файл, out var взят))
+            if (негодные.Contains(к.файл))
+                continue;
+            bool впервые = !взятые.TryGetValue(к.файл, out var взят);
+            if (впервые)
             {
                 string путь = $"{ПАПКА}/{к.файл}.fbx";
-                if (!ResourceLoader.Exists(путь))
+                if (!ResourceLoader.Exists(путь) || GD.Load<PackedScene>(путь) is not { } сцена)
                 {
                     GD.PrintErr($"нет клипа {путь} — «{к.клип}» будет заглушкой");
+                    негодные.Add(к.файл);
                     continue;
                 }
-                var узел = GD.Load<PackedScene>(путь).Instantiate<Node3D>();
-                var игрок = узел.FindChildren("*", "AnimationPlayer", true, false).Cast<AnimationPlayer>().First();
-                var свой = узел.FindChildren("*", "Skeleton3D", true, false).Cast<Skeleton3D>().First();
+                var узел = сцена.Instantiate<Node3D>();
+                var игрок = узел.FindChildren("*", "AnimationPlayer", true, false).Cast<AnimationPlayer>().FirstOrDefault();
+                var свой = узел.FindChildren("*", "Skeleton3D", true, false).Cast<Skeleton3D>().FirstOrDefault();
+                if (игрок is null || свой is null || игрок.GetAnimationList().Length == 0)
+                {
+                    GD.PrintErr($"в {путь} нет {(свой is null ? "скелета" : "анимации")} — "
+                                + $"«{к.клип}» и другие клипы из него будут заглушкой");
+                    узел.Free();
+                    негодные.Add(к.файл);
+                    continue;
+                }
                 var (бёдра, рост) = Покой(свой);
                 var клип = (Animation)игрок.GetAnimation(игрок.GetAnimationList()[0]).Duplicate(true);
                 узел.Free();
@@ -270,7 +309,7 @@ public static class Люди
             }
             if (к.шаг)
                 _шаг[к.клип] = взят.шаг;
-            _клипы.AddAnimation(к.клип, взят.клип);
+            _клипы.AddAnimation(к.клип, впервые ? взят.клип : (Animation)взят.клип.Duplicate());
         }
         return true;
     }
