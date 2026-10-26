@@ -153,6 +153,28 @@ public static partial class Конфликт
     {
         var moved = Словари.Строкой<double>();
         int left = (int)Math.Max(1, Math.Round(limit, MidpointRounding.ToEven));
+        // У героя «в руках» — его ноша (пакет, сумка, рюкзак): она живёт мимо
+        // шкафа, и брать из шкафа значило бы отнять банки, лежащие дома,
+        // а полный пакет в руках оставить (обзор 27.10.2026). Есть ноша —
+        // берут из неё. У соседей ноши нет, и всё как в прототипе
+        if (victim.ноша is { пусто: false } ноша)
+        {
+            foreach (string res in НЕСУТ)
+            {
+                if (left <= 0)
+                    break;
+                double в_руках = ноша.Сколько(res);
+                if (в_руках <= 1e-9)
+                    continue;
+                double amount = Math.Min(в_руках,
+                    Math.Min(left, Math.Max(1, Math.Round(в_руках * 0.3, MidpointRounding.ToEven))));
+                amount = ноша.Вынуть(res, amount);
+                taker.stock[res] = taker.stock.Взять(res, 0.0) + amount;
+                moved[res] = amount;
+                left -= Math.Max(1, (int)amount);
+            }
+            return moved;
+        }
         foreach (string res in НЕСУТ)
         {
             if (left <= 0)
