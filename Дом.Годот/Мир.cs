@@ -1365,7 +1365,7 @@ public partial class Мир : Node3D
             Mesh = new BoxMesh { Size = new Vector3(0.03f, 0.16f, 0.02f) },
             MaterialOverride = new StandardMaterial3D
             {
-                AlbedoColor = new Color("#9aa0b8"),
+                AlbedoColor = ЗАРУБКА,
                 ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
             },
             Position = дверь + new Vector3(в_дом * 0.08f, 0.30f, 0.52f),
@@ -1620,11 +1620,22 @@ public partial class Мир : Node3D
     };
 
     /// <summary>Где остались зарубки прошлых жизней.</summary>
-    public void Отголоски(IReadOnlyCollection<int> квартиры)
+    /// <summary>Зарубки на косяках — там, где что-то было в прошлых жизнях.
+    /// <paramref name="ярче"/> — рассудок дошёл до тревоги (ГДД 11: «отголоски
+    /// ярче»): зарубка белее и крупнее, её видно издали.</summary>
+    public void Отголоски(IReadOnlyCollection<int> квартиры, bool ярче = false)
     {
         foreach (var д in _двери)
+        {
             д.зарубка.Visible = квартиры.Contains(д.квартира);
+            if (д.зарубка.MaterialOverride is StandardMaterial3D м)
+                м.AlbedoColor = ярче ? ЗАРУБКА_ЯРКО : ЗАРУБКА;
+            д.зарубка.Scale = ярче ? new Vector3(1.6f, 1.8f, 1.0f) : Vector3.One;
+        }
     }
+
+    private static readonly Color ЗАРУБКА = new("#9aa0b8");
+    private static readonly Color ЗАРУБКА_ЯРКО = new("#eef0ff");
 
     private static readonly Color ДЕРЕВО = new("#6b4a2c");
     private static readonly Color ПУСТО = new("#40301f");
