@@ -194,7 +194,7 @@ public static partial class Проверки
                 плохо.Add("торг: мена считает выгоду мимо торга");
             string Файл(string имя) => File.ReadAllText(Path.Combine(Пути.Корень, "Дом.Годот", имя));
             string узел = Файл("ДомУзел.cs"), игра = Файл("ДомУзел.РазговорИгра.cs");
-            if (!узел.Contains("Разговор_перед_делом(номер, с_разговора, торг: дело_дома.Item1 == \"обмен\");", StringComparison.Ordinal))
+            if (!узел.Contains("Разговор_перед_делом(номер, с_разговора, торг: дело_дома.Item1 == \"обмен\",", StringComparison.Ordinal))
                 плохо.Add("торг: ответ «обмен» идёт мимо реплики на время");
             if (!игра.Contains("bool сорван = и.торг && Реплики.Торг_сорван(к);", StringComparison.Ordinal)
                 || !игра.Contains("Реплики.Торг_сорвался(и.с, _партия.сеанс.я, _ручки);", StringComparison.Ordinal))
