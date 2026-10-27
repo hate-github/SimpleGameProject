@@ -167,7 +167,7 @@ public static partial class Проверки
         {
             string Файл(string имя) => File.ReadAllText(Path.Combine(Пути.Корень, "Дом.Годот", имя));
             string узел = Файл("ДомУзел.cs"), игра = Файл("ДомУзел.РазговорИгра.cs");
-            if (!узел.Contains("Разговор_перед_делом(номер, с_разговора);", StringComparison.Ordinal)
+            if (!узел.Contains("Разговор_перед_делом(номер, с_разговора, торг: дело_дома.Item1 == \"обмен\");", StringComparison.Ordinal)
                 || !узел.Contains("Реплика_кадр(delta);", StringComparison.Ordinal))
                 плохо.Add("разговор: ответ «разговор» идёт мимо реплики на время");
             if (!игра.Contains("МиниИгры.Сыграно_для(МиниИгра.РАЗГОВОР, к, _ручки)", StringComparison.Ordinal)
