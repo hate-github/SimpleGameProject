@@ -174,6 +174,7 @@ public partial class Мир : Node3D
     public void Построить(House h, int своя)
     {
         _двери.Clear();
+        _записки.Clear();               // таблички записок висели на прежних дверях
         _лампы.Clear();
         _гул_ламп.Clear();
         _гаражи.Clear();
@@ -1400,6 +1401,57 @@ public partial class Мир : Node3D
             // сорванный замок виден тем, что дверь больше не закрывается
             д.узел.RotationDegrees = new Vector3(
                 0, с.взломана || с.разобрана ? д.в_дом * 11 : 0, 0);
+        }
+    }
+
+    private readonly Dictionary<int, Label3D> _записки = new();
+
+    /// <summary>Где стоять перед дверью квартиры и где сама дверь — для проб.</summary>
+    public (Vector3 перед, Vector3 дверь)? Дверь_где(int кв)
+        => _двери.FirstOrDefault(д => д.квартира == кв) is { } д && GodotObject.IsInstanceValid(д.узел)
+            ? (д.перед, д.узел.GlobalPosition)
+            : null;
+
+    /// <summary>
+    /// Что написано на дверях: мел — белым прямо по двери, бумага — тёмные
+    /// буквы на светлом поле (обводка вместо листка). Решает
+    /// `Дом.Экран.Беседы.Записки`; здесь только буквы.
+    /// </summary>
+    public void Записки(IReadOnlyList<Дом.Экран.Записка> что)
+    {
+        var по_номеру = что.ToDictionary(з => з.квартира);
+        foreach (var д in _двери)
+        {
+            по_номеру.TryGetValue(д.квартира, out var з);
+            if (_записки.TryGetValue(д.квартира, out var старая) && !GodotObject.IsInstanceValid(старая))
+                _записки.Remove(д.квартира);
+            if (!_записки.TryGetValue(д.квартира, out var л))
+            {
+                if (з is null || !GodotObject.IsInstanceValid(д.узел))
+                    continue;
+                л = new Label3D
+                {
+                    FontSize = 44,
+                    PixelSize = 0.0021f,
+                    Billboard = BaseMaterial3D.BillboardModeEnum.Disabled,
+                    Position = new Vector3(д.в_дом * 0.10f, 0.12f, 0),
+                    RotationDegrees = new Vector3(0, д.в_дом * 90, 0),
+                    DoubleSided = true,
+                    Shaded = false,
+                    AutowrapMode = TextServer.AutowrapMode.WordSmart,
+                    Width = 400,
+                    OutlineModulate = new Color("#d9d2bf"),
+                };
+                д.узел.AddChild(л);
+                _записки[д.квартира] = л;
+            }
+            л.Visible = з is not null;
+            if (з is null)
+                continue;
+            л.Text = з.текст;
+            bool мел = з.чем == Дом.Экран.Чем.МЕЛ;
+            л.Modulate = мел ? new Color("#ebe6da") : new Color("#2a2622");
+            л.OutlineSize = мел ? 0 : 16;
         }
     }
 

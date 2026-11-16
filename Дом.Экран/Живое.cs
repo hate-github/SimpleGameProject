@@ -37,6 +37,12 @@ public enum ЗаДверью { ПУСТО, РАЗОБРАНА, ТЕЛО, НИК�
 /// слова (уже с родом и именами) и что слышно за дверью.</summary>
 public sealed record ОтветДвери(ЗаДверью что, NPC? кто, bool открыл, string слова, string? слышно);
 
+/// <summary>Записка или знак на двери: чем написано — мелом по двери или на бумаге.</summary>
+public enum Чем { МЕЛ, БУМАГА }
+
+/// <summary>Что написано на двери квартиры — видно всякому на площадке.</summary>
+public sealed record Записка(int квартира, string текст, Чем чем);
+
 /// <summary>Что услышано, пока стоял у двери: строки (кто — голосом, как его
 /// знает герой, — и что сказал) и что герой узнал о чужой еде: о ком и сколько.</summary>
 public sealed record Подслушано(IReadOnlyList<string> строки, IReadOnlyList<(string кто, double еды)> о_еде);
@@ -47,6 +53,7 @@ public sealed partial class Беседы
     private readonly Dictionary<string, List<string>> _за_дверью = new(StringComparer.Ordinal);
     private readonly Dictionary<string, List<string>> _окно = new(StringComparer.Ordinal);
     private readonly Dictionary<string, List<string>> _подслушать = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, List<string>> _записки = new(StringComparer.Ordinal);
 
     /// <summary>Списки реплик на ходу — проверка сверяет, что все на месте.</summary>
     public static readonly IReadOnlyList<string> МИМОХОДОМ = new[]
@@ -69,6 +76,9 @@ public sealed partial class Беседы
         "болезнь", "голод", "запасы", "страх", "быт", "ответ",
     };
 
+    /// <summary>Списки записок на дверях.</summary>
+    public static readonly IReadOnlyList<string> ЗАПИСКИ = new[] { "тело", "переехали", "болеют", "отдаст" };
+
     /// <summary>Списки вида из окна.</summary>
     public static readonly IReadOnlyList<string> ОКНО = new[]
     {
@@ -83,6 +93,7 @@ public sealed partial class Беседы
         "за_дверью" => _за_дверью[список],
         "окно" => _окно[список],
         "подслушать" => _подслушать[список],
+        "записки" => _записки[список],
         _ => throw new ArgumentException($"нет раздела «{раздел}»"),
     };
 
@@ -95,6 +106,7 @@ public sealed partial class Беседы
                      ("за_дверью", ЗА_ДВЕРЬЮ, _за_дверью),
                      ("окно", ОКНО, _окно),
                      ("подслушать", ПОДСЛУШАТЬ, _подслушать),
+                     ("записки", ЗАПИСКИ, _записки),
                  })
         {
             var р = к.GetProperty(раздел);
@@ -315,6 +327,55 @@ public sealed partial class Беседы
         if (p.panic > 60)
             return ("страх", null);
         return ("быт", null);
+    }
+
+    // ------------------------------------------------------------ записки
+
+    /// <summary>
+    /// Что написано на дверях сегодня — то, что жильцы пишут друг другу
+    /// и что видит каждый на площадке: мелом крест, где хозяин остался
+    /// внутри; «мы у такого-то» — где все съехали к соседу; «болеем, не
+    /// стучать» — где больной (болезнь с «Вектора», только в мире героя);
+    /// «кому совсем плохо — стучите» — у того, кто последнее отдаст, когда
+    /// в доме уже голодно. Пустая, разобранная, без живых — без записки.
+    /// </summary>
+    public IReadOnlyList<Записка> Записки(House h, NPC я, IReadOnlyList<ДверьСнаружи> двери, Заражение? з, long зерно)
+    {
+        int свой = h.хозяин_жилья(я).apt;
+        string Из(string список, int кв) => Одна(_записки[список], зерно, "записка_" + список, "кв" + кв, h.day);
+        var @out = new List<Записка>();
+        foreach (var д in двери.OrderBy(д => д.квартира))
+        {
+            int кв = д.квартира;
+            if (кв == свой)
+                continue;                   // на своей двери герой пишет сам — если захочет
+            if (д.тело)
+            {
+                @out.Add(new Записка(кв, Из("тело", кв), Чем.МЕЛ));
+                continue;
+            }
+            var прописаны = h.people.Значения.Where(p => p.apt == кв).ToList();
+            var живут = h.alive().Where(p => h.хозяин_жилья(p).apt == кв).ToList();
+            // все прописанные живы и живут у соседа — пишут, где искать
+            if (живут.Count == 0 && прописаны.Count > 0 && прописаны.All(p => p.alive)
+                && прописаны.Select(p => h.хозяин_жилья(p)).FirstOrDefault(f => f.apt != кв) is { } у
+                && h.alive().Where(p => p.apt == у.apt).OrderBy(p => p.id, StringComparer.Ordinal).FirstOrDefault() is NPC хозяин)
+            {
+                @out.Add(new Записка(кв, Из("переехали", кв).Replace("{кого}", хозяин.form("gen").ToUpperInvariant(), StringComparison.Ordinal)
+                                                        .Replace("{кв}", у.apt.ToString(System.Globalization.CultureInfo.InvariantCulture), StringComparison.Ordinal),
+                                     Чем.БУМАГА));
+                continue;
+            }
+            if (з is not null && живут.Any(p => з.Стадия(p.id) is Стадия.БОЛЕН or Стадия.ТЯЖЕЛО))
+            {
+                @out.Add(new Записка(кв, Из("болеют", кв), Чем.БУМАГА));
+                continue;
+            }
+            if (h.day >= 3 && живут.Any(p => p.пунктики.Contains("последнее_отдаст", StringComparer.Ordinal)
+                                             && p.stock.Взять("еда", 0.0) > 0))
+                @out.Add(new Записка(кв, Из("отдаст", кв), Чем.БУМАГА));
+        }
+        return @out;
     }
 
     // ------------------------------------------------------------ из окна
