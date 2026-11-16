@@ -150,7 +150,7 @@ public sealed partial class Беседы
     public static readonly IReadOnlyList<string> ЗАПИСКИ = new[] { "тело", "переехали", "болеют", "отдаст", "вор", "пустая", "зовёт" };
 
     /// <summary>Списки раздела «доска»: что вешают у входа.</summary>
-    public static readonly IReadOnlyList<string> ДОСКА = new[] { "мена", "кража", "смерть", "медик", "старые" };
+    public static readonly IReadOnlyList<string> ДОСКА = new[] { "мена", "кража", "смерть", "медик", "старые", "до_метели" };
 
     /// <summary>Чем меняются на доске — ресурс дома и как его пишут (винительный).</summary>
     public static readonly IReadOnlyList<string> МЕНА = new[] { "еда", "вода", "топливо", "лекарства", "материалы" };
@@ -572,8 +572,8 @@ public sealed partial class Беседы
         string Из(string список, string повод) => Одна(_доска[список], зерно, "доска_" + список, повод, h.day);
         static string Кв(int кв) => кв.ToString(System.Globalization.CultureInfo.InvariantCulture);
         var старая = new Объявление(Одна(_доска["старые"], зерно, "доска_старые", "доска", 0), null, null, 0.0);
-        if (до_метели)
-            return new[] { старая };       // до метели на доске только то, что висело с осени
+        if (до_метели)                     // до метели — прогноз снегопада и то, что висело с осени
+            return new[] { new Объявление(Одна(_доска["до_метели"], зерно, "доска_до_метели", "доска", 0), null, null, 0.0), старая };
         var @out = new List<Объявление>();
         var живые = h.alive().Where(p => p != я && p.здесь()).OrderBy(p => p.apt).ThenBy(p => p.id, StringComparer.Ordinal).ToList();
         // смерть — первой: о ней знает весь дом
