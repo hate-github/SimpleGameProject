@@ -1848,6 +1848,15 @@ public partial class Мир : Node3D
         Звуки.Пустить(п, поток, -9f, 0f);
     }
 
+    /// <summary>Кто стоит рядом с этой фигурой (ближе <paramref name="радиус"/>, на том
+    /// же этаже, не идёт) — с ним она и говорит, если не с героем.</summary>
+    public Сосед3D? Рядом_с(Сосед3D ф, float радиус = 1.8f)
+        => _люди.Values.Where(д => д != ф && IsInstanceValid(д) && д.Visible && !д.идёт
+                                   && Mathf.Abs(д.GlobalPosition.Y - ф.GlobalPosition.Y) < 0.6f
+                                   && д.GlobalPosition.DistanceTo(ф.GlobalPosition) < радиус)
+                       .OrderBy(д => д.GlobalPosition.DistanceTo(ф.GlobalPosition))
+                       .FirstOrDefault();
+
     /// <summary>Где стоит фигура соседа — или null: на лестнице его не видно.</summary>
     public Vector3? Где_сосед(string id)
         => _люди.TryGetValue(id, out var с) && IsInstanceValid(с) && с.Visible
