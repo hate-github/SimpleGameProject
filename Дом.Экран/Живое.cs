@@ -37,11 +37,16 @@ public enum ЗаДверью { ПУСТО, РАЗОБРАНА, ТЕЛО, НИК�
 /// слова (уже с родом и именами) и что слышно за дверью.</summary>
 public sealed record ОтветДвери(ЗаДверью что, NPC? кто, bool открыл, string слова, string? слышно);
 
+/// <summary>Что услышано, пока стоял у двери: строки (кто — голосом, как его
+/// знает герой, — и что сказал) и что герой узнал о чужой еде: о ком и сколько.</summary>
+public sealed record Подслушано(IReadOnlyList<string> строки, IReadOnlyList<(string кто, double еды)> о_еде);
+
 public sealed partial class Беседы
 {
     private readonly Dictionary<string, List<string>> _мимоходом = new(StringComparer.Ordinal);
     private readonly Dictionary<string, List<string>> _за_дверью = new(StringComparer.Ordinal);
     private readonly Dictionary<string, List<string>> _окно = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, List<string>> _подслушать = new(StringComparer.Ordinal);
 
     /// <summary>Списки реплик на ходу — проверка сверяет, что все на месте.</summary>
     public static readonly IReadOnlyList<string> МИМОХОДОМ = new[]
@@ -57,6 +62,13 @@ public sealed partial class Беседы
         "чужой", "знакомый", "свой", "кашель", "ребёнок", "голоса",
     };
 
+    /// <summary>Списки того, что слышно, если постоять у двери тихо.</summary>
+    public static readonly IReadOnlyList<string> ПОДСЛУШАТЬ = new[]
+    {
+        "тихо", "спят", "тепло", "запас", "угол", "рассорить", "уйти", "вместе", "о_герое", "на_героя",
+        "болезнь", "голод", "запасы", "страх", "быт", "ответ",
+    };
+
     /// <summary>Списки вида из окна.</summary>
     public static readonly IReadOnlyList<string> ОКНО = new[]
     {
@@ -70,6 +82,7 @@ public sealed partial class Беседы
         "мимоходом" => _мимоходом[список],
         "за_дверью" => _за_дверью[список],
         "окно" => _окно[список],
+        "подслушать" => _подслушать[список],
         _ => throw new ArgumentException($"нет раздела «{раздел}»"),
     };
 
@@ -81,6 +94,7 @@ public sealed partial class Беседы
                      ("мимоходом", МИМОХОДОМ, _мимоходом),
                      ("за_дверью", ЗА_ДВЕРЬЮ, _за_дверью),
                      ("окно", ОКНО, _окно),
+                     ("подслушать", ПОДСЛУШАТЬ, _подслушать),
                  })
         {
             var р = к.GetProperty(раздел);
@@ -222,6 +236,85 @@ public sealed partial class Беседы
         if (дома.Count >= 2)
             слышно.Add(Из("голоса"));
         return слышно.Count == 0 ? null : string.Join(" ", слышно);
+    }
+
+    // ------------------------------------------------------------ подслушать
+
+    /// <summary>
+    /// Постоять у двери <paramref name="кв"/> тихо: что слышно. Каждый, кто дома,
+    /// говорит о том, чем живёт: замысел (уйти, запас, тепло, угол, стравить
+    /// двоих, перезимовать вдвоём), злость на героя — и замысел против него,
+    /// болезнь, голод или полный шкаф, страх, быт; второй отвечает. Голос
+    /// подписан так, как его знает герой: имя — или «мужской голос». О еде
+    /// герой узнаёт по-настоящему (<see cref="Подслушано.о_еде"/>): узел кладёт
+    /// это в его сведения о соседе, как кладёт сплетня.
+    /// </summary>
+    public Подслушано Подслушать(House h, NPC я, int кв, IReadOnlyList<СоседГде> кто_где, double час,
+                                 Заражение? з, long зерно, int раз)
+    {
+        string Из(string список, string кто, int ещё = 0)
+            => Одна(_подслушать[список], зерно, "слушать_" + список, кто, раз + h.day * 19 + ещё);
+        var дома = кто_где.Where(с => с.дом == кв && с.где == Где.Дома).Select(с => h.живой(с.id)).OfType<NPC>()
+                          .OrderBy(p => p.apt == кв ? 0 : 1).ThenBy(p => p.id, StringComparer.Ordinal).ToList();
+        if (дома.Count == 0)
+            return new Подслушано(new[] { Слова(Из("тихо", "кв" + кв), я, я) }, Array.Empty<(string, double)>());
+        if (час >= 23 || час < 6.5)
+            return new Подслушано(new[] { Слова(Из("спят", "кв" + кв), я, я) }, Array.Empty<(string, double)>());
+        var строки = new List<string>();
+        var о_еде = new List<(string, double)>();
+        foreach (var (p, n) in дома.Take(2).Select((p, n) => (p, n)))
+        {
+            string голос = Знакомство.Знает(h, я, p) ? $"голос {p.form("gen")}"
+                         : p.sex == "ж" ? "женский голос" : "мужской голос";
+            var (список, кому) = О_чём(h, я, p, з);
+            string слова;
+            if (список is null)
+                слова = Из("ответ", p.id);
+            else
+            {
+                слова = Из(список, p.id);
+                if (кому is not null)
+                    слова = слова.Replace("{кто}", кому.@short, StringComparison.Ordinal)
+                                 .Replace("{кого}", кому.form("gen"), StringComparison.Ordinal)
+                                 .Replace("{кому}", кому.form("dat"), StringComparison.Ordinal)
+                                 .Replace("{кем}", кому.form("ins"), StringComparison.Ordinal);
+                слова = слова.Replace("{кв}", я.apt.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                                      StringComparison.Ordinal);
+                if (список is "голод" or "запасы")
+                    о_еде.Add((p.id, p.stock.Взять("еда", 0.0)));
+            }
+            // второй — чаще отвечает первому, чем начинает своё
+            if (n == 1 && список is not ("на_героя" or "о_герое") && Округа.Бросок(зерно, "слушать_второй", p.id, раз + h.day * 19) < 0.5)
+                слова = Из("ответ", p.id);
+            строки.Add($"{СЗаглавной(голос)}: «{Слова(слова, p, я)}»");
+        }
+        return new Подслушано(строки, о_еде);
+    }
+
+    /// <summary>О чём человек говорит у себя дома, если его не видят: имя
+    /// списка и о ком (для «{кому}»); null — просто поддакнет.</summary>
+    private static (string? список, NPC? кому) О_чём(House h, NPC я, NPC p, Заражение? з)
+    {
+        if (p.замысел is { } за)
+        {
+            if (за.вид == "рассорить" && за.враг == я.id)
+                return ("на_героя", null);
+            var кому = h.живой(за.враг ?? за.друг ?? "");
+            if (Замыслы.ВИДЫ.Contains(за.вид) && (за.вид is not ("рассорить" or "вместе") || кому is not null))
+                return (за.вид, кому);
+        }
+        if (p.hate.Взять(я.id, 0.0) > 30)
+            return ("о_герое", null);
+        if (з is not null && з.Стадия(p.id) is Стадия.БОЛЕН or Стадия.ТЯЖЕЛО)
+            return ("болезнь", null);
+        double еды = p.stock.Взять("еда", 0.0);
+        if (p.satiety < 35 || еды < 2)
+            return ("голод", null);
+        if (еды >= 12)
+            return ("запасы", null);
+        if (p.panic > 60)
+            return ("страх", null);
+        return ("быт", null);
     }
 
     // ------------------------------------------------------------ из окна
