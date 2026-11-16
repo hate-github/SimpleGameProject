@@ -102,7 +102,7 @@ public sealed partial class Беседы
     public static readonly IReadOnlyList<string> О_СЕБЕ = new[] { "голод", "жажда", "холод", "усталость", "ранен", "страх", "тоска", "болен" };
 
     /// <summary>Списки записок на дверях.</summary>
-    public static readonly IReadOnlyList<string> ЗАПИСКИ = new[] { "тело", "переехали", "болеют", "отдаст" };
+    public static readonly IReadOnlyList<string> ЗАПИСКИ = new[] { "тело", "переехали", "болеют", "отдаст", "вор", "пустая" };
 
     /// <summary>Списки вида из окна.</summary>
     public static readonly IReadOnlyList<string> ОКНО = new[]
@@ -525,14 +525,22 @@ public sealed partial class Беседы
     {
         int свой = h.хозяин_жилья(я).apt;
         string Из(string список, int кв) => Одна(_записки[список], зерно, "записка_" + список, "кв" + кв, h.day);
+        var живые = h.alive().ToList();
+        // поймали на краже за три дня — или о нём шепчут трое: мелом на двери
+        bool Вор(NPC p) => живые.Any(с => с != p && с.memory.Any(м => м.вид == Вид.ПОЙМАЛ_ВОРА && м.кто == p.id && h.day - м.день <= 3))
+                        || живые.Count(с => с != p && с.memory.Any(м => м.вид == Вид.НАЗВАЛИ_ВОРОМ && м.кто == p.id && h.day - м.день <= 3)) >= 3;
         var @out = new List<Записка>();
         foreach (var д in двери.OrderBy(д => д.квартира))
         {
             int кв = д.квартира;
+            var живут = живые.Where(p => h.хозяин_жилья(p).apt == кв).ToList();
             if (кв == свой)
             {
-                // на своей двери герой пишет сам (`ЗапискаГероя`)
-                if (я.записка is string вид && _записка_героя.TryGetValue(вид, out var своя))
+                // на своей двери герой пишет сам (`ЗапискаГероя`); «вор» мелом — поверх
+                string? своя = я.записка is string вид && _записка_героя.TryGetValue(вид, out var т) ? т : null;
+                if (живут.Any(Вор))
+                    @out.Add(new Записка(кв, Из("вор", кв) + (своя is null ? "" : "\n" + своя), Чем.МЕЛ));
+                else if (своя is not null)
                     @out.Add(new Записка(кв, своя, Чем.БУМАГА));
                 continue;
             }
@@ -542,7 +550,13 @@ public sealed partial class Беседы
                 continue;
             }
             var прописаны = h.people.Значения.Where(p => p.apt == кв).ToList();
-            var живут = h.alive().Where(p => h.хозяин_жилья(p).apt == кв).ToList();
+            // здесь никто не жил и до метели: бумажка, оставшаяся с осени, — не у всех
+            if (прописаны.Count == 0 && живут.Count == 0)
+            {
+                if (!д.разобрана && Округа.Бросок(зерно, "записка_пустая_есть", "кв" + кв, 0) < 0.6)
+                    @out.Add(new Записка(кв, Одна(_записки["пустая"], зерно, "записка_пустая", "кв" + кв, 0), Чем.БУМАГА));
+                continue;
+            }
             // все прописанные живы и живут у соседа — пишут, где искать
             if (живут.Count == 0 && прописаны.Count > 0 && прописаны.All(p => p.alive)
                 && прописаны.Select(p => h.хозяин_жилья(p)).FirstOrDefault(f => f.apt != кв) is { } у
@@ -556,6 +570,11 @@ public sealed partial class Беседы
             if (з is not null && живут.Any(p => з.Стадия(p.id) is Стадия.БОЛЕН or Стадия.ТЯЖЕЛО))
             {
                 @out.Add(new Записка(кв, Из("болеют", кв), Чем.БУМАГА));
+                continue;
+            }
+            if (живут.Any(Вор))
+            {
+                @out.Add(new Записка(кв, Из("вор", кв), Чем.МЕЛ));
                 continue;
             }
             if (h.day >= 3 && живут.Any(p => p.пунктики.Contains("последнее_отдаст", StringComparer.Ordinal)
