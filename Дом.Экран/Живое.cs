@@ -55,6 +55,10 @@ public sealed partial class Беседы
     private readonly Dictionary<string, List<string>> _подслушать = new(StringComparer.Ordinal);
     private readonly Dictionary<string, List<string>> _записки = new(StringComparer.Ordinal);
     private readonly Dictionary<string, List<string>> _у_двери = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, string> _записка_героя = new(StringComparer.Ordinal);
+
+    /// <summary>Что написано на двери героя — по виду записки (`ЗапискаГероя.ВИДЫ`).</summary>
+    public IReadOnlyDictionary<string, string> записка_героя => _записка_героя;
 
     /// <summary>Списки реплик на ходу — проверка сверяет, что все на месте.</summary>
     public static readonly IReadOnlyList<string> МИМОХОДОМ = new[]
@@ -62,6 +66,7 @@ public sealed partial class Беседы
         "злой", "болен", "голод", "жажда", "холод", "усталость", "страх", "ранен", "тоска",
         "к_двери", "смерть", "утро", "вечер", "метель", "свой", "знакомый", "чужой",
         "ноша_чужой", "ноша_свой", "пропажа", "вор_пойман", "назвали_вором", "на_лжи", "изгнание", "убийство",
+        "записка_не_стучать", "записка_болею", "записка_меняю", "записка_помогу",
     };
 
     /// <summary>Списки ответов двери и того, что за ней слышно.</summary>
@@ -124,6 +129,9 @@ public sealed partial class Беседы
             foreach (var имя in имена)
                 куда[имя] = Список(р.GetProperty(имя));
         }
+        var зг = к.GetProperty("записка_героя");
+        foreach (var вид in ЗапискаГероя.ВИДЫ)
+            _записка_героя[вид] = зг.GetProperty(вид).GetString()!;
     }
 
     // ------------------------------------------------------------ на ходу
@@ -155,6 +163,10 @@ public sealed partial class Беседы
         // героиня несёт полную тару — это видно всем
         if (с_ношей && Бросок("ноша") < 0.5)
             return Слова(Из(отношение is "свой" or "знакомый" ? "ноша_свой" : "ноша_чужой"), с, я);
+        // записку на двери героини читали все — кто-нибудь да скажет
+        if (я.записка is string записка && Бросок("записка") < 0.35
+            && _мимоходом.ContainsKey("записка_" + записка))
+            return Слова(Из("записка_" + записка), с, я);
         // что давит сильнее всего — о том и скажет, чаще всего
         if (Нужда(с) is string нужда && Бросок("нужда") < 0.75)
             return Слова(Из(нужда), с, я);
@@ -420,7 +432,12 @@ public sealed partial class Беседы
         {
             int кв = д.квартира;
             if (кв == свой)
-                continue;                   // на своей двери герой пишет сам — если захочет
+            {
+                // на своей двери герой пишет сам (`ЗапискаГероя`)
+                if (я.записка is string вид && _записка_героя.TryGetValue(вид, out var своя))
+                    @out.Add(new Записка(кв, своя, Чем.БУМАГА));
+                continue;
+            }
             if (д.тело)
             {
                 @out.Add(new Записка(кв, Из("тело", кв), Чем.МЕЛ));
