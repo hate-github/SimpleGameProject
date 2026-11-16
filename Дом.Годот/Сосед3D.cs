@@ -55,6 +55,13 @@ public partial class Сосед3D : StaticBody3D
     /// или null, и тогда лицом по делу. Ставит `Мир.Взгляды` каждый кадр.</summary>
     public Vector3? Смотреть_на { get; set; }
 
+    // шаги идущего (импровизация 17.11.2026): по полу и по снегу, тише своих —
+    // соседа слышно на лестнице выше и ниже, пока он идёт, и не слышно, когда стоит
+    private AudioStreamPlayer3D? _шаги;
+    private float _до_шага;
+    private int _нога;
+    private const float ДЛИНА_ШАГА = 0.7f;  // метров на шаг
+
     private const float ШАГ = 1.25f;       // м/с — по лестнице хрущёвки не разбежишься
     private const float БЕГОМ = 2.6f;
     private const float НА_ЛЕСТНИЦЕ = 0.6f; // доля скорости на ступенях
@@ -104,6 +111,15 @@ public partial class Сосед3D : StaticBody3D
             с.аниматор = new Аниматор { Name = "аниматор", Рука = с.руки, Тело = корпус };
         }
         с.AddChild(с.аниматор);
+        с._шаги = new AudioStreamPlayer3D
+        {
+            Name = "шаги",
+            UnitSize = 1.6f,
+            MaxDistance = 16f,
+            Bus = Шины.ШАГИ,
+            Position = new Vector3(0, 0.1f, 0),
+        };
+        с.AddChild(с._шаги);
         с._форма = new CollisionShape3D
         {
             Shape = new CapsuleShape3D { Height = 1.75f, Radius = 0.28f },
@@ -186,6 +202,27 @@ public partial class Сосед3D : StaticBody3D
         Rotation = new Vector3(0, Mathf.LerpAngle(Rotation.Y, куда, 1f - Mathf.Exp(-6f * (float)delta)), 0);
     }
 
+    /// <summary>Прошёл <paramref name="метров"/> — пора ли шагнуть: на полу дома —
+    /// глухой шаг, во дворе — снег; бегом громче.</summary>
+    private void Шаги_кадр(float метров)
+    {
+        if (_шаги is null)
+            return;
+        _до_шага -= метров;
+        if (_до_шага > 0)
+            return;
+        _до_шага = ДЛИНА_ШАГА;
+        _нога = 1 - _нога;
+        bool снег = !Мир.В_секции(GlobalPosition);
+        var запись = Звуки.Взять(снег ? (_нога == 0 ? "шаги_снег_1" : "шаги_снег_2") : "шаги_пол");
+        if (запись is null)
+            return;
+        _шаги.Stream = запись;
+        _шаги.VolumeDb = (_бегом ? -6f : -11f) + (float)GD.RandRange(-1.5, 1.5);
+        _шаги.PitchScale = 1f + (float)GD.RandRange(-0.03, 0.03);
+        _шаги.Play(снег ? (_нога == 0 ? 0.40f : 0.20f) : 0.44f);
+    }
+
     public override void _PhysicsProcess(double delta)
     {
         if (!идёт)
@@ -199,6 +236,7 @@ public partial class Сосед3D : StaticBody3D
                                       лестница && впереди.Y > 0 ? Анимации.ЛЕСТНИЦА : null));
         аниматор.Скорость(скорость);
         float шаг = скорость * (float)delta;
+        Шаги_кадр(шаг);
         while (шаг > 0 && _точка < _путь.Length)
         {
             var к = _путь[_точка] - Position;
