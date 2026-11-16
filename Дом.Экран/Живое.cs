@@ -31,6 +31,10 @@ using Дом.Ядро;
 namespace Дом.Экран;
 
 /// <summary>Кто или что за дверью, когда стучат просто так.</summary>
+/// <summary>Объявление на доске у входа: текст и, если это мена, — кто повесил, что
+/// у него в избытке и сколько (он пишет о своём шкафе сам).</summary>
+public sealed record Объявление(string текст, string? кто, string? ресурс, double сколько);
+
 /// <summary>Что сосед рассказал на «что слышно?»: слова и, если это весть о чужом
 /// шкафе, — о ком и сколько, по его мнению, у того еды.</summary>
 public sealed record Весть(string слова, string? о_ком, double еды);
@@ -63,6 +67,8 @@ public sealed partial class Беседы
     private readonly Dictionary<string, List<string>> _мысли = new(StringComparer.Ordinal);
     private readonly Dictionary<string, List<string>> _вести = new(StringComparer.Ordinal);
     private readonly Dictionary<string, List<string>> _труба = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, List<string>> _доска = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, string> _доска_ресурсы = new(StringComparer.Ordinal);
 
     /// <summary>Что написано на двери героя — по виду записки (`ЗапискаГероя.ВИДЫ`).</summary>
     public IReadOnlyDictionary<string, string> записка_героя => _записка_героя;
@@ -132,6 +138,12 @@ public sealed partial class Беседы
     /// <summary>Списки записок на дверях.</summary>
     public static readonly IReadOnlyList<string> ЗАПИСКИ = new[] { "тело", "переехали", "болеют", "отдаст", "вор", "пустая" };
 
+    /// <summary>Списки раздела «доска»: что вешают у входа.</summary>
+    public static readonly IReadOnlyList<string> ДОСКА = new[] { "мена", "кража", "смерть", "медик", "старые" };
+
+    /// <summary>Чем меняются на доске — ресурс дома и как его пишут (винительный).</summary>
+    public static readonly IReadOnlyList<string> МЕНА = new[] { "еда", "вода", "топливо", "лекарства", "материалы" };
+
     /// <summary>Списки раздела «труба»: как отзываются по стояку.</summary>
     public static readonly IReadOnlyList<string> ТРУБА = new[] { "ответили", "сонно", "тихо" };
 
@@ -157,6 +169,7 @@ public sealed partial class Беседы
         "мысли_героя" => _мысли[список],
         "вести" => _вести[список],
         "труба" => _труба[список],
+        "доска" => _доска[список],
         _ => throw new ArgumentException($"нет раздела «{раздел}»"),
     };
 
@@ -173,6 +186,7 @@ public sealed partial class Беседы
                      ("у_двери", У_ДВЕРИ.SelectMany(к => new[] { к + "_гость", к + "_хозяин" }).Append("нет_дома").ToList(), _у_двери),
                      ("вести", ВЕСТИ, _вести),
                      ("труба", ТРУБА, _труба),
+                     ("доска", ДОСКА, _доска),
                      ("мысли_героя", УВИДЕЛ.Concat(О_СЕБЕ.Select(к => "о_себе_" + к)).Concat(ДОМА.Select(к => "дома_" + к))
                                            .SelectMany(к => new[] { к + "_обычно", к + "_холодно" }).ToList(), _мысли),
                  })
@@ -184,6 +198,9 @@ public sealed partial class Беседы
         var зг = к.GetProperty("записка_героя");
         foreach (var вид in ЗапискаГероя.ВИДЫ)
             _записка_героя[вид] = зг.GetProperty(вид).GetString()!;
+        var др = к.GetProperty("доска").GetProperty("ресурсы");
+        foreach (var р in МЕНА)
+            _доска_ресурсы[р] = др.GetProperty(р).GetString()!;
         var зс = к.GetProperty("записка_соседу");
         foreach (var вид in ЗапискаГероя.СОСЕДУ)
             _записка_соседу[вид] = зс.GetProperty(вид).GetString()!;
@@ -504,6 +521,66 @@ public sealed partial class Беседы
             return null;
         string тон = порог == Порог.ОБЫЧНО ? "_обычно" : "_холодно";
         return Слова(Одна(_мысли["о_себе_" + что + тон], зерно, "о_себе_" + что, я.id, день * 13 + раз), я, я);
+    }
+
+    // ------------------------------------------------------------ доска объявлений
+
+    /// <summary>
+    /// Что висит на доске у входа. Каждое объявление пишет тот, кто знает:
+    /// мену — сосед о своём шкафе (избыток от шести порций, лекарств — от двух,
+    /// нехватка — запаса меньше, чем ему кажется нужным, `NPC.secure`; лекарств —
+    /// только когда болит), до трёх
+    /// самых щедрых; кражу — у кого за два дня пропало (`Вид.ПРОПАЖА`); смерть —
+    /// кто умер за три дня (знает весь дом); медик, когда знает, что в доме болеют,
+    /// — совет сидеть дома; и всегда — бумажка с осени, одна на мир. Аркадий
+    /// («знал_заранее») ничего не вешает: он ничем не делится.
+    /// </summary>
+    public IReadOnlyList<Объявление> Объявления(House h, NPC я, Заражение? з, long зерно, bool до_метели = false)
+    {
+        string Из(string список, string повод) => Одна(_доска[список], зерно, "доска_" + список, повод, h.day);
+        static string Кв(int кв) => кв.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        var старая = new Объявление(Одна(_доска["старые"], зерно, "доска_старые", "доска", 0), null, null, 0.0);
+        if (до_метели)
+            return new[] { старая };       // до метели на доске только то, что висело с осени
+        var @out = new List<Объявление>();
+        var живые = h.alive().Where(p => p != я && p.здесь()).OrderBy(p => p.apt).ThenBy(p => p.id, StringComparer.Ordinal).ToList();
+        // смерть — первой: о ней знает весь дом
+        foreach (var мёртв in h.people.Значения.Where(p => !p.alive && p.died_day is int д && h.day - д <= 3)
+                                                 .OrderByDescending(p => p.died_day).ThenBy(p => p.id, StringComparer.Ordinal))
+            @out.Add(new Объявление(Из("смерть", мёртв.id).Replace("{кто}", мёртв.@short.ToUpperInvariant(), StringComparison.Ordinal)
+                                                          .Replace("{кв}", Кв(мёртв.apt), StringComparison.Ordinal), null, null, 0.0));
+        // медик знает, что в доме болеют, — советует сидеть дома
+        if (з is not null && живые.FirstOrDefault(p => p.skills.Contains("медик", StringComparer.Ordinal)
+                                                       && Эпидемия.Вести(h, p, я, з).в_доме) is NPC медик)
+            @out.Add(new Объявление(Из("медик", медик.id).Replace("{кто}", медик.@short.ToUpperInvariant(), StringComparison.Ordinal)
+                                                         .Replace("{кв}", Кв(медик.apt), StringComparison.Ordinal), null, null, 0.0));
+        // обокрали — пишет обокраденный
+        foreach (var p in живые.Where(p => p.memory.Any(м => м.вид == Вид.ПРОПАЖА && h.day - м.день <= 2)))
+            @out.Add(new Объявление(Из("кража", p.id).Replace("{кв}", Кв(h.хозяин_жилья(p).apt), StringComparison.Ordinal), null, null, 0.0));
+        // мена: избыток на нехватку — до трёх самых щедрых
+        var мена = new List<(NPC p, string что, string на, double сколько)>();
+        foreach (var p in живые.Where(p => !p.пунктики.Contains("знал_заранее", StringComparer.Ordinal)))
+        {
+            var избыток = МЕНА.Select(р => (р, сколько: p.stock.Взять(р, 0.0), порог: р == "лекарства" ? 2.0 : 6.0))
+                              .Where(х => х.сколько >= х.порог)
+                              .OrderByDescending(х => х.сколько / х.порог).ThenBy(х => х.р, StringComparer.Ordinal).FirstOrDefault();
+            if (избыток.р is null)
+                continue;
+            // лекарств «не хватает» всем, у кого их нет, — просят их, только когда болит
+            bool болит = p.health < 50 || !string.IsNullOrEmpty(p.sick);
+            var нехватка = МЕНА.Where(р => р != избыток.р && р != "материалы" && (р != "лекарства" || болит) && p.secure(р) < 0.8)
+                               .OrderBy(р => p.secure(р)).ThenBy(р => р, StringComparer.Ordinal).FirstOrDefault();
+            if (нехватка is not null)
+                мена.Add((p, избыток.р, нехватка, избыток.сколько));
+        }
+        foreach (var (p, что, на, сколько) in мена.OrderByDescending(м => м.сколько).ThenBy(м => м.p.id, StringComparer.Ordinal).Take(3))
+            @out.Add(new Объявление(Из("мена", p.id).Replace("{что}", _доска_ресурсы[что], StringComparison.Ordinal)
+                                                    .Replace("{на}", _доска_ресурсы[на], StringComparison.Ordinal)
+                                                    .Replace("{кв}", Кв(h.хозяин_жилья(p).apt), StringComparison.Ordinal),
+                                    p.id, что, сколько));
+        // бумажка с осени — одна на мир и не меняется
+        @out.Add(старая);
+        return @out;
     }
 
     // ------------------------------------------------------------ по трубе
