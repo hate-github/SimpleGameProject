@@ -54,6 +54,7 @@ public sealed partial class Беседы
     private readonly Dictionary<string, List<string>> _окно = new(StringComparer.Ordinal);
     private readonly Dictionary<string, List<string>> _подслушать = new(StringComparer.Ordinal);
     private readonly Dictionary<string, List<string>> _записки = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, List<string>> _у_двери = new(StringComparer.Ordinal);
 
     /// <summary>Списки реплик на ходу — проверка сверяет, что все на месте.</summary>
     public static readonly IReadOnlyList<string> МИМОХОДОМ = new[]
@@ -77,6 +78,13 @@ public sealed partial class Беседы
         "болезнь", "голод", "запасы", "страх", "быт", "ответ",
     };
 
+    /// <summary>Дела, с которыми стоят у чужой двери, — у каждого реплика гостя
+    /// и ответ хозяина («ключ_гость», «ключ_хозяин» в разделе «у_двери»).</summary>
+    public static readonly IReadOnlyList<string> У_ДВЕРИ = new[]
+    {
+        "разговор", "попросить", "обмен", "поделиться", "лечить", "проведать", "позвать", "вернуть", "отнять", "шепнуть",
+    };
+
     /// <summary>Списки записок на дверях.</summary>
     public static readonly IReadOnlyList<string> ЗАПИСКИ = new[] { "тело", "переехали", "болеют", "отдаст" };
 
@@ -95,6 +103,7 @@ public sealed partial class Беседы
         "окно" => _окно[список],
         "подслушать" => _подслушать[список],
         "записки" => _записки[список],
+        "у_двери" => _у_двери[список],
         _ => throw new ArgumentException($"нет раздела «{раздел}»"),
     };
 
@@ -108,6 +117,7 @@ public sealed partial class Беседы
                      ("окно", ОКНО, _окно),
                      ("подслушать", ПОДСЛУШАТЬ, _подслушать),
                      ("записки", ЗАПИСКИ, _записки),
+                     ("у_двери", У_ДВЕРИ.SelectMany(к => new[] { к + "_гость", к + "_хозяин" }).Append("нет_дома").ToList(), _у_двери),
                  })
         {
             var р = к.GetProperty(раздел);
@@ -287,6 +297,29 @@ public sealed partial class Беседы
         if (дома.Count >= 2)
             слышно.Add(Из("голоса"));
         return слышно.Count == 0 ? null : string.Join(" ", слышно);
+    }
+
+    // ------------------------------------------------------------ у чужой двери
+
+    /// <summary>
+    /// Сосед <paramref name="гость"/> стоит у двери <paramref name="кв"/> по делу
+    /// <paramref name="ключ"/> (хроника) — что слышит проходящий мимо: реплику
+    /// гостя и ответ хозяина, если тот дома, иначе тишину. Имена — как их
+    /// знает герой. null — дело не из тех, что слышно на площадке.
+    /// </summary>
+    public string? У_двери(House h, NPC я, NPC гость, int кв, string ключ, IReadOnlyList<СоседГде> кто_где,
+                           long зерно, int раз)
+    {
+        if (!У_ДВЕРИ.Contains(ключ))
+            return null;
+        string Из(string список, string кто) => Одна(_у_двери[список], зерно, "у_двери_" + список, кто, раз + h.day * 23);
+        var хозяин = кто_где.Where(с => с.дом == кв && с.где == Где.Дома && с.id != гость.id)
+                            .Select(с => h.живой(с.id)).OfType<NPC>()
+                            .OrderBy(p => p.apt == кв ? 0 : 1).ThenBy(p => p.id, StringComparer.Ordinal).FirstOrDefault();
+        string гость_ = $"{СЗаглавной(Знакомство.Как_зовут(h, я, гость))}: «{Слова(Из(ключ + "_гость", гость.id), гость, я)}»";
+        if (хозяин is null)
+            return $"{гость_} — {Слова(Из("нет_дома", "кв" + кв), я, я)}";
+        return $"{гость_} — {Знакомство.Как_зовут(h, я, хозяин)}: «{Слова(Из(ключ + "_хозяин", хозяин.id), хозяин, я)}»";
     }
 
     // ------------------------------------------------------------ подслушать
