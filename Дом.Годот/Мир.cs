@@ -1589,6 +1589,30 @@ public partial class Мир : Node3D
     /// <summary>Сетка ходьбы соседей — для слежки и проверок.</summary>
     public Навигация? навигация => _навигация;
 
+    /// <summary>Сосед в подъезде, стоящий ближе всех к <paramref name="где"/>:
+    /// не дальше <paramref name="радиус"/> по полу и на том же этаже;
+    /// уходящие к выходу не в счёт.</summary>
+    public Сосед3D? Ближний(Vector3 где, float радиус, bool любой_этаж = false)
+    {
+        Сосед3D? лучший = null;
+        float ближе = радиус;
+        foreach (var ф in _люди.Values)
+        {
+            if (!GodotObject.IsInstanceValid(ф) || !ф.IsInsideTree())
+                continue;
+            var п = ф.GlobalPosition;
+            if (!любой_этаж && Mathf.Abs(п.Y - где.Y) > 1.2f)
+                continue;
+            float d = new Vector2(п.X - где.X, п.Z - где.Z).Length() + (любой_этаж ? Mathf.Abs(п.Y - где.Y) : 0);
+            if (d < ближе)
+            {
+                ближе = d;
+                лучший = ф;
+            }
+        }
+        return лучший;
+    }
+
     /// <summary>Слой створки входной двери: в неё упираются, но в сетку
     /// ходьбы она не запекается — открывается сама, и сосед в неё проходит.</summary>
     public const uint СЛОЙ_ДВЕРЕЙ = 8;

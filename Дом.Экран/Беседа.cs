@@ -41,7 +41,7 @@ public sealed record ТемаБеседы(string id, string имя, bool про�
 /// он услышал (слухи в метель).</summary>
 public sealed record Слепок(int памяти);
 
-public sealed class Беседы
+public sealed partial class Беседы
 {
     private readonly List<ТемаБеседы> _темы = new();
     private readonly Dictionary<string, List<string>> _приветствие = new(StringComparer.Ordinal);
@@ -139,6 +139,7 @@ public sealed class Беседы
                 б._болезнь[имя] = Список(бол.GetProperty(имя));
         foreach (var x in бол.GetProperty("свои").EnumerateObject())
             б._болезнь_свои[x.Name] = Список(x.Value);
+        б.Прочитать_живое(к);
         return б;
     }
 
@@ -180,16 +181,23 @@ public sealed class Беседы
             return Слова(Одна(_болезнь["тяжело"], зерно, "тяжело", с.id, раз), с, я);
         if (в?.сам == Стадия.БОЛЕН)
             return Слова(Одна(_болезнь["приветствие_больной"], зерно, "больной", с.id, раз), с, я);
-        double доверие = с.trust.Взять(я.id, 3.0), злоба = с.hate.Взять(я.id, 0.0);
-        string кто = злоба > 30 || доверие < 1.5 ? "злой"
-                   : доверие >= 4.5 ? "свой"
-                   : доверие >= 3.1 ? "знакомый"
-                   : "чужой";
+        string кто = Отношение(я, с);
         if (в is { герой_болен: true })
             return Слова(Одна(_болезнь["герой_болен." + кто], зерно, "герой_болен", с.id, раз), с, я);
         if (в is { в_доме: true })
             return Слова(Одна(_болезнь["приветствие." + кто], зерно, "осторожно", с.id, раз), с, я);
         return Слова(Одна(_приветствие[кто], зерно, "привет", с.id, раз), с, я);
+    }
+
+    /// <summary>Как сосед <paramref name="с"/> относится к герою: злой, чужой,
+    /// знакомый, свой — по его доверию и злобе к нему (так же и встречает).</summary>
+    public static string Отношение(NPC я, NPC с)
+    {
+        double доверие = с.trust.Взять(я.id, 3.0), злоба = с.hate.Взять(я.id, 0.0);
+        return злоба > 30 || доверие < 1.5 ? "злой"
+             : доверие >= 4.5 ? "свой"
+             : доверие >= 3.1 ? "знакомый"
+             : "чужой";
     }
 
     public string Прощание(NPC я, NPC с, long зерно, int раз)
