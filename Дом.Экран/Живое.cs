@@ -31,6 +31,10 @@ using Дом.Ядро;
 namespace Дом.Экран;
 
 /// <summary>Кто или что за дверью, когда стучат просто так.</summary>
+/// <summary>Что сосед рассказал на «что слышно?»: слова и, если это весть о чужом
+/// шкафе, — о ком и сколько, по его мнению, у того еды.</summary>
+public sealed record Весть(string слова, string? о_ком, double еды);
+
 public enum ЗаДверью { ПУСТО, РАЗОБРАНА, ТЕЛО, НИКОГО, СПИТ, ТЯЖЕЛО, БОЛЕН, ОПЯТЬ, ЗЛОЙ, ЗАНЯТ, ЧУЖОЙ, ЗНАКОМЫЙ, СВОЙ, БОИТСЯ }
 
 /// <summary>Что ответила дверь: что за ней, кто ответил (null — никто), открыл ли,
@@ -57,6 +61,7 @@ public sealed partial class Беседы
     private readonly Dictionary<string, List<string>> _у_двери = new(StringComparer.Ordinal);
     private readonly Dictionary<string, string> _записка_героя = new(StringComparer.Ordinal);
     private readonly Dictionary<string, List<string>> _мысли = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, List<string>> _вести = new(StringComparer.Ordinal);
 
     /// <summary>Что написано на двери героя — по виду записки (`ЗапискаГероя.ВИДЫ`).</summary>
     public IReadOnlyDictionary<string, string> записка_героя => _записка_героя;
@@ -105,6 +110,9 @@ public sealed partial class Беседы
     /// <summary>Списки записок на дверях.</summary>
     public static readonly IReadOnlyList<string> ЗАПИСКИ = new[] { "тело", "переехали", "болеют", "отдаст", "вор", "пустая" };
 
+    /// <summary>Списки раздела «вести»: что сосед расскажет на «что слышно?».</summary>
+    public static readonly IReadOnlyList<string> ВЕСТИ = new[] { "много_еды", "нет_еды", "болен", "ничего", "уже" };
+
     /// <summary>Списки вида из окна.</summary>
     public static readonly IReadOnlyList<string> ОКНО = new[]
     {
@@ -122,6 +130,7 @@ public sealed partial class Беседы
         "записки" => _записки[список],
         "у_двери" => _у_двери[список],
         "мысли_героя" => _мысли[список],
+        "вести" => _вести[список],
         _ => throw new ArgumentException($"нет раздела «{раздел}»"),
     };
 
@@ -136,6 +145,7 @@ public sealed partial class Беседы
                      ("подслушать", ПОДСЛУШАТЬ, _подслушать),
                      ("записки", ЗАПИСКИ, _записки),
                      ("у_двери", У_ДВЕРИ.SelectMany(к => new[] { к + "_гость", к + "_хозяин" }).Append("нет_дома").ToList(), _у_двери),
+                     ("вести", ВЕСТИ, _вести),
                      ("мысли_героя", УВИДЕЛ.Concat(О_СЕБЕ.Select(к => "о_себе_" + к))
                                            .SelectMany(к => new[] { к + "_обычно", к + "_холодно" }).ToList(), _мысли),
                  })
@@ -423,6 +433,50 @@ public sealed partial class Беседы
             return null;
         string тон = порог == Порог.ОБЫЧНО ? "_обычно" : "_холодно";
         return Слова(Одна(_мысли["о_себе_" + что + тон], зерно, "о_себе_" + что, я.id, день * 13 + раз), я, я);
+    }
+
+    // ------------------------------------------------------------ что слышно
+
+    /// <summary>
+    /// «Что слышно?» у открытой двери — одна весть из того, что сосед знает
+    /// сам: свежая сплетня (`Сплетня`), кто в доме болеет (`Эпидемия.Вести`),
+    /// у кого, по его мнению, шкаф ломится или пуст (его `NPC.сведения` —
+    /// только о тех, о ком он что-то слышал), — или ничего. Второй раз за день
+    /// (<paramref name="уже"/>) — «я ж тебе всё рассказал». Весть о шкафе —
+    /// слух: сосед говорит то, что думает, а не то, что есть, и узел кладёт её
+    /// в сведения героя с весом меньше подслушанного.
+    /// </summary>
+    public Весть Что_слышно(House h, NPC я, NPC с, Заражение? з, long зерно, int раз, bool уже)
+    {
+        string Из(string список) => Одна(_вести[список], зерно, "вести_" + список, с.id, раз + h.day * 37);
+        static string Про(string т, NPC о) => т.Replace("{кто}", о.@short, StringComparison.Ordinal)
+                                               .Replace("{кого}", о.form("gen"), StringComparison.Ordinal)
+                                               .Replace("{кем}", о.form("ins"), StringComparison.Ordinal)
+                                               .Replace("{вин}", о.form("acc"), StringComparison.Ordinal);
+        if (уже)
+            return new Весть(Слова(Из("уже"), с, я), null, 0.0);
+        // свежее, что сам видел и слышал, — первым
+        if (Сплетня(h, я, с) is var (список, о_ком))
+            return new Весть(Слова(Про(Одна(_мимоходом[список], зерно, "вести_сплетня", с.id, раз + h.day * 37), о_ком), с, я),
+                               null, 0.0);
+        // кто болеет — из того, что он сам видел и слышал
+        if (Эпидемия.Вести(h, с, я, з).больные.FirstOrDefault() is NPC больной)
+            return new Весть(Слова(Про(Из("болен"), больной), с, я), null, 0.0);
+        // у кого, по его мнению, шкаф ломится или пуст — самое далёкое от «как у всех»
+        NPC? о_шкафе = null;
+        double еды = 0.0;
+        string? какой = null;
+        foreach (var п in h.alive().Where(p => p != я && p != с).OrderBy(p => p.id, StringComparer.Ordinal))
+        {
+            if (!с.сведения.TryGetValue(п.id, out var св) || !св.est.TryGetValue("еда", out double е))
+                continue;
+            string? вид = е >= 6.0 ? "много_еды" : е < 1.0 ? "нет_еды" : null;
+            if (вид is not null && (о_шкафе is null || Math.Abs(е - 3.0) > Math.Abs(еды - 3.0)))
+                (о_шкафе, еды, какой) = (п, е, вид);
+        }
+        if (о_шкафе is not null)
+            return new Весть(Слова(Про(Из(какой!), о_шкафе), с, я), о_шкафе.id, еды);
+        return new Весть(Слова(Из("ничего"), с, я), null, 0.0);
     }
 
     // ------------------------------------------------------------ у чужой двери

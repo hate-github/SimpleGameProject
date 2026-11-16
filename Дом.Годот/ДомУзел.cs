@@ -1075,6 +1075,8 @@ public partial class ДомУзел : Node
             GD.PrintErr($"разговоры.json: {e.Message}");
         }
         _раз.Clear();
+        _расспросил.Clear();                // дни новой жизни — те же числа
+        _подумал.Clear();
         _ждёт_ответа = null;
         if (_мир.Ворота is { } ворота)
         {
