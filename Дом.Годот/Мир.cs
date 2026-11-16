@@ -175,6 +175,7 @@ public partial class Мир : Node3D
     {
         _двери.Clear();
         _записки.Clear();               // таблички записок висели на прежних дверях
+        _во_дворе.Clear();              // фигуры двора — в прежнем мире
         _лампы.Clear();
         _гул_ламп.Clear();
         _гаражи.Clear();
@@ -1641,11 +1642,74 @@ public partial class Мир : Node3D
     /// <summary>Сетка ходьбы соседей — для слежки и проверок.</summary>
     public Навигация? навигация => _навигация;
 
+    // соседи во дворе: у урн и у гаражей — по хронике (место вылазки)
+    private readonly Dictionary<string, Сосед3D> _во_дворе = new(StringComparer.Ordinal);
+
+    /// <summary>Кто сейчас стоит во дворе фигурой — для проб.</summary>
+    public IEnumerable<Сосед3D> Фигуры_во_дворе => _во_дворе.Values.Where(GodotObject.IsInstanceValid);
+
+    /// <summary>
+    /// Кто сейчас во дворе (`Подача.Кто_где`: за порогом, место вылазки —
+    /// «двор и мусорки» или «гаражи за домом») — стоит там фигурой: у урн
+    /// роется в мусоре, у гаражей — у ворот. Из окна их видно словами
+    /// (`Беседы.Из_окна`), выйдешь во двор — вот они. Ушедших убирает.
+    /// </summary>
+    public void Во_дворе(IReadOnlyList<Дом.Экран.СоседГде> все)
+    {
+        _соседи ??= Узел("соседи");
+        var есть = new HashSet<string>(StringComparer.Ordinal);
+        int у_урн = 0, у_гаражей = 0;
+        foreach (var с in все)
+        {
+            if (с.где != Дом.Экран.Где.ЗаПорогом || с.место is not string м)
+                continue;
+            Vector3 где, к_чему;
+            if (м.StartsWith("двор", StringComparison.Ordinal) && _урны.Count > 0)
+            {
+                var урна = _урны[у_урн % _урны.Count].полная;
+                if (!GodotObject.IsInstanceValid(урна))
+                    continue;
+                // второй у той же урны встаёт с другой стороны
+                float сторона = (у_урн / _урны.Count) % 2 == 0 ? 1f : -1f;
+                у_урн++;
+                к_чему = урна.GlobalPosition;
+                где = к_чему + new Vector3(0.75f * сторона, 0, 0.55f);
+            }
+            else if (м.StartsWith("гараж", StringComparison.Ordinal) && _гаражи.Count > 0)
+            {
+                var г = _гаражи[у_гаражей++ % _гаражи.Count];
+                if (!GodotObject.IsInstanceValid(г))
+                    continue;
+                где = г.УВорот();
+                к_чему = г.GlobalPosition with { Y = где.Y };
+            }
+            else
+                continue;
+            есть.Add(с.id);
+            var к = к_чему - где;
+            float лицом = Mathf.RadToDeg(Mathf.Atan2(-к.X, -к.Z));
+            if (!_во_дворе.TryGetValue(с.id, out var ф) || !GodotObject.IsInstanceValid(ф))
+            {
+                ф = Сосед3D.Собрать(с.id, с.имя, Пальто(с.id), new Color("#8a6f56"));
+                _соседи.AddChild(ф);
+                _во_дворе[с.id] = ф;
+                ф.Держать(Дом.Экран.Руки.ПУСТЫ, new Дом.Экран.Движение(Дом.Экран.Анимация.Loot));
+            }
+            ф.Встать(где, лицом, $"двор_{с.id}", твёрдый: true);
+        }
+        foreach (var id in _во_дворе.Keys.Where(id => !есть.Contains(id)).ToList())
+        {
+            if (GodotObject.IsInstanceValid(_во_дворе[id]))
+                _во_дворе[id].QueueFree();
+            _во_дворе.Remove(id);
+        }
+    }
+
     /// <summary>Стоящие в подъезде поворачиваются к герою, подошедшему ближе
     /// 2.6 метра на том же этаже, — остальные стоят лицом по делу.</summary>
     public void Взгляды(Vector3 герой)
     {
-        foreach (var ф in _люди.Values)
+        foreach (var ф in _люди.Values.Concat(_во_дворе.Values))
         {
             if (!GodotObject.IsInstanceValid(ф))
                 continue;
@@ -1663,7 +1727,7 @@ public partial class Мир : Node3D
     {
         Сосед3D? лучший = null;
         float ближе = радиус;
-        foreach (var ф in _люди.Values)
+        foreach (var ф in _люди.Values.Concat(_во_дворе.Values))
         {
             if (!GodotObject.IsInstanceValid(ф) || !ф.IsInsideTree())
                 continue;
