@@ -48,6 +48,13 @@ public partial class Сосед3D : StaticBody3D
     /// <summary>Идёт ли сейчас.</summary>
     public bool идёт => _точка < _путь.Length;
 
+    // куда стоит лицом по делу (`Встать`), в радианах
+    private float _лицом;
+
+    /// <summary>Куда смотреть, пока стоит: на героя, подошедшего близко, —
+    /// или null, и тогда лицом по делу. Ставит `Мир.Взгляды` каждый кадр.</summary>
+    public Vector3? Смотреть_на { get; set; }
+
     private const float ШАГ = 1.25f;       // м/с — по лестнице хрущёвки не разбежишься
     private const float БЕГОМ = 2.6f;
     private const float НА_ЛЕСТНИЦЕ = 0.6f; // доля скорости на ступенях
@@ -140,6 +147,7 @@ public partial class Сосед3D : StaticBody3D
         цель = где;
         Position = где;
         RotationDegrees = new Vector3(0, лицом, 0);
+        _лицом = Mathf.DegToRad(лицом);
         Name = зовут;
         CollisionLayer = твёрдый ? Мир.СЛОЙ_ЛЮДЕЙ : 0;
         аниматор.Играть(_на_месте);
@@ -160,6 +168,22 @@ public partial class Сосед3D : StaticBody3D
         CollisionLayer = 0;
         Name = $"сосед_{id}_идёт";
         аниматор.Играть(new Движение(бегом ? Анимация.Run : Анимация.Walk));
+    }
+
+    /// <summary>Стоящий поворачивается к подошедшему герою и обратно — плавно,
+    /// за пару десятых секунды: люди замечают, кто к ним подошёл.</summary>
+    public override void _Process(double delta)
+    {
+        if (идёт)
+            return;
+        float куда = _лицом;
+        if (Смотреть_на is Vector3 т)
+        {
+            var к = т - GlobalPosition;
+            if (к.X * к.X + к.Z * к.Z > 0.01f)
+                куда = Mathf.Atan2(-к.X, -к.Z);
+        }
+        Rotation = new Vector3(0, Mathf.LerpAngle(Rotation.Y, куда, 1f - Mathf.Exp(-6f * (float)delta)), 0);
     }
 
     public override void _PhysicsProcess(double delta)

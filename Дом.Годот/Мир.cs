@@ -1641,6 +1641,21 @@ public partial class Мир : Node3D
     /// <summary>Сетка ходьбы соседей — для слежки и проверок.</summary>
     public Навигация? навигация => _навигация;
 
+    /// <summary>Стоящие в подъезде поворачиваются к герою, подошедшему ближе
+    /// 2.6 метра на том же этаже, — остальные стоят лицом по делу.</summary>
+    public void Взгляды(Vector3 герой)
+    {
+        foreach (var ф in _люди.Values)
+        {
+            if (!GodotObject.IsInstanceValid(ф))
+                continue;
+            var п = ф.GlobalPosition;
+            bool рядом = Mathf.Abs(п.Y - герой.Y) < 1.2f
+                         && new Vector2(п.X - герой.X, п.Z - герой.Z).Length() < 2.6f;
+            ф.Смотреть_на = рядом ? герой : null;
+        }
+    }
+
     /// <summary>Сосед в подъезде, стоящий ближе всех к <paramref name="где"/>:
     /// не дальше <paramref name="радиус"/> по полу и на том же этаже;
     /// уходящие к выходу не в счёт.</summary>
