@@ -62,6 +62,7 @@ public sealed partial class Беседы
     private readonly Dictionary<string, string> _записка_героя = new(StringComparer.Ordinal);
     private readonly Dictionary<string, List<string>> _мысли = new(StringComparer.Ordinal);
     private readonly Dictionary<string, List<string>> _вести = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, List<string>> _труба = new(StringComparer.Ordinal);
 
     /// <summary>Что написано на двери героя — по виду записки (`ЗапискаГероя.ВИДЫ`).</summary>
     public IReadOnlyDictionary<string, string> записка_героя => _записка_героя;
@@ -116,6 +117,9 @@ public sealed partial class Беседы
     /// <summary>Списки записок на дверях.</summary>
     public static readonly IReadOnlyList<string> ЗАПИСКИ = new[] { "тело", "переехали", "болеют", "отдаст", "вор", "пустая" };
 
+    /// <summary>Списки раздела «труба»: как отзываются по стояку.</summary>
+    public static readonly IReadOnlyList<string> ТРУБА = new[] { "ответили", "сонно", "тихо" };
+
     /// <summary>Списки раздела «вести»: что сосед расскажет на «что слышно?».</summary>
     public static readonly IReadOnlyList<string> ВЕСТИ = new[] { "много_еды", "нет_еды", "болен", "ничего", "уже" };
 
@@ -137,6 +141,7 @@ public sealed partial class Беседы
         "у_двери" => _у_двери[список],
         "мысли_героя" => _мысли[список],
         "вести" => _вести[список],
+        "труба" => _труба[список],
         _ => throw new ArgumentException($"нет раздела «{раздел}»"),
     };
 
@@ -152,6 +157,7 @@ public sealed partial class Беседы
                      ("записки", ЗАПИСКИ, _записки),
                      ("у_двери", У_ДВЕРИ.SelectMany(к => new[] { к + "_гость", к + "_хозяин" }).Append("нет_дома").ToList(), _у_двери),
                      ("вести", ВЕСТИ, _вести),
+                     ("труба", ТРУБА, _труба),
                      ("мысли_героя", УВИДЕЛ.Concat(О_СЕБЕ.Select(к => "о_себе_" + к))
                                            .SelectMany(к => new[] { к + "_обычно", к + "_холодно" }).ToList(), _мысли),
                  })
@@ -474,6 +480,30 @@ public sealed partial class Беседы
             return null;
         string тон = порог == Порог.ОБЫЧНО ? "_обычно" : "_холодно";
         return Слова(Одна(_мысли["о_себе_" + что + тон], зерно, "о_себе_" + что, я.id, день * 13 + раз), я, я);
+    }
+
+    // ------------------------------------------------------------ по трубе
+
+    /// <summary>
+    /// Постучать по трубе стояка у себя (привычка панельного дома): кто живёт
+    /// прямо над и под героем (на четыре квартиры выше и ниже) и сейчас дома,
+    /// тот стучит в ответ; ночью — стукнет сонно и затихнет; никого — тишина.
+    /// Так узнают, живы ли и дома ли соседи, не выходя. Только слова: стук —
+    /// привычка, а не вопрос дому.
+    /// </summary>
+    public IReadOnlyList<string> По_трубе(House h, NPC я, IReadOnlyList<СоседГде> кто_где, double час, long зерно, int раз)
+    {
+        int свой = h.хозяин_жилья(я).apt;
+        var @out = new List<string>();
+        foreach (var (кв, откуда) in new[] { (свой + 4, "сверху"), (свой - 4, "снизу") })
+        {
+            if (кв < 1 || кв > h.flats.Ключи.Max())
+                continue;                  // над верхним этажом и под первым — никого
+            bool дома = кто_где.Any(с => с.дом == кв && с.где == Где.Дома);
+            string список = !дома ? "тихо" : час >= 23 || час < 6.5 ? "сонно" : "ответили";
+            @out.Add($"{откуда}: {Одна(_труба[список], зерно, "труба_" + список, "кв" + кв, раз + h.day * 41)}");
+        }
+        return @out;
     }
 
     // ------------------------------------------------------------ что слышно
