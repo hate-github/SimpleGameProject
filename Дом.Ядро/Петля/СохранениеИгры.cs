@@ -52,6 +52,10 @@ public static class СохранениеИгры
                 ["продукты"] = Продукты.У(я)?.Сложить(),
                 ["снаряжение"] = я.снаряжение?.Сложить(),
                 ["записка"] = я.записка,
+                ["записки_соседям"] = я.записки_соседям is { } зс
+                    ? new JsonObject(зс.OrderBy(п => п.Key, StringComparer.Ordinal).Select(п =>
+                        KeyValuePair.Create(п.Key, (JsonNode?)new JsonObject { ["вид"] = п.Value.вид, ["до_дня"] = п.Value.до_дня })))
+                    : null,
             },
             ["округа"] = Округа.У(h)?.Сложить(),
             ["магазин"] = магазин?.Сложить(),
@@ -102,6 +106,10 @@ public static class СохранениеИгры
         if (и["снаряжение"] is JsonObject с && я.снаряжение is not null)
             я.снаряжение.Разложить(с);
         я.записка = и["записка"]?.GetValue<string>();
+        if (и["записки_соседям"] is JsonObject зс)
+            я.записки_соседям = зс.ToDictionary(п => п.Key,
+                п => new ЗапискаСоседу(п.Value!["вид"]!.GetValue<string>(), п.Value!["до_дня"]!.GetValue<int>()),
+                StringComparer.Ordinal);
         if (о["округа"] is JsonObject ок && Округа.У(h) is { } округа)
             округа.Разложить(ок, я);
         if (о["магазин"] is JsonObject м && магазин is not null)

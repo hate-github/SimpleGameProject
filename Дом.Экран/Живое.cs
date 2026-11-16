@@ -66,6 +66,10 @@ public sealed partial class Беседы
     /// <summary>Что написано на двери героя — по виду записки (`ЗапискаГероя.ВИДЫ`).</summary>
     public IReadOnlyDictionary<string, string> записка_героя => _записка_героя;
 
+    // как выглядит записка героя на чужой двери (`ЗапискаГероя.СОСЕДУ`), {кв} — его квартира
+    private readonly Dictionary<string, string> _записка_соседу = new(StringComparer.Ordinal);
+    public IReadOnlyDictionary<string, string> записка_соседу => _записка_соседу;
+
     /// <summary>Списки реплик на ходу — проверка сверяет, что все на месте.</summary>
     public static readonly IReadOnlyList<string> МИМОХОДОМ = new[]
     {
@@ -157,6 +161,9 @@ public sealed partial class Беседы
         var зг = к.GetProperty("записка_героя");
         foreach (var вид in ЗапискаГероя.ВИДЫ)
             _записка_героя[вид] = зг.GetProperty(вид).GetString()!;
+        var зс = к.GetProperty("записка_соседу");
+        foreach (var вид in ЗапискаГероя.СОСЕДУ)
+            _записка_соседу[вид] = зс.GetProperty(вид).GetString()!;
     }
 
     // ------------------------------------------------------------ на ходу
@@ -645,6 +652,15 @@ public sealed partial class Беседы
             if (живут.Any(Вор))
             {
                 @out.Add(new Записка(кв, Из("вор", кв), Чем.МЕЛ));
+                continue;
+            }
+            // записка героя хозяину — пока висит
+            if (я.записки_соседям is { } мои
+                && живут.Select(p => мои.TryGetValue(p.id, out var з) && h.day <= з.до_дня ? з : null).FirstOrDefault(з => з is not null) is { } моя
+                && _записка_соседу.TryGetValue(моя.вид, out var текст))
+            {
+                @out.Add(new Записка(кв, текст.Replace("{кв}", свой.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                                                       StringComparison.Ordinal), Чем.БУМАГА));
                 continue;
             }
             if (h.day >= 3 && живут.Any(p => p.пунктики.Contains("последнее_отдаст", StringComparer.Ordinal)
