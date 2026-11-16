@@ -136,7 +136,7 @@ public sealed partial class Беседы
     public static readonly IReadOnlyList<string> О_СЕБЕ = new[] { "голод", "жажда", "холод", "усталость", "ранен", "страх", "тоска", "болен" };
 
     /// <summary>Списки записок на дверях.</summary>
-    public static readonly IReadOnlyList<string> ЗАПИСКИ = new[] { "тело", "переехали", "болеют", "отдаст", "вор", "пустая" };
+    public static readonly IReadOnlyList<string> ЗАПИСКИ = new[] { "тело", "переехали", "болеют", "отдаст", "вор", "пустая", "зовёт" };
 
     /// <summary>Списки раздела «доска»: что вешают у входа.</summary>
     public static readonly IReadOnlyList<string> ДОСКА = new[] { "мена", "кража", "смерть", "медик", "старые" };
@@ -795,8 +795,15 @@ public sealed partial class Беседы
             var живут = живые.Where(p => h.хозяин_жилья(p).apt == кв).ToList();
             if (кв == свой)
             {
-                // на своей двери герой пишет сам (`ЗапискаГероя`); «вор» мелом — поверх
+                // на своей двери герой пишет сам (`ЗапискаГероя`); сосед, задумавший
+                // перезимовать с героем вдвоём, оставляет свою — «зайди»; «вор» мелом — поверх
                 string? своя = я.записка is string вид && _записка_героя.TryGetValue(вид, out var т) ? т : null;
+                if (живые.Where(p => p != я && p.замысел is { вид: "вместе" } з && з.друг == я.id)
+                         .OrderBy(p => p.id, StringComparer.Ordinal).FirstOrDefault() is NPC зовёт)
+                    своя = Из("зовёт", кв).Replace("{кто}", зовёт.@short.ToUpperInvariant(), StringComparison.Ordinal)
+                                          .Replace("{кв}", h.хозяин_жилья(зовёт).apt.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                                                   StringComparison.Ordinal)
+                           + (своя is null ? "" : "\n" + своя);
                 if (живут.Any(Вор))
                     @out.Add(new Записка(кв, Из("вор", кв) + (своя is null ? "" : "\n" + своя), Чем.МЕЛ));
                 else if (своя is not null)
