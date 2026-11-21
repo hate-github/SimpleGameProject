@@ -208,7 +208,8 @@ public sealed class КаталогЕды
         if (корень.TryGetProperty("готовка", out var го))
             к.готовка = new ЧислаГотовки(го.GetProperty("подгорело_ниже").GetDouble(), го.GetProperty("подгорело_теряется").GetDouble(),
                                          го.GetProperty("на_славу_выше").GetDouble(), го.GetProperty("настроение_на_славу").GetDouble(),
-                                         го.GetProperty("настроение_подгорело").GetDouble());
+                                         го.GetProperty("настроение_подгорело").GetDouble(),
+                                         го.GetProperty("доверие_за_горячее").GetDouble());
         if (корень.TryGetProperty("блюда", out var блюда))
             foreach (var б in блюда.EnumerateArray())
                 к._рецепты.Add(Рецепт.Прочитать(б, к));
