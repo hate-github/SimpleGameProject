@@ -67,6 +67,9 @@ public sealed record ВидЕды(string id, string имя, РодЕды род,
     /// <summary>Сколько порций воды в целой вещи (газировка): выпил — жажда уходит.</summary>
     public double воды { get; init; }
 
+    /// <summary>Сколько тепла даёт горячим — в день, когда сготовлено (блюдо).</summary>
+    public double греет { get; init; }
+
     /// <summary>Модель есть (у еды из доставки её пока нет — ждёт автора).</summary>
     public bool с_моделью => модель.Length > 0;
 
@@ -93,6 +96,10 @@ public sealed class КаталогЕды
     private readonly List<ВидЕды> _виды = new();
     private readonly Dictionary<string, ВидЕды> _по_id = new(StringComparer.Ordinal);
     private readonly Dictionary<string, List<(string вид, double вес)>> _откуда = new(StringComparer.Ordinal);
+    private readonly List<Рецепт> _рецепты = new();
+
+    /// <summary>Что готовят у своей печи (`Готовка.cs`), в порядке файла.</summary>
+    public IReadOnlyList<Рецепт> рецепты => _рецепты;
     private readonly Dictionary<string, Dictionary<РодЕды, double>> _возраст = new(StringComparer.Ordinal);
 
     public IReadOnlyList<ВидЕды> виды => _виды;
@@ -169,6 +176,7 @@ public sealed class КаталогЕды
             {
                 сырым = п.TryGetProperty("сырым", out var сы) ? сы.GetDouble() : 1.0,
                 воды = п.TryGetProperty("воды", out var во) ? во.GetDouble() : 0.0,
+                греет = п.TryGetProperty("греет", out var гр) ? гр.GetDouble() : 0.0,
                 части = части.Count > 0 ? части : вид.род == РодЕды.ХЛЕБ ? ВидЕды.ЧАСТИ_ХЛЕБА : части,
                 свежий = слова[0],
                 испорчен = слова[1],
@@ -194,6 +202,9 @@ public sealed class КаталогЕды
                 по_роду[Род(р.Name, "возраст." + где.Name)] = р.Value.GetDouble();
             к._возраст[где.Name] = по_роду;
         }
+        if (корень.TryGetProperty("блюда", out var блюда))
+            foreach (var б in блюда.EnumerateArray())
+                к._рецепты.Add(Рецепт.Прочитать(б, к));
         foreach (string нужно in Продукты.ОТКУДА)
             if (!к._откуда.ContainsKey(нужно))
                 throw new InvalidDataException($"еда.json: нет «откуда.{нужно}»");
@@ -240,7 +251,7 @@ public sealed class Продукт
 public sealed record Съедено(double единиц, double сытости, double настроения, bool отравился,
                             string? почему = null);
 
-public sealed class Продукты
+public sealed partial class Продукты
 {
     /// <summary>Откуда еда приходит к герою — ключи `откуда` в `еда.json`.</summary>
     public static readonly IReadOnlyList<string> ОТКУДА =
@@ -629,6 +640,9 @@ public sealed class Продукты
                             - (отравился ? 8.0 : 0.0);
         я.satiety = Util.Clamp(я.satiety + сытости);
         я.mood = Util.Clamp(я.mood + настроения);
+        // горячее блюдо — в день, когда сготовлено, — ещё и греет
+        if (в.греет > 0 && п.возраст < 1.0 && !отравился)
+            я.warmth = Util.Clamp(я.warmth + в.греет * сколько / в.единиц);
         if (в.воды > 0)
             я.hydration = Util.Clamp(я.hydration + h.B["вода_за_порцию"] * в.воды * сколько / в.единиц);
         if (отравился)
