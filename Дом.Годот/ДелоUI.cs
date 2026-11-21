@@ -56,7 +56,8 @@ namespace Дом.Годот;
 /// на границе куска (номер куска; false — дело кончилось, дальше не идти),
 /// сколько в нём часов дня — для часов над телом, как оно выглядит
 /// (движение для аниматора, п. 21) и что при нём в руках (инструмент дела).
-/// Последний кусок — это <paramref name="готово"/>.</summary>
+/// Последний кусок — это <paramref name="готово"/>. Своя <paramref name="подсказка"/>
+/// мини-игры — вместо общей («режь в такт…» у готовки).</summary>
 public sealed record Долгое(string слово, double секунд, System.Action готово,
                             System.Action? прервано = null,
                             System.Action<double>? идёт = null,
@@ -69,7 +70,8 @@ public sealed record Долгое(string слово, double секунд, System
                             Дом.Ядро.МиниИгра? мини = null,
                             double зона = 0.22,
                             bool смотреть = true,
-                            System.Action? щелчок = null);
+                            System.Action? щелчок = null,
+                            string? подсказка = null);
 
 public partial class ДелоUI : Control
 {
@@ -240,7 +242,7 @@ public partial class ДелоUI : Control
         _центр = 0.3 + System.Random.Shared.NextDouble() * 0.4;
         _где_метка = 0.5f;
         Visible = true;
-        string как = дело.мини switch
+        string как = дело.подсказка is string своя ? своя + " · " : дело.мини switch
         {
             Дом.Ядро.МиниИгра.ВЗЛОМ => "держи метку мышью в светлой полосе · ",
             Дом.Ядро.МиниИгра.РЕМОНТ => "щёлкни мышью, когда метка в светлой полосе · ",

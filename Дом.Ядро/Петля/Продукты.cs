@@ -100,6 +100,9 @@ public sealed class КаталогЕды
 
     /// <summary>Что готовят у своей печи (`Готовка.cs`), в порядке файла.</summary>
     public IReadOnlyList<Рецепт> рецепты => _рецепты;
+
+    /// <summary>Числа мини-игр готовки («готовка»).</summary>
+    public ЧислаГотовки готовка { get; private set; } = ЧислаГотовки.ОБЫЧНЫЕ;
     private readonly Dictionary<string, Dictionary<РодЕды, double>> _возраст = new(StringComparer.Ordinal);
 
     public IReadOnlyList<ВидЕды> виды => _виды;
@@ -202,6 +205,10 @@ public sealed class КаталогЕды
                 по_роду[Род(р.Name, "возраст." + где.Name)] = р.Value.GetDouble();
             к._возраст[где.Name] = по_роду;
         }
+        if (корень.TryGetProperty("готовка", out var го))
+            к.готовка = new ЧислаГотовки(го.GetProperty("подгорело_ниже").GetDouble(), го.GetProperty("подгорело_теряется").GetDouble(),
+                                         го.GetProperty("на_славу_выше").GetDouble(), го.GetProperty("настроение_на_славу").GetDouble(),
+                                         го.GetProperty("настроение_подгорело").GetDouble());
         if (корень.TryGetProperty("блюда", out var блюда))
             foreach (var б in блюда.EnumerateArray())
                 к._рецепты.Add(Рецепт.Прочитать(б, к));
