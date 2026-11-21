@@ -78,6 +78,12 @@ public partial class ТелефонUI : PanelContainer
     /// <summary>Что во вкладке «сервисы»: шапка (деньги, долги, заказ) и строки;
     /// строка без дела — подпись раздела. Ставится корневым узлом.</summary>
     public System.Func<(string шапка, IReadOnlyList<СтрокаОкна> строки)>? Сервисы_дай { get; set; }
+
+    /// <summary>Запись камеры на пролёт (ГДД 15): шапка и строки — или null,
+    /// камеры нет, и вкладки не видно. Ставится корневым узлом.</summary>
+    public System.Func<(string шапка, IReadOnlyList<Дом.Экран.СтрокаКамеры> строки)?>? Камера_дай { get; set; }
+    private RichTextLabel _камера = null!;
+    private string? _камера_текст;          // что нарисовано: перерисовывать, только если иное
     private TabContainer _вкладки = null!;
     private Label _время = null!;
     private Label _сеть = null!;
@@ -226,6 +232,8 @@ public partial class ТелефонUI : PanelContainer
         _заметки = Страница("заметки");
         Сервисы_страница();
         _новости = Страница("новости");
+        _камера = Страница("камера");
+        _вкладки.SetTabHidden(_камера.GetParent().GetIndex(), true);
 
         // развлечения — одна кнопка (ГДД 19), под экраном, на любой вкладке
         _провести = new Button
@@ -528,6 +536,14 @@ public partial class ТелефонUI : PanelContainer
     /// <summary>Открыть телефон на мыслях.</summary>
     public void К_мыслям() => _вкладки.CurrentTab = 0;
 
+    /// <summary>Перелистнуть на вкладку камеры, если она видна.</summary>
+    public void К_камере()
+    {
+        int i = _камера.GetParent().GetIndex();
+        if (!_вкладки.IsTabHidden(i))
+            _вкладки.CurrentTab = i;
+    }
+
     /// <summary>Открыта ли вкладка мыслей.</summary>
     public bool на_мыслях => _вкладки.CurrentTab == 0;
 
@@ -600,8 +616,53 @@ public partial class ТелефонUI : PanelContainer
         _был_сел = сел;
         for (int i = 1; i < _вкладки.GetTabCount(); i++)
             _вкладки.SetTabHidden(i, сел);
+        // камеры нет — её вкладки не видно и с зарядом
+        _вкладки.SetTabHidden(_камера.GetParent().GetIndex(), сел || _камера_текст is null);
         if (сел)
             _вкладки.CurrentTab = 0;
+    }
+
+    /// <summary>
+    /// Вкладка камеры: запись за два дня, свежее сверху, у своей двери —
+    /// ярче. Камеры нет — вкладка спрятана. Перерисовывается целиком, когда
+    /// запись иная: строк немного, а «и сейчас там» меняется само.
+    /// </summary>
+    private void Камера_обновить()
+    {
+        var з = Камера_дай?.Invoke();
+        string? текст = null;
+        if (з is var (шапка, строки))
+        {
+            var т = new System.Text.StringBuilder();
+            т.Append($"[color=#8e897c]{Экранировать(шапка)}[/color]\n");
+            if (строки.Count == 0)
+                т.Append("\nНа записи пусто: у дверей этажа никто не стоял.\n");
+            int? день = null;
+            foreach (var с in строки)
+            {
+                if (с.день != день)
+                {
+                    т.Append($"\n[color=#6f6a5e]день {с.день}[/color]\n");
+                    день = с.день;
+                }
+                т.Append(с.у_своей ? $"[color=#e8c27a]{Экранировать(с.текст)}[/color]\n" : $"{Экранировать(с.текст)}\n");
+            }
+            текст = т.ToString();
+        }
+        if (текст == _камера_текст)
+            return;
+        bool была = _камера_текст is not null;
+        _камера_текст = текст;
+        _камера.Clear();
+        if (текст is not null)
+            _камера.AppendText(текст);
+        if (была != (текст is not null))
+        {
+            int i = _камера.GetParent().GetIndex();
+            _вкладки.SetTabHidden(i, текст is null || _был_сел);
+            if (текст is null && _вкладки.CurrentTab == i)
+                _вкладки.CurrentTab = 0;
+        }
     }
 
     /// <summary>Динамик сверху и полоска снизу — в полях корпуса.</summary>
@@ -673,6 +734,7 @@ public partial class ТелефонUI : PanelContainer
     public void Обновить()
     {
         Сервисы_обновить();
+        Камера_обновить();
         Написать_обновить();
         if (Сеанс is not null)
         {
