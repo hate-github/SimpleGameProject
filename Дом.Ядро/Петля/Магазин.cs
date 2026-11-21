@@ -19,6 +19,15 @@
 //     (шпроты — 0.6 порции, и стоят 0.6 цены), в тару ложится та самая вещь,
 //     и число еды в таре растёт на её порции — закон слоя продуктов держится.
 //
+// Строительный на Заречной (ГДД 15, 18: «продуктовый и строительный
+// магазины работают до дня 0»; «строительный магазин в фазе подготовки:
+// купить или украсть через инвентарь») — тот же класс со своим файлом
+// (`строймаг.json`). У дома такого места нет — соседи туда не ходят,
+// и симуляция о нём не знает, — поэтому всё у него считано штуками
+// на складе («всего» у каждой строки, и у ресурса тоже), а работает
+// он только до метели («до_метели»). Продают за прилавком свои люди
+// («продавец» — кто стоит за кассой).
+//
 // Звать можно только пока дом спит на вопросе: покупка меняет дом.
 
 using System.Text.Json;
@@ -57,9 +66,19 @@ public sealed class Магазин
     /// <summary>Сколько часов очереди до прилавка.</summary>
     public double очередь_часы { get; private set; }
 
+    /// <summary>Кто за прилавком: «продавщица», «продавец».</summary>
+    public string продавец { get; private set; } = "продавщица";
+
+    /// <summary>Работает только до метели (строительный): с первого дня закрыт.</summary>
+    public bool до_метели { get; private set; }
+
     /// <summary>Работает ли сегодня: пока работает у соседей и на полках
     /// ещё что-то есть.</summary>
-    public bool Открыт(House h) => h.магазины;
+    public bool Открыт(House h) => до_метели ? h.day < 1 : h.магазины;
+
+    /// <summary>Считан ли товар штуками на складе: вещь — всегда, ресурс —
+    /// у лавки, которой у дома нет (строительный).</summary>
+    private static bool Штучный(Товар т) => т.предмет is not null || т.всего > 0;
 
     /// <summary>Наценка этого дня — та же, что у соседей. До метели (пролог,
     /// дом ещё на нулевом дне) цены обычные: наценки нет, а не скидка.</summary>
@@ -76,7 +95,7 @@ public sealed class Магазин
     /// ресурсы — пока полка не опустела до дна места.</summary>
     public int Осталось(House h, Товар т)
     {
-        if (т.предмет is not null)
+        if (Штучный(т))
             return Math.Max(0, т.всего - _продано.GetValueOrDefault(т.id));
         double полка = h.богатство_места(место) - h.B["вылазка_минимум_богатства"];
         return Math.Max(0, (int)Math.Floor(полка / Math.Max(1e-9, истощение * т.единиц) + 1e-9));
@@ -123,8 +142,7 @@ public sealed class Магазин
             я.ноша.Положить(тара, одна, ручки);
             Вещью(я, т, МестоЕды.НОША);
             h.stats["принесено_" + р] = h.stats.Взять("принесено_" + р, 0.0) + т.единиц;
-            h.места[место] = Math.Max(h.B["вылазка_минимум_богатства"],
-                                      h.богатство_места(место) - истощение * т.единиц);
+            Убыло(h, т);
         }
         else if (т.предмет is string id)
         {
@@ -210,8 +228,7 @@ public sealed class Магазин
             Вещью(я, т, в_карман ? МестоЕды.КАРМАН : МестоЕды.НОША);
             h.stats["принесено_" + р] = h.stats.Взять("принесено_" + р, 0.0) + т.единиц;
             h.stats["украдено_" + р] = h.stats.Взять("украдено_" + р, 0.0) + т.единиц;
-            h.места[место] = Math.Max(h.B["вылазка_минимум_богатства"],
-                                      h.богатство_места(место) - истощение * т.единиц);
+            Убыло(h, т);
         }
         else if (т.предмет is string id)
         {
@@ -223,51 +240,68 @@ public sealed class Магазин
         return new Кража(true, false, в_карман);
     }
 
+    /// <summary>Ресурс ушёл с полки: у лавки дома — пустеет место (соседям
+    /// меньше), у штучной — склад.</summary>
+    private void Убыло(House h, Товар т)
+    {
+        if (Штучный(т))
+            _продано[т.id] = _продано.GetValueOrDefault(т.id) + 1;
+        else
+            h.места[место] = Math.Max(h.B["вылазка_минимум_богатства"],
+                                      h.богатство_места(место) - истощение * т.единиц);
+    }
+
     /// <summary>Полка пустеет от чужих покупок — сосед, поверивший, что будет
     /// метель, выгреб своё (беседа в прологе).</summary>
     public void Истощить(House h, int штук)
         => h.места[место] = Math.Max(h.B["вылазка_минимум_богатства"],
                                      h.богатство_места(место) - истощение * Math.Max(0, штук));
 
-    public static Магазин Прочитать(string каталог, Инструменты? предметы = null)
+    public static Магазин Прочитать(string каталог, Инструменты? предметы = null, string файл = "магазин.json")
     {
         var м = new Магазин();
         var еда = КаталогЕды.Прочитать(каталог);
-        using var поток = File.OpenRead(Path.Combine(каталог, "магазин.json"));
+        using var поток = File.OpenRead(Path.Combine(каталог, файл));
         using var док = JsonDocument.Parse(поток);
         var корень = док.RootElement;
         м.место = корень.GetProperty("место").GetString()!;
-        м.истощение = корень.GetProperty("истощение_за_штуку").GetDouble();
+        м.истощение = корень.TryGetProperty("истощение_за_штуку", out var ист) ? ист.GetDouble() : 0.0;
         м.очередь_часы = корень.GetProperty("очередь_часы").GetDouble();
+        if (корень.TryGetProperty("продавец", out var пв))
+            м.продавец = пв.GetString()!;
+        м.до_метели = корень.TryGetProperty("до_метели", out var дм) && дм.GetBoolean();
         var ids = new HashSet<string>(StringComparer.Ordinal);
         foreach (var т in корень.GetProperty("товары").EnumerateArray())
         {
             string id = т.GetProperty("id").GetString()!;
             if (!ids.Add(id))
-                throw new InvalidDataException($"магазин.json: товар «{id}» дважды");
+                throw new InvalidDataException($"{файл}: товар «{id}» дважды");
             string? ресурс = т.TryGetProperty("ресурс", out var р) ? р.GetString() : null;
             string? предмет = т.TryGetProperty("предмет", out var п) ? п.GetString() : null;
             string? продукт = т.TryGetProperty("продукт", out var пр) ? пр.GetString() : null;
             if ((ресурс is null ? 0 : 1) + (предмет is null ? 0 : 1) + (продукт is null ? 0 : 1) != 1)
-                throw new InvalidDataException($"магазин.json: «{id}» — либо ресурс, либо продукт, либо предмет");
+                throw new InvalidDataException($"{файл}: «{id}» — либо ресурс, либо продукт, либо предмет");
             double единиц = 1.0;
             string? имя = null;
             if (продукт is not null)
             {
                 if (еда is null || !еда.Есть(продукт))
-                    throw new InvalidDataException($"магазин.json: «{id}» — продукта «{продукт}» в еда.json нет");
+                    throw new InvalidDataException($"{файл}: «{id}» — продукта «{продукт}» в еда.json нет");
                 ресурс = Продукты.ЕДА;
                 единиц = еда[продукт].единиц;
                 имя = еда[продукт].имя;
             }
             if (ресурс is not null && !Ресурсы.ВСЕ.Contains(ресурс, StringComparer.Ordinal))
-                throw new InvalidDataException($"магазин.json: «{id}» — ресурса «{ресурс}» в доме нет");
+                throw new InvalidDataException($"{файл}: «{id}» — ресурса «{ресурс}» в доме нет");
             if (предмет is not null && предметы is not null && !предметы.в_руках.ContainsKey(предмет))
-                throw new InvalidDataException($"магазин.json: «{id}» — предмета «{предмет}» в каталоге нет");
+                throw new InvalidDataException($"{файл}: «{id}» — предмета «{предмет}» в каталоге нет");
             double цена = т.TryGetProperty("цена", out var ц) ? ц.GetDouble() : 0.0;
             int всего = т.TryGetProperty("всего", out var в) ? в.GetInt32() : 0;
             if (предмет is not null && (цена <= 0 || всего <= 0))
-                throw new InvalidDataException($"магазин.json: у «{id}» нужны цена и сколько на складе");
+                throw new InvalidDataException($"{файл}: у «{id}» нужны цена и сколько на складе");
+            // у лавки, которой нет у дома, полки дома нет — всё считано штуками
+            if (м.истощение <= 0 && всего <= 0)
+                throw new InvalidDataException($"{файл}: «{id}» — у лавки без места в доме у каждой строки «всего»");
             м._товары.Add(new Товар(id, ресурс, предмет, цена, всего, продукт, единиц, имя));
         }
         return м;

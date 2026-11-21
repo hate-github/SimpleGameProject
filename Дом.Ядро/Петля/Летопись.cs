@@ -383,8 +383,8 @@ public sealed class Летопись
                                   x.GetProperty("улица").GetString()!, x.GetProperty("часы").GetDouble(),
                                   x.GetProperty("вид").GetString()!,
                                   x.TryGetProperty("знать", out var з) ? з.GetString() : null);
-                if (п.часы <= 0 || п.вид is not ("магазин" or "промзона" or "бункер" or "участок"))
-                    throw new InvalidDataException($"мир.json: поход «{п.id}» — часы больше нуля, вид — магазин, промзона, бункер или участок");
+                if (п.часы <= 0 || п.вид is not ("магазин" or "строительный" or "промзона" or "бункер" or "участок"))
+                    throw new InvalidDataException($"мир.json: поход «{п.id}» — часы больше нуля, вид — магазин, строительный, промзона, бункер или участок");
                 л._походы.Add(п);
             }
         if (корень.TryGetProperty("участок", out var уч))
