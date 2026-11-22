@@ -299,7 +299,7 @@ public static partial class Улица
                                     * (1.0 + Math.Max(0.0, -h.outside - 12) * 0.03));
             npc.день_вылазки = h.day;      // его видели с пакетами
             string куда = свой ? "в свой гараж"
-                : (npc.ключи_кладовых.Contains(к.id)
+                : (к.id != null && npc.ключи_кладовых.Contains(к.id)
                     ? $"в гараж кв.{к.apt} — по чужому ключу"
                     : $"в гараж кв.{к.apt} — тот, что вскрыли");
             txt = $"{npc.@short} {Util.Vb(npc.sex, "сходил")} {куда}: {если}";

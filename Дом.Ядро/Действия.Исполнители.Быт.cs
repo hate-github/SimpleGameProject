@@ -307,7 +307,7 @@ public static partial class Действия
             // нужны услуге для цены и считаются здесь, как их считал сбор:
             // услуги про действия не знают. null от заказать — «пока он шёл,
             // надобность отпала»
-            var said = Услуги.заказать(h, npc, target as NPC, холод_впереди(h, npc, b),
+            var said = Услуги.заказать(h, npc, (target as NPC)!, холод_впереди(h, npc, b),
                                        тревога(h, npc), что as string);
             return said is null ? НЕ_СОСТОЯЛОСЬ : said;
         }, детали: true);

@@ -4397,7 +4397,7 @@ public static partial class Проверки
             for (int д = 0; д < 6; д++)
                 прогон.one_day();
             var снимок = Дом.Ядро.Сохранение.сохранить(h);
-            using var мой = JsonDocument.Parse(Отсортировать(снимок).ToJsonString());
+            using var мой = JsonDocument.Parse(Отсортировать(снимок)!.ToJsonString());
             Сравнение.Одинаково(ждём.RootElement, мой.RootElement, "сейв", плохо);
         }
 

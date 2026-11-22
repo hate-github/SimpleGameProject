@@ -15,7 +15,7 @@ public static partial class Действия
         {
             var b = h.B;
             var t = (NPC)target!;
-            var (lvl, kind) = Каталог.COST["лечить"];
+            var (lvl, kind) = Каталог.COST["лечить"]!;
             string? said = null;
             // медик умеет то, чего не умеет сам себе перевязывающий (GDD 12.6)
             bool медик = npc.skills.Contains("медик", StringComparer.Ordinal);
@@ -230,7 +230,7 @@ public static partial class Действия
             // час на сговор уже потрачен, и потрачен он в любом случае:
             // и когда пошли, и когда отказали
             var t = target as NPC;
-            string имя = npc.зов_куда;
+            string? имя = npc.зов_куда;
             var м = Улица.МЕСТА.FirstOrDefault(
                 x => string.Equals(x.имя, имя, StringComparison.Ordinal));
             if (м is null || !Улица.место_доступно(h, npc, м, часов: npc.time_left))
@@ -318,7 +318,7 @@ public static partial class Действия
 
         исполняет("вылазка", (h, npc, target, spent) =>
         {
-            Улица._outing(h, npc, spent, target as Место);
+            Улица._outing(h, npc, spent, (target as Место)!);
             return null;  // текст пишет сам _outing
         });
 

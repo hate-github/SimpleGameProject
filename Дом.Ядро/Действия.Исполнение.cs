@@ -208,7 +208,7 @@ public static partial class Действия
     public static void _эпилог(House h, NPC npc, string key, string? said, double spent = 0.0)
     {
         var b = h.B;
-        var (lvl, kind) = Каталог.COST[key];
+        var (lvl, kind) = Каталог.COST[key]!;
         if (!string.IsNullOrEmpty(said))
             h.journal.line(said!, Каталог.NOTABLE.Взять(key, 0));
         if (lvl != 0 && !string.IsNullOrEmpty(kind))
@@ -362,7 +362,7 @@ public static partial class Действия
         npc.time_left -= spent;
         mark(h, npc, key, target);
         npc.часы_работы += СЧИТАЕТСЯ_РАБОТОЙ.Contains(key) ? spent : 0;
-        var (lvl, kind) = Каталог.COST[key];
+        var (lvl, kind) = Каталог.COST[key]!;
 
         // у работы есть шанс провала (GDD 7: «провал — потеря материалов,
         // травма руки»)

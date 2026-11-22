@@ -48,8 +48,12 @@ public sealed class Словарь<K, V> : IEnumerable<KeyValuePair<K, V>> where
         }
     }
 
-    /// <summary>`d.get(ключ, умолчание)` — умолчание здесь часто значимо.</summary>
-    public V Взять(K ключ, V умолчание)
+    /// <summary>
+    /// `d.get(ключ, умолчание)` — умолчание здесь часто значимо. `d.get(ключ)`
+    /// — умолчание `null`, и тогда ответ может быть пуст.
+    /// </summary>
+    [return: NotNullIfNotNull(nameof(умолчание))]
+    public V? Взять(K ключ, V? умолчание)
         => _значения.TryGetValue(ключ, out var v) ? v : умолчание;
 
     public bool Есть(K ключ) => _значения.ContainsKey(ключ);

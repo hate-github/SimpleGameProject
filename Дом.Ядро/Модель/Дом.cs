@@ -191,7 +191,7 @@ public sealed class House
         return кто;
     }
 
-    public NPC? get(string npc_id) => people.TryGetValue(npc_id, out var p) ? p : null;
+    public NPC? get(string? npc_id) => npc_id is not null && people.TryGetValue(npc_id, out var p) ? p : null;
 
     /// <summary>Жилец по id, если он жив и в доме; иначе null.</summary>
     public NPC? живой(string? npc_id)
