@@ -542,7 +542,7 @@ public static class Взлом
                            place: $"у {чья}", reason: "вор у кладовой");
         else
             h.journal.line($"{ловец.@short} {Util.Vb(ловец.sex, "отпустил")} "
-                           + $"{вор.form("acc")} — но запомнил.", 1);
+                           + $"{вор.form("acc")} — но {Util.Vb(ловец.sex, "запомнил")}.", 1);
     }
 
     /// <summary>
