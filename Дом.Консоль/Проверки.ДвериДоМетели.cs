@@ -42,6 +42,16 @@ public static partial class Проверки
         if (план.Count == 0 || план.Any(ж => !ж.здесь))
             плохо.Add("двери: план свежего дома пуст или в нём выбывшие");
 
+        // ---- 4. небо (автор, 23.11: «без скайбоксов грустно») ----
+        string воздух = File.ReadAllText(Path.Combine(Пути.Корень, "Дом.Годот", "Обстановка3D.cs"));
+        if (!воздух.Contains("BackgroundMode = Godot.Environment.BGMode.Sky", StringComparison.Ordinal)
+            || !воздух.Contains("shader_type sky;", StringComparison.Ordinal))
+            плохо.Add("небо: фон — ровный цвет, неба нет");
+        if (!воздух.Contains("_воздух.FogSkyAffect = 0.2f + 0.8f * _пелена;", StringComparison.Ordinal))
+            плохо.Add("небо: в метель не застилается — или до неё его съедает туман");
+        if (!узел.Contains("_воздух.Час(_час_неба ?? _партия.сеанс.я.час());", StringComparison.Ordinal))
+            плохо.Add("небо: не знает, который час, — ночью светло");
+
         w($"  свежий дом: дверей {снаружи.Count}, следов нет; жильцов на плане {план.Count}");
         return плохо;
     }
